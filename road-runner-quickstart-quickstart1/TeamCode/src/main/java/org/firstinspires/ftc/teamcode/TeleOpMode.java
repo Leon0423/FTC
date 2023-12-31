@@ -4,7 +4,6 @@ import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 @TeleOp(name = "TeleOpMode")
@@ -29,10 +28,10 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void init_hardware(){
-        FR=hardwareMap.get(DcMotorEx.class, "FR");
-        FL=hardwareMap.get(DcMotorEx.class, "FL");
-        BR=hardwareMap.get(DcMotorEx.class, "BR");
-        BL=hardwareMap.get(DcMotorEx.class, "BL");
+        FR=hardwareMap.get(DcMotor.class, "FR");
+        FL=hardwareMap.get(DcMotor.class, "FL");
+        BR=hardwareMap.get(DcMotor.class, "BR");
+        BL=hardwareMap.get(DcMotor.class, "BL");
 
         FR.setDirection(DcMotorSimple.Direction.REVERSE);
         BR.setDirection(DcMotorSimple.Direction.REVERSE);
