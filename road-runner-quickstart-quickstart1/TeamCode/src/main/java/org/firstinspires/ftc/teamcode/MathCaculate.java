@@ -1,20 +1,15 @@
 package org.firstinspires.ftc.teamcode;
 
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
-
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-import org.apache.commons.math3.analysis.function.Acos;
-
 @TeleOp(name = "MathCaculate")
 public class MathCaculate extends LinearOpMode {
 
     private DcMotor FR, FL, BR, BL;
-    private double x, y, turn;
-    private double sin, cos, max;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -26,26 +21,34 @@ public class MathCaculate extends LinearOpMode {
         while(opModeIsActive()){
             init_telemetry();
 
-            x = gamepad1.left_stick_x;
-            y = -gamepad1.left_stick_y;
-            turn = gamepad1.right_stick_x;
+            double x = gamepad1.left_stick_x;
+            double y = -gamepad1.left_stick_y;
+            double turn = gamepad1.right_stick_x;
 
             double theta = Math.atan2(y, x);
             double power = Math.hypot(x, y);
+            double sin, cos, max;
 
             sin = Math.sin(theta - Math.PI/4);
             cos = Math.cos(theta - Math.PI/4);
             max = Math.max(Math.abs(sin), Math.abs(cos));
 
-            FL.setPower(power * cos/max + turn);
-            FR.setPower(power * cos/max - turn);
-            BL.setPower(power * cos/max + turn);
-            BR.setPower(power * cos/max - turn);
-
+            double fl = power * cos / max + turn;
+            double fr = power * cos / max - turn;
+            double bl = power * cos / max + turn;
+            double br = power * cos / max - turn;
 
             if ((power + Math.abs(turn)) > 1) {
-                FL /=
+                fl /= power + Math.abs(turn);
+                fr /= power + Math.abs(turn);
+                bl /= power + Math.abs(turn);
+                br /= power + Math.abs(turn);
             }
+
+            FL.setPower(fl);
+            FR.setPower(fr);
+            BL.setPower(bl);
+            BR.setPower(br);
         }
     }
 
