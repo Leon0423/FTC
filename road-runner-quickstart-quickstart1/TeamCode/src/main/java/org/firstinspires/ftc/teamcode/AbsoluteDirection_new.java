@@ -35,30 +35,18 @@ public class AbsoluteDirection_new extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-
         init_hardware();
-
         while (!isStarted()) {
-
             init_telemetry();
-
         }
-
         waitForStart();
-
         while (opModeIsActive()) {
-
             init_telemetry();
-
             AbsoluteControls();
-            
         }
-        
     }
 
-
     public void init_hardware(){
-
         //get motor & servo
         FL = hardwareMap.get(DcMotorEx.class, "FL");
         BL = hardwareMap.get(DcMotorEx.class, "BL");
@@ -90,7 +78,6 @@ public class AbsoluteDirection_new extends LinearOpMode {
     }
 
     public void init_imu() {
-
         //set imu
         BNO055IMU.Parameters IMU_Parameters = new BNO055IMU.Parameters();
 
@@ -107,7 +94,6 @@ public class AbsoluteDirection_new extends LinearOpMode {
     }
 
     public void AbsoluteControls(){
-
         //get gamepad information
         drive_o = gamepad1.right_stick_x;
         drive_y = gamepad1.left_stick_y;
