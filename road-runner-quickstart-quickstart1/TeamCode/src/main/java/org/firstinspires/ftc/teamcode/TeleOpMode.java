@@ -35,7 +35,6 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void init_hardware(){
-
         FR=hardwareMap.get(DcMotorEx.class, "FR");
         FL=hardwareMap.get(DcMotorEx.class, "FL");
         BR=hardwareMap.get(DcMotorEx.class, "BR");
@@ -53,11 +52,9 @@ public class TeleOpMode extends LinearOpMode {
         BL.setZeroPowerBehavior(BRAKE);
         FR.setZeroPowerBehavior(BRAKE);
         BR.setZeroPowerBehavior(BRAKE);
-
     }
 
     public void teleOpControls(){
-
         drive = -gamepad1.left_stick_y;     //前進
         turn = gamepad1.right_stick_x;      //自旋
         strafe = -gamepad1.left_stick_x;    //平移
@@ -66,11 +63,9 @@ public class TeleOpMode extends LinearOpMode {
         boxx = gamepad1.left_stick_x;
         rightstickx = Math.abs (gamepad1.right_stick_x);
         leftstick = Math.abs (Math.sqrt (Math.pow (boxy, 2) + Math.pow (boxx, 2)));
-
     }
 
     public double scaling_power(double fr, double fl, double br, double bl){
-
         max = Math.max( Math.max( Math.abs(fr), Math.abs(fl) ), Math.max( Math.abs(br), Math.abs(bl) ));
         if (max <= 1){
             max = 1;
@@ -97,7 +92,6 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void chassis_power(){
-
         fr = (- drive - strafe + turn) * drive_speed(rightstickx, leftstick);
         fl = (- drive + strafe - turn) * drive_speed(rightstickx, leftstick);
         br = (- drive + strafe + turn) * drive_speed(rightstickx, leftstick);
