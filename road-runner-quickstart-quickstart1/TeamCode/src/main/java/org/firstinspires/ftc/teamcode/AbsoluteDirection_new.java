@@ -10,9 +10,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.IMU;
-
-import kotlin.reflect.KParameter;
 
 @TeleOp(name="AbsoluteDirectionDrive_new")
 public class AbsoluteDirection_new extends LinearOpMode {
@@ -21,17 +18,15 @@ public class AbsoluteDirection_new extends LinearOpMode {
     private DcMotorEx FL, BL, FR, BR;
     private BNO055IMU imu;
 
-    private double imu_x = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).firstAngle;
-    private double imu_y = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).secondAngle;
-    private double imu_z = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).thirdAngle;
+    double imu_x, imu_y, imu_z;
 
     //set variable
-    private double drive_o, drive_y, drive_x;
+    double drive_o, drive_y, drive_x;
     private double drive_speed;
-    private double drive_speed_max = 0.7;
+    double drive_speed_max = 0.7;
     private double angle;
-    private double yFL, yBL, yFR, yBR;
-    private double xFL, xBL, xFR, xBR;
+    double yFL, yBL, yFR, yBR;
+    double xFL, xBL, xFR, xBR;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -99,8 +94,11 @@ public class AbsoluteDirection_new extends LinearOpMode {
         drive_y = gamepad1.left_stick_y;
         drive_x = gamepad1.left_stick_x;
 
-        //get imu information
+        imu_x = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).firstAngle;
+        imu_y = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).secondAngle;
+        imu_z = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).thirdAngle;
 
+        //get imu information
         //TODO: check AxesOrder.ZXY or something
         angle = -(imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).firstAngle);
 
@@ -109,6 +107,7 @@ public class AbsoluteDirection_new extends LinearOpMode {
         double boxx = gamepad1.left_stick_x;
         double rightstickx = Math.abs( gamepad1.right_stick_x );
         double leftstick = Math.abs( Math.sqrt( Math.pow( boxy, 2 ) + Math.pow( boxx, 2 ) ) );
+
         if ( leftstick < 0.2 ){
             drive_speed = 0;
         } else if ( leftstick < 0.5 ){
@@ -123,6 +122,7 @@ public class AbsoluteDirection_new extends LinearOpMode {
         } else if ( rightstickx < 1 ){
             drive_speed = drive_speed_max;
         }
+
         //imu angle calculate
         if ( angle > 180 ){
             angle = angle - 360;
@@ -164,6 +164,7 @@ public class AbsoluteDirection_new extends LinearOpMode {
             xFL = -( angle / 45 - 3 );
             xBR = -( angle / 45 - 3 );
         }
+
         //wheels caculate
         FR.setPower(( drive_y * yFR - drive_x * xFR + drive_o) * drive_speed );
         BR.setPower(( drive_y * yBR - drive_x * xBR + drive_o) * drive_speed );

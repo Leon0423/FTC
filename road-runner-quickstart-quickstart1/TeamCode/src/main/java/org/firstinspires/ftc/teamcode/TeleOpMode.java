@@ -12,12 +12,7 @@ public class TeleOpMode extends LinearOpMode {
 
     private DcMotor FR, FL, BR, BL;
     private double drive, turn, strafe;
-    double drive_speed;
-    private double drive_speed_max = 0.7;
-    private double fr, fl, br, bl, scale;
-    private double boxy, boxx;
     private double rightstickx, leftstick;
-    private double max;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -29,7 +24,7 @@ public class TeleOpMode extends LinearOpMode {
         while(opModeIsActive()){
             init_telemetry();
             teleOpControls();
-            chassis_power();
+            wheels_power();
         }
     }
 
@@ -58,14 +53,14 @@ public class TeleOpMode extends LinearOpMode {
         turn = gamepad1.right_stick_x;      //自旋
         strafe = -gamepad1.left_stick_x;    //平移
 
-        boxy = gamepad1.left_stick_y;
-        boxx = gamepad1.left_stick_x;
+        double boxy = gamepad1.left_stick_y;
+        double boxx = gamepad1.left_stick_x;
         rightstickx = Math.abs (gamepad1.right_stick_x);
         leftstick = Math.abs (Math.sqrt (Math.pow (boxy, 2) + Math.pow (boxx, 2)));
     }
 
     public double scaling_power(double fr, double fl, double br, double bl){
-        max = Math.max( Math.max( Math.abs(fr), Math.abs(fl) ), Math.max( Math.abs(br), Math.abs(bl) ));
+        double max = Math.max(Math.max(Math.abs(fr), Math.abs(fl)), Math.max(Math.abs(br), Math.abs(bl)));
         if (max <= 1){
             max = 1;
         }
@@ -73,6 +68,8 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public double drive_speed(double rightstickx, double leftstick){
+        double drive_speed;
+        double drive_speed_max = 0.7;
         if(leftstick < 0.2){
             drive_speed = 0;
         } else if(leftstick < 0.5){
@@ -90,13 +87,13 @@ public class TeleOpMode extends LinearOpMode {
         return drive_speed;
     }
 
-    public void chassis_power(){
-        fr = (- drive - strafe + turn) * drive_speed(rightstickx, leftstick);
-        fl = (- drive + strafe - turn) * drive_speed(rightstickx, leftstick);
-        br = (- drive + strafe + turn) * drive_speed(rightstickx, leftstick);
-        bl = (- drive - strafe - turn) * drive_speed(rightstickx, leftstick);
+    public void wheels_power(){
+        double fr = (-drive - strafe + turn) * drive_speed(rightstickx, leftstick);
+        double fl = (-drive + strafe - turn) * drive_speed(rightstickx, leftstick);
+        double br = (-drive + strafe + turn) * drive_speed(rightstickx, leftstick);
+        double bl = (-drive - strafe - turn) * drive_speed(rightstickx, leftstick);
 
-        scale = scaling_power(fr, fl, br, bl);
+        double scale = scaling_power(fr, fl, br, bl);
         FR.setPower(fr / scale);
         FL.setPower(fl / scale);
         BR.setPower(br / scale);
