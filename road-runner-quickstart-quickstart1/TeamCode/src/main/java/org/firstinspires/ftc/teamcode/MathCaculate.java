@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class MathCaculate extends LinearOpMode {
 
     private DcMotor FR, FL, BR, BL;
-    private double drive_speed = 0.6;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -46,6 +45,7 @@ public class MathCaculate extends LinearOpMode {
                 br /= power + Math.abs(turn);
             }
 
+            double drive_speed = 0.6;
             FL.setPower(fl * drive_speed);
             FR.setPower(fr * drive_speed);
             BL.setPower(bl * drive_speed);
@@ -62,10 +62,10 @@ public class MathCaculate extends LinearOpMode {
         FL.setDirection(DcMotorSimple.Direction.REVERSE);
         BL.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        FR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        FL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        BR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        BL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        FR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        FL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        BR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        BL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         FL.setZeroPowerBehavior(BRAKE);
         BL.setZeroPowerBehavior(BRAKE);
