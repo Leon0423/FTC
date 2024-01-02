@@ -77,6 +77,9 @@ public class MathCaculate extends LinearOpMode {
         telemetry.addData("BL", BL.getCurrentPosition());
         telemetry.addData("FR", FR.getCurrentPosition());
         telemetry.addData("BR", BR.getCurrentPosition());
+        telemetry.addData("left_stick_x", gamepad1.left_stick_x);
+        telemetry.addData("left_stick_y", -gamepad1.left_stick_y);
+        telemetry.addData("right_stick_x", gamepad1.right_stick_x);
         telemetry.update();
     }
 }
