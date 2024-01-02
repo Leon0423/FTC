@@ -46,7 +46,7 @@ public class MathCaculate extends LinearOpMode {
                 br /= power + Math.abs(turn);
             }
 
-            FL.setPower(fl *drive_speed);
+            FL.setPower(fl * drive_speed);
             FR.setPower(fr * drive_speed);
             BL.setPower(bl * drive_speed);
             BR.setPower(br * drive_speed);
@@ -59,13 +59,13 @@ public class MathCaculate extends LinearOpMode {
         BR=hardwareMap.get(DcMotor.class, "BR");
         BL=hardwareMap.get(DcMotor.class, "BL");
 
-        FR.setDirection(DcMotorSimple.Direction.REVERSE);
-        BR.setDirection(DcMotorSimple.Direction.REVERSE);
+        FL.setDirection(DcMotorSimple.Direction.REVERSE);
+        BL.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        FR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        FL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        BR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        BL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        FR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        FL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         FL.setZeroPowerBehavior(BRAKE);
         BL.setZeroPowerBehavior(BRAKE);
