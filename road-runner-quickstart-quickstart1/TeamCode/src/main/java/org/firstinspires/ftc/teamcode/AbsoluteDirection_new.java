@@ -22,8 +22,7 @@ public class AbsoluteDirection_new extends LinearOpMode {
 
     //set variable
     double drive_o, drive_y, drive_x;
-    private double drive_speed;
-    double drive_speed_max = 0.7;
+    private double drive_speed = 0.7;
     private double angle;
     double yFL, yBL, yFR, yBR;
     double xFL, xBL, xFR, xBR;
@@ -101,27 +100,6 @@ public class AbsoluteDirection_new extends LinearOpMode {
         //get imu information
         //TODO: check AxesOrder.ZXY or something
         angle = -(imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).firstAngle);
-
-        //gamepad caculate
-        double boxy = gamepad1.left_stick_y;
-        double boxx = gamepad1.left_stick_x;
-        double rightstickx = Math.abs( gamepad1.right_stick_x );
-        double leftstick = Math.abs( Math.sqrt( Math.pow( boxy, 2 ) + Math.pow( boxx, 2 ) ) );
-
-        if ( leftstick < 0.2 ){
-            drive_speed = 0;
-        } else if ( leftstick < 0.5 ){
-            drive_speed = 0.4;
-        } else if ( leftstick < 1 ){
-            drive_speed = drive_speed_max;
-        }
-        if ( rightstickx < 0.2 ){
-            drive_speed = 0;
-        } else if ( rightstickx < 0.5 ) {
-            drive_speed = 0.4;
-        } else if ( rightstickx < 1 ){
-            drive_speed = drive_speed_max;
-        }
 
         //imu angle calculate
         if ( angle > 180 ){

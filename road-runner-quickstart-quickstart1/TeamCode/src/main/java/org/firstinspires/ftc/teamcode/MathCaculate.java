@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class MathCaculate extends LinearOpMode {
 
     private DcMotor FR, FL, BR, BL;
+    private double drive_speed = 0.6;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -45,10 +46,10 @@ public class MathCaculate extends LinearOpMode {
                 br /= power + Math.abs(turn);
             }
 
-            FL.setPower(fl);
-            FR.setPower(fr);
-            BL.setPower(bl);
-            BR.setPower(br);
+            FL.setPower(fl *drive_speed);
+            FR.setPower(fr * drive_speed);
+            BL.setPower(bl * drive_speed);
+            BR.setPower(br * drive_speed);
         }
     }
 
@@ -77,9 +78,6 @@ public class MathCaculate extends LinearOpMode {
         telemetry.addData("BL", BL.getCurrentPosition());
         telemetry.addData("FR", FR.getCurrentPosition());
         telemetry.addData("BR", BR.getCurrentPosition());
-        telemetry.addData("left_stick_x", gamepad1.left_stick_x);
-        telemetry.addData("left_stick_y", -gamepad1.left_stick_y);
-        telemetry.addData("right_stick_x", gamepad1.right_stick_x);
         telemetry.update();
     }
 }

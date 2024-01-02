@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class TeleOpMode extends LinearOpMode {
 
     private DcMotor FR, FL, BR, BL;
-
+    private double drive_speed = 0.6;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -24,21 +24,13 @@ public class TeleOpMode extends LinearOpMode {
             init_telemetry();
 
             double drive = -gamepad1.left_stick_y;     //前進
-            double turn = gamepad1.right_stick_x;      //自旋
             double strafe = -gamepad1.left_stick_x;    //平移
+            double turn = gamepad1.right_stick_x;      //自旋
 
-            double boxy = gamepad1.left_stick_y;
-            double boxx = gamepad1.left_stick_x;
-            double rightstickx = Math.abs(gamepad1.right_stick_x);
-            double leftstick = Math.abs(Math.sqrt(Math.pow(boxy, 2) + Math.pow(boxx, 2)));
-
-            double drive_speed_max = 0.7;
-
-
-            double fr = (-drive - strafe + turn);
-            double fl = (-drive + strafe - turn);
-            double br = (-drive + strafe + turn);
-            double bl = (-drive - strafe - turn);
+            double fr = (-drive - strafe + turn) * drive_speed;
+            double fl = (-drive + strafe - turn) * drive_speed;
+            double br = (-drive + strafe + turn) * drive_speed;
+            double bl = (-drive - strafe - turn) * drive_speed;
             double scale = scaling_power(fr, fl, br, bl);
 
             FR.setPower(fr / scale);
