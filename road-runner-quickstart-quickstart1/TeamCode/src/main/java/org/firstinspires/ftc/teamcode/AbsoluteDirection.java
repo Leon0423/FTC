@@ -11,13 +11,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name="AbsoluteDirectionDrive_new")
-public class AbsoluteDirection_new extends LinearOpMode {
+@TeleOp(name="AbsoluteDirectionDrive")
+public class AbsoluteDirection extends LinearOpMode {
 
     //set motor & servo & imu
     private DcMotorEx FL, BL, FR, BR;
     private BNO055IMU imu;
-
     double imu_x, imu_y, imu_z;
 
     //set variable
@@ -73,12 +72,6 @@ public class AbsoluteDirection_new extends LinearOpMode {
     public void init_imu() {
         //set imu
         BNO055IMU.Parameters IMU_Parameters = new BNO055IMU.Parameters();
-
-        //TODO: check if it help or not
-        // IMU_Parameters.mode = BNO055IMU.SensorMode.IMU;
-        // IMU_Parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
-        // IMU_Parameters.calibrationDataFile = "BNO055IMUCalibration. json";
-
         IMU_Parameters.mode = BNO055IMU.SensorMode.IMU;
         IMU_Parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
         IMU_Parameters.calibrationDataFile = "BNO055IMUCalibration. json";
