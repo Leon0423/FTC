@@ -10,5 +10,6 @@ public class AutonomousMode extends Autonomous_Base {
         init_hardware();
         waitForStart();
         //anything you want can be written here
+        DriveStraight(500, 0, 60, 2);
     }
 }
