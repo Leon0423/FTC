@@ -24,6 +24,7 @@ public class AbsoluteDirection extends LinearOpMode {
     private double angle;
     double yFL, yBL, yFR, yBR;
     double xFL, xBL, xFR, xBR;
+    double drive_speed = 1 ;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -136,7 +137,6 @@ public class AbsoluteDirection extends LinearOpMode {
         }
 
         //wheels caculate
-        double drive_speed = 0.65 ;
         FR.setPower(( drive_y * yFR - drive_x * xFR + drive_o) * drive_speed);
         BR.setPower(( drive_y * yBR - drive_x * xBR + drive_o) * drive_speed);
         FL.setPower(( drive_y * yFL - drive_x * xFL - drive_o) * drive_speed);
