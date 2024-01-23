@@ -67,7 +67,7 @@ public class TeleOpMode extends LinearOpMode {
             //intake_part
             if (gamepad1.a){
                 intake.setPower(1);
-            }else {
+            }else if (gamepad1.b){
                 intake.setPower(0);
             }
         }
@@ -126,6 +126,8 @@ public class TeleOpMode extends LinearOpMode {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         intake.setZeroPowerBehavior(FLOAT);
+
+        intake.setPower(0);
     }
 
     public double scaling_power(double fr, double fl, double br, double bl){
