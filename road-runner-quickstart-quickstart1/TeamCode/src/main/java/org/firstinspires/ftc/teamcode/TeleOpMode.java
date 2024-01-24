@@ -4,6 +4,7 @@ import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.FLOAT;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -12,13 +13,18 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 @TeleOp(name = "TeleOpMode")
 public class TeleOpMode extends LinearOpMode {
 
-    private DcMotorEx FR, FL, BR, BL;
-    private DcMotorEx Slide_left, Slide_right;
-    private DcMotorEx intake;
+    private DcMotorEx FR = null, FL = null, BR = null, BL = null;
+    private DcMotorEx Slide_left = null, Slide_right = null;
+    private DcMotorEx intake = null;
     private double drive_speed = 1 ;
-    private double Slide_speed = 0.1;
+    private double Slide_speed = 0.3;
+    private int MAX_Slide_pos = 100;
+    int incrementAngle;
+    int currentRotation;
+    int targetRotation;
 
-    private int motor_pos = 0;
+    // 定義一個變數來追蹤 intake 的狀態
+    boolean intakeRunning = false;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -39,36 +45,63 @@ public class TeleOpMode extends LinearOpMode {
             double fl = (-drive + strafe - turn) * drive_speed;
             double br = (-drive + strafe + turn) * drive_speed;
             double bl = (-drive - strafe - turn) * drive_speed;
-            double scale = scaling_power(fr, fl, br, bl);
 
+            double scale = scaling_power(fr, fl, br, bl);
             FR.setPower(fr / scale);
             FL.setPower(fl / scale);
             BR.setPower(br / scale);
             BL.setPower(bl / scale);
 
             //Slide_part
-            int per_updown;
+            double rightTriggerValue = gamepad1.right_trigger;
+            double leftTriggerValue = gamepad1.left_trigger;
 
-            if (gamepad1.right_trigger > 0.5 || gamepad1.left_trigger > 0.5){
-                per_updown = 10;
+            incrementAngle = 10; // 每次上升的固定角度
+            currentRotation = Slide_left.getCurrentPosition(); // 當前的馬達位置
+            targetRotation = currentRotation + (int) (incrementAngle * (rightTriggerValue - leftTriggerValue));
+
+            // 限制目標旋轉度數在0到500之間
+            targetRotation = Math.min(Math.max(targetRotation, 0), MAX_Slide_pos);
+
+            // 設定馬達的目標Encoder位置
+            Slide_left.setTargetPosition(targetRotation);
+            Slide_right.setTargetPosition(targetRotation);
+
+            // 啟動馬達運動
+            Slide_left.setPower((rightTriggerValue - leftTriggerValue) * Slide_speed);  // 設定左馬達功率
+            Slide_right.setPower((rightTriggerValue - leftTriggerValue) * Slide_speed); // 設定右馬達功率
+
+            // 等待馬達到達目標位置
+            while (Slide_left.isBusy() || Slide_right.isBusy()) {
+                // 在這裡等待，不執行其他動作
+            }
+
+            // 運動完成後停止馬達
+            Slide_left.setPower(0);
+            Slide_right.setPower(0);
+
+            intake();
+        }
+    }
+
+    public void intake() {
+        // 在遙控器的按鍵 A 上設定的按鍵，這裡以 gamepad1 的 A 按鍵為例
+        if (gamepad1.a) {
+            // 如果 A 按鍵被按下
+
+            if (!intakeRunning) {
+                // 如果 intake 沒有在運行，啟動 intake
+                intake.setPower(1.0);  // 可以根據需要調整功率
+                intakeRunning = true;
             } else {
-                per_updown = 5;
-            }
-
-            if(gamepad1.right_trigger > 0 && motor_pos < 1000) {
-                motor_pos += per_updown;
-            }
-            else if(gamepad1.left_trigger > 0 && motor_pos > 0) {
-                motor_pos -= per_updown;
-            }
-            Slide_right.setTargetPosition(motor_pos);
-            Slide_left.setTargetPosition(motor_pos);
-
-            //intake_part
-            if (gamepad1.a){
-                intake.setPower(1);
-            }else if (gamepad1.b){
+                // 如果 intake 已經在運行，停止 intake
                 intake.setPower(0);
+                intakeRunning = false;
+            }
+
+            // 等待按鍵釋放，避免連續多次啟動或停止
+            while (gamepad1.a) {
+                // 等待按鍵釋放
             }
         }
     }
@@ -88,6 +121,11 @@ public class TeleOpMode extends LinearOpMode {
         BR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         BL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        FR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        FL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        BR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        BL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         FL.setZeroPowerBehavior(BRAKE);
         BL.setZeroPowerBehavior(BRAKE);
         FR.setZeroPowerBehavior(BRAKE);
@@ -96,37 +134,26 @@ public class TeleOpMode extends LinearOpMode {
         //slide_Base
         Slide_left=hardwareMap.get(DcMotorEx.class, "SL");
         Slide_right=hardwareMap.get(DcMotorEx.class, "SR");
-
         Slide_right.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        Slide_right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Slide_left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
+        Slide_left.setDirection(DcMotorSimple.Direction.REVERSE);
         Slide_right.setZeroPowerBehavior(BRAKE);
         Slide_left.setZeroPowerBehavior(BRAKE);
 
         Slide_left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         Slide_right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        Slide_right.setTargetPosition(0);
-        Slide_left.setTargetPosition(0);
-
+        Slide_right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        Slide_left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         Slide_right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         Slide_left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         Slide_right.setTargetPosition(0);
         Slide_left.setTargetPosition(0);
 
-        Slide_right.setPower(Slide_speed);
-        Slide_left.setPower(Slide_speed);
-
         //intake_Base
         intake=hardwareMap.get(DcMotorEx.class, "intake");
-
+        intake.setDirection(DcMotorSimple.Direction.REVERSE);
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
         intake.setZeroPowerBehavior(FLOAT);
-
         intake.setPower(0);
     }
 
@@ -139,22 +166,22 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void init_telemetry(){
-        telemetry.addData("drive_speed", drive_speed);
-        telemetry.addData("Slide_speed", Slide_speed);
-
-        telemetry.addData("left_trigger", gamepad1.left_trigger);
-        telemetry.addData("right_trigger", gamepad1.right_trigger);
-
-        telemetry.addData("motor_pos", motor_pos);
-
+        //Slide
         telemetry.addData("Slide_right", Slide_right.getCurrentPosition());
         telemetry.addData("Slide_left", Slide_left.getCurrentPosition());
+        telemetry.addData("left_trigger", gamepad1.left_trigger);
+        telemetry.addData("right_trigger", gamepad1.right_trigger);
+        telemetry.addData("incrementAngle", incrementAngle);
+        telemetry.addData("currentRotation", currentRotation);
+        telemetry.addData("targetRotation", targetRotation);
+        telemetry.addData("Slide_speed\n", Slide_speed);
 
+        //drive
+        telemetry.addData("drive_speed", drive_speed);
         telemetry.addData("FL", FL.getCurrentPosition());
         telemetry.addData("BL", BL.getCurrentPosition());
         telemetry.addData("FR", FR.getCurrentPosition());
         telemetry.addData("BR", BR.getCurrentPosition());
-
         telemetry.addData("left_stick_x", -gamepad1.left_stick_x);
         telemetry.addData("left_stick_y", -gamepad1.left_stick_y);
         telemetry.addData("right_stick_x", gamepad1.right_stick_x);
