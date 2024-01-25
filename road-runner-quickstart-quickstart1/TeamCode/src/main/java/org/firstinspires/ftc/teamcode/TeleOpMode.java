@@ -14,10 +14,11 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class TeleOpMode extends LinearOpMode {
 
     private DcMotorEx FR = null, FL = null, BR = null, BL = null;
+    double fl, fr, bl, br;
     private DcMotorEx Slide_left = null, Slide_right = null;
     private DcMotorEx intake = null;
     private double drive_speed = 1 ;
-    private double Slide_speed = 0.3;
+    private double Slide_speed = 0.1;
     private int MAX_Slide_pos = 100;
     int incrementAngle;
     int currentRotation;
@@ -36,52 +37,60 @@ public class TeleOpMode extends LinearOpMode {
         while(opModeIsActive()){
             init_telemetry();
 
-            //drive_part
-            double drive = -gamepad1.left_stick_y;     //前進
-            double strafe = -gamepad1.left_stick_x;    //平移
-            double turn = gamepad1.right_stick_x;      //自旋
+            drive();
 
-            double fr = (-drive - strafe + turn) * drive_speed;
-            double fl = (-drive + strafe - turn) * drive_speed;
-            double br = (-drive + strafe + turn) * drive_speed;
-            double bl = (-drive - strafe - turn) * drive_speed;
-
-            double scale = scaling_power(fr, fl, br, bl);
-            FR.setPower(fr / scale);
-            FL.setPower(fl / scale);
-            BR.setPower(br / scale);
-            BL.setPower(bl / scale);
-
-            //Slide_part
-            double rightTriggerValue = gamepad1.right_trigger;
-            double leftTriggerValue = gamepad1.left_trigger;
-
-            incrementAngle = 10; // 每次上升的固定角度
-            currentRotation = Slide_left.getCurrentPosition(); // 當前的馬達位置
-            targetRotation = currentRotation + (int) (incrementAngle * (rightTriggerValue - leftTriggerValue));
-
-            // 限制目標旋轉度數在0到500之間
-            targetRotation = Math.min(Math.max(targetRotation, 0), MAX_Slide_pos);
-
-            // 設定馬達的目標Encoder位置
-            Slide_left.setTargetPosition(targetRotation);
-            Slide_right.setTargetPosition(targetRotation);
-
-            // 啟動馬達運動
-            Slide_left.setPower((rightTriggerValue - leftTriggerValue) * Slide_speed);  // 設定左馬達功率
-            Slide_right.setPower((rightTriggerValue - leftTriggerValue) * Slide_speed); // 設定右馬達功率
-
-            // 等待馬達到達目標位置
-            while (Slide_left.isBusy() || Slide_right.isBusy()) {
-                // 在這裡等待，不執行其他動作
-            }
-
-            // 運動完成後停止馬達
-            Slide_left.setPower(0);
-            Slide_right.setPower(0);
+            slide();
 
             intake();
         }
+    }
+
+    public  void drive(){
+        //drive_part
+        double drive = -gamepad1.left_stick_y;     //前進
+        double strafe = -gamepad1.left_stick_x;    //平移
+        double turn = gamepad1.right_stick_x;      //自旋
+
+        fr = (-drive - strafe + turn) * drive_speed;
+        fl = (-drive + strafe - turn) * drive_speed;
+        br = (-drive + strafe + turn) * drive_speed;
+        bl = (-drive - strafe - turn) * drive_speed;
+
+        double scale = scaling_power(fr, fl, br, bl);
+        FR.setPower(fr / scale);
+        FL.setPower(fl / scale);
+        BR.setPower(br / scale);
+        BL.setPower(bl / scale);
+    }
+
+    public void slide(){
+        //Slide_part
+        double rightTriggerValue = gamepad1.right_trigger;
+        double leftTriggerValue = gamepad1.left_trigger;
+
+        incrementAngle = 5; // 每次上升的固定角度
+        currentRotation = Slide_left.getCurrentPosition(); // 當前的馬達位置
+        targetRotation = currentRotation + (int) (incrementAngle * (rightTriggerValue - leftTriggerValue));
+
+        // 限制目標旋轉度數在0到500之間
+        targetRotation = Math.min(Math.max(targetRotation, 0), MAX_Slide_pos);
+
+        // 設定馬達的目標Encoder位置
+        Slide_left.setTargetPosition(targetRotation);
+        Slide_right.setTargetPosition(targetRotation);
+
+        // 啟動馬達運動
+        Slide_left.setPower((rightTriggerValue - leftTriggerValue) * Slide_speed);  // 設定左馬達功率
+        Slide_right.setPower((rightTriggerValue - leftTriggerValue) * Slide_speed); // 設定右馬達功率
+
+        // 等待馬達到達目標位置
+        while (Slide_left.isBusy() || Slide_right.isBusy()) {
+            // 在這裡等待，不執行其他動作
+        }
+
+        // 運動完成後停止馬達
+        Slide_left.setPower(0);
+        Slide_right.setPower(0);
     }
 
     public void intake() {
@@ -120,11 +129,6 @@ public class TeleOpMode extends LinearOpMode {
         FL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         BR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         BL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        FR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        FL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        BR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        BL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         FL.setZeroPowerBehavior(BRAKE);
         BL.setZeroPowerBehavior(BRAKE);
@@ -174,14 +178,14 @@ public class TeleOpMode extends LinearOpMode {
         telemetry.addData("incrementAngle", incrementAngle);
         telemetry.addData("currentRotation", currentRotation);
         telemetry.addData("targetRotation", targetRotation);
-        telemetry.addData("Slide_speed\n", Slide_speed);
+        telemetry.addData("Slide_speed", Slide_speed);
 
         //drive
         telemetry.addData("drive_speed", drive_speed);
-        telemetry.addData("FL", FL.getCurrentPosition());
-        telemetry.addData("BL", BL.getCurrentPosition());
-        telemetry.addData("FR", FR.getCurrentPosition());
-        telemetry.addData("BR", BR.getCurrentPosition());
+        telemetry.addData("fl", fl);
+        telemetry.addData("bl", bl)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ;
+        telemetry.addData("fr", fr);
+        telemetry.addData("br", br);
         telemetry.addData("left_stick_x", -gamepad1.left_stick_x);
         telemetry.addData("left_stick_y", -gamepad1.left_stick_y);
         telemetry.addData("right_stick_x", gamepad1.right_stick_x);
