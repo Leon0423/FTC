@@ -42,6 +42,8 @@ public class TeleOpMode extends LinearOpMode {
             slide();
 
             intake();
+
+            idle();
         }
     }
 
@@ -86,6 +88,7 @@ public class TeleOpMode extends LinearOpMode {
         // 等待馬達到達目標位置
         while (Slide_left.isBusy() || Slide_right.isBusy()) {
             // 在這裡等待，不執行其他動作
+            idle();
         }
 
         // 運動完成後停止馬達
@@ -111,6 +114,7 @@ public class TeleOpMode extends LinearOpMode {
             // 等待按鍵釋放，避免連續多次啟動或停止
             while (gamepad1.a) {
                 // 等待按鍵釋放
+                idle();
             }
         }
     }
