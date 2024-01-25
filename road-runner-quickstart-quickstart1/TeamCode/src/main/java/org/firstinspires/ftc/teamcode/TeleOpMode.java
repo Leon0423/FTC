@@ -4,8 +4,8 @@ import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.FLOAT;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -14,18 +14,25 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class TeleOpMode extends LinearOpMode {
 
     private DcMotorEx FR = null, FL = null, BR = null, BL = null;
-    double fl, fr, bl, br;
+    private double fl, fr, bl, br;
+
+    //slide
     private DcMotorEx Slide_left = null, Slide_right = null;
     private DcMotorEx intake = null;
     private double drive_speed = 1 ;
     private double Slide_speed = 0.1;
-    private int MAX_Slide_pos = 100;
-    int incrementAngle;
-    int currentRotation;
-    int targetRotation;
+    private int MAX_Slide_pos = 50;
+    private int incrementAngle;
+    private int currentRotation;
+    private int targetRotation;
+    private boolean intakeRunning = false; // 定義一個變數來追蹤 intake 的狀態
 
-    // 定義一個變數來追蹤 intake 的狀態
-    boolean intakeRunning = false;
+    //servo
+    private Servo clawServo = null;
+    // 伺服馬達的初始位置
+    private double clawPosition = 0.5;
+    // 用來切換夾子狀態的變數
+    private boolean toggleButtonPressed = false;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -42,6 +49,8 @@ public class TeleOpMode extends LinearOpMode {
             slide();
 
             intake();
+
+            claw();
 
             idle();
         }
@@ -74,7 +83,7 @@ public class TeleOpMode extends LinearOpMode {
         currentRotation = Slide_left.getCurrentPosition(); // 當前的馬達位置
         targetRotation = currentRotation + (int) (incrementAngle * (rightTriggerValue - leftTriggerValue));
 
-        // 限制目標旋轉度數在0到500之間
+        // 限制目標旋轉度數在0到MAX_Slide_pos之間
         targetRotation = Math.min(Math.max(targetRotation, 0), MAX_Slide_pos);
 
         // 設定馬達的目標Encoder位置
@@ -88,10 +97,10 @@ public class TeleOpMode extends LinearOpMode {
         // 等待馬達到達目標位置
         while (Slide_left.isBusy() || Slide_right.isBusy()) {
             // 在這裡等待，不執行其他動作
-            idle();
         }
 
         // 運動完成後停止馬達
+        if ()
         Slide_left.setPower(0);
         Slide_right.setPower(0);
     }
@@ -117,6 +126,30 @@ public class TeleOpMode extends LinearOpMode {
                 idle();
             }
         }
+    }
+
+    public void claw(){
+        // 使用遙控器的按鈕控制伺服馬達的位置
+        if (gamepad1.a && !toggleButtonPressed) {
+            // 切換夾子狀態
+            if (clawPosition == 0.0) {
+                clawPosition = 1.0; // 設定為張開的位置
+            } else {
+                clawPosition = 0.0; // 設定為夾緊的位置
+            }
+
+            // 設定按鈕為已按下，避免連續變更
+            toggleButtonPressed = true;
+        } else if (!gamepad1.a) {
+            // 如果按鈕釋放，設定按鈕為未按下
+            toggleButtonPressed = false;
+        }
+
+        // 設定伺服馬達的位置
+        clawServo.setPosition(clawPosition);
+
+        // 讓控制迴圈平穩執行
+        idle();
     }
 
     public void init_hardware(){
@@ -163,6 +196,9 @@ public class TeleOpMode extends LinearOpMode {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         intake.setZeroPowerBehavior(FLOAT);
         intake.setPower(0);
+
+        // Servo_Base
+        clawServo = hardwareMap.get(Servo.class, "claw");
     }
 
     public double scaling_power(double fr, double fl, double br, double bl){
@@ -194,5 +230,7 @@ public class TeleOpMode extends LinearOpMode {
         telemetry.addData("left_stick_y", -gamepad1.left_stick_y);
         telemetry.addData("right_stick_x", gamepad1.right_stick_x);
         telemetry.update();
+
+        //claw
     }
 }
