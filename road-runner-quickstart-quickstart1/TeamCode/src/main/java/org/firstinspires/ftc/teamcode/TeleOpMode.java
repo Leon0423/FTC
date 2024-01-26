@@ -20,8 +20,8 @@ public class TeleOpMode extends LinearOpMode {
     //slide
     private DcMotorEx slide_left = null, slide_right = null;
     private double drive_speed = 1 ;
-    private double slide_speed = 0.2;
-    private int maxEncoderValue = 100;
+    private double slide_speed = 0.1;
+    private int maxEncoderValue = 550;
     private int minEncoderValue = 0;
 
     //intake
@@ -89,15 +89,11 @@ public class TeleOpMode extends LinearOpMode {
             slide_left.setPower(slide_speed);  // 設定馬達功率，可以根據需要調整
             slide_right.setPower(slide_speed);
 
-            idle();
-
-        } else if (leftTriggerValue > 0 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() >= minEncoderValue) {
+        } else if (leftTriggerValue > 0 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
 
             // 如果左 trigger 被按下，反向啟動滑軌
-            slide_left.setPower(-slide_speed);  // 設定馬達功率，可以根據需要調整
-            slide_right.setPower(-slide_speed);
-
-            idle();
+            slide_left.setPower(-1 * slide_speed);  // 設定馬達功率，可以根據需要調整
+            slide_right.setPower(-1 * slide_speed);
 
         } else {
             // 如果 trigger 都沒有被按下，停止滑軌
@@ -187,11 +183,6 @@ public class TeleOpMode extends LinearOpMode {
         slide_right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         slide_right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         slide_left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        slide_right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide_left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        slide_right.setTargetPosition(0);
-        slide_left.setTargetPosition(0);
 
         //intake_Base
         intake=hardwareMap.get(DcMotorEx.class, "intake");
