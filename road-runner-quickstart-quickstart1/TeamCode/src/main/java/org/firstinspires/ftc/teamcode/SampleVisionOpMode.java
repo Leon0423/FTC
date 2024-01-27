@@ -16,7 +16,7 @@ public class SampleVisionOpMode extends LinearOpMode {
     @Override
     public void runOpMode() {
 
-        visionProcessor = new CSVisionProcessor(50, 0, 0, 0, 0, 0, 0); //use this contstructor to specify the rectange size and position
+        visionProcessor = new CSVisionProcessor(80, 250, 150, 250, 250, 400, 250); //use this contstructor to specify the rectange size and position
         //i.e. visionProcessor = new CSVisionProcessor(100, 100, 50, 150, 50, 200, 50);
         visionPortal = VisionPortal.easyCreateWithDefaults(hardwareMap.get(WebcamName.class, "Webcam 1"), visionProcessor);
 
