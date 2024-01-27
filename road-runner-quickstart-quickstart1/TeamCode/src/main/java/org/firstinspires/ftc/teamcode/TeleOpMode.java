@@ -19,9 +19,9 @@ public class TeleOpMode extends LinearOpMode {
 
     //slide
     private DcMotorEx slide_left = null, slide_right = null;
-    private double drive_speed = 1 ;
-    private double slide_speed = 0.1;
-    private int maxEncoderValue = 550;
+    private double drive_speed = 0.8 ;
+    private double slide_speed = 0.7;
+    private int maxEncoderValue = 2800;
     private int minEncoderValue = 0;
 
     //intake
@@ -83,7 +83,7 @@ public class TeleOpMode extends LinearOpMode {
         double leftTriggerValue = gamepad1.left_trigger;
 
         // 如果右 trigger 被按下，啟動滑軌
-        if (rightTriggerValue > 0 && slide_left.getCurrentPosition() <= maxEncoderValue && slide_right.getCurrentPosition() <= maxEncoderValue) {
+        if (rightTriggerValue > 0 && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
 
             // 啟動馬達運動
             slide_left.setPower(slide_speed);  // 設定馬達功率，可以根據需要調整
@@ -92,8 +92,8 @@ public class TeleOpMode extends LinearOpMode {
         } else if (leftTriggerValue > 0 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
 
             // 如果左 trigger 被按下，反向啟動滑軌
-            slide_left.setPower(-1 * slide_speed);  // 設定馬達功率，可以根據需要調整
-            slide_right.setPower(-1 * slide_speed);
+            slide_left.setPower(-slide_speed);  // 設定馬達功率，可以根據需要調整
+            slide_right.setPower(-slide_speed);
 
         } else {
             // 如果 trigger 都沒有被按下，停止滑軌
@@ -104,24 +104,55 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void intake() {
-        // 在遙控器的按鍵 A 上設定的按鍵，這裡以 gamepad1 的 A 按鍵為例
-        if (gamepad1.a) {
-            // 如果 A 按鍵被按下
 
-            if (!intakeRunning) {
-                // 如果 intake 沒有在運行，啟動 intake
-                intake.setPower(1.0);  // 可以根據需要調整功率
-                intakeRunning = true;
-            } else {
-                // 如果 intake 已經在運行，停止 intake
-                intake.setPower(0);
-                intakeRunning = false;
+        if(gamepad1.a || gamepad1.b) {
+            if (gamepad1.a) {
+                // 如果 A 按鍵被按下
+                if (!intakeRunning) {
+                    // 如果 intake 沒有在運行，啟動 intake
+                    intake.setPower(1.0);  // 可以根據需要調整功率
+                    intakeRunning = true;
+                } else if (gamepad1.b){
+                    intake.setPower(-1.0);  // 可以根據需要調整功率
+                    intakeRunning = false;
+                } else {
+                    // 如果 intake 已經在運行，停止 intake
+                    intake.setPower(0);
+                    intakeRunning = false;
+                }
+
+                // 等待按鍵釋放，避免連續多次啟動或停止
+                while (gamepad1.a || gamepad1.b) {
+                    // 等待按鍵釋放
+                    idle();
+                }
+
+
             }
 
-            // 等待按鍵釋放，避免連續多次啟動或停止
-            while (gamepad1.a) {
-                // 等待按鍵釋放
-                idle();
+            if (gamepad1.b) {
+                // 如果 B 按鍵被按下
+                if (!intakeRunning) {
+                    // 如果 intake 沒有在運行，啟動 intake
+                    intake.setPower(-1.0);  // 可以根據需要調整功率
+                    intakeRunning = true;
+                } else if(gamepad1.a){
+                    // 如果 intake 沒有在運行，啟動 intake
+                    intake.setPower(1.0);  // 可以根據需要調整功率
+                    intakeRunning = false;
+                }else {
+                    // 如果 intake 已經在運行，停止 intake
+                    intake.setPower(0);
+                    intakeRunning = false;
+                }
+
+                // 等待按鍵釋放，避免連續多次啟動或停止
+                while (gamepad1.b || gamepad1.a) {
+                    // 等待按鍵釋放
+                    idle();
+                }
+
+
             }
         }
     }
