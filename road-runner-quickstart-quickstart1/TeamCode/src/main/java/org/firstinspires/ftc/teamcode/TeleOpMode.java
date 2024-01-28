@@ -5,10 +5,12 @@ import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.FLOAT;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 @TeleOp(name = "TeleOpMode")
 public class TeleOpMode extends LinearOpMode {
@@ -16,26 +18,36 @@ public class TeleOpMode extends LinearOpMode {
     //chassis
     private DcMotorEx FR = null, FL = null, BR = null, BL = null;
     private double fl, fr, bl, br;
+    private double drive_speed = 0.8 ;
 
     //slide
     private DcMotorEx slide_left = null, slide_right = null;
-    private double drive_speed = 0.8 ;
-    private double slide_speed = 0.7;
+    private double slidepos = 0;
+    private double slide_speed = 0.6;
     private int maxEncoderValue = 2800;
     private int minEncoderValue = 0;
+    private ElapsedTime xTimer = new ElapsedTime();
+    private double xInterval = 1;
 
     //intake
     private DcMotorEx intake = null;
     private boolean intakeRunning = false; // 定義一個變數來追蹤 intake 的狀態
 
-    /*
-    //servo
+    //claw
     private Servo clawServo = null;
     // 伺服馬達的初始位置
     private double clawPosition = 0.5;
     // 用來切換夾子狀態的變數
     private boolean toggleButtonPressed = false;
-     */
+
+    //drone
+    private Servo drone = null;
+    private double dronePosition = 0.62;
+
+    //arm
+    private CRServo armServo = null;
+    private double armPower = 0.3;
+
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -53,7 +65,11 @@ public class TeleOpMode extends LinearOpMode {
 
             intake();
 
-            //claw();
+            claw();
+
+            drone();
+
+            arm();
 
             idle();
         }
@@ -85,20 +101,45 @@ public class TeleOpMode extends LinearOpMode {
         // 如果右 trigger 被按下，啟動滑軌
         if (rightTriggerValue > 0 && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
 
+            slidepos += 0.1;
+
             // 啟動馬達運動
             slide_left.setPower(slide_speed);  // 設定馬達功率，可以根據需要調整
             slide_right.setPower(slide_speed);
 
+            slide_left.setTargetPosition( (int) slidepos);
+            slide_right.setTargetPosition((int) slidepos);
+
+
         } else if (leftTriggerValue > 0 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
+
+            slidepos -= 0.1;
 
             // 如果左 trigger 被按下，反向啟動滑軌
             slide_left.setPower(-slide_speed);  // 設定馬達功率，可以根據需要調整
             slide_right.setPower(-slide_speed);
 
+            slide_left.setTargetPosition((int) slidepos);
+            slide_right.setTargetPosition((int) slidepos);
+
         } else {
             // 如果 trigger 都沒有被按下，停止滑軌
             slide_left.setPower(0);
             slide_right.setPower(0);
+        }
+
+        if (gamepad1.y) {
+            if (xTimer.seconds() >= xInterval) {
+                slide_speed += 0.05;
+                xTimer.reset();
+            }
+        }
+
+        if (gamepad1.x) {
+            if (xTimer.seconds() >= xInterval) {
+                slide_speed -= 0.05;
+                xTimer.reset();
+            }
         }
 
     }
@@ -157,19 +198,19 @@ public class TeleOpMode extends LinearOpMode {
         }
     }
 
-    /*public void claw(){
+    public void claw(){
         // 使用遙控器的按鈕控制伺服馬達的位置
-        if (gamepad1.x && !toggleButtonPressed) {
+        if (gamepad1.right_bumper && !toggleButtonPressed) {
             // 切換夾子狀態
-            if (clawPosition == 0.0) {
-                clawPosition = 1.0; // 設定為張開的位置
+            if (clawPosition == 0.5) {
+                clawPosition = 0.65; // 設定為張開的位置
             } else {
-                clawPosition = 0.0; // 設定為夾緊的位置
+                clawPosition = 0.5; // 設定為夾緊的位置
             }
 
             // 設定按鈕為已按下，避免連續變更
             toggleButtonPressed = true;
-        } else if (!gamepad1.x) {
+        } else if (!gamepad1.right_bumper) {
             // 如果按鈕釋放，設定按鈕為未按下
             toggleButtonPressed = false;
         }
@@ -181,7 +222,24 @@ public class TeleOpMode extends LinearOpMode {
         idle();
     }
 
-     */
+    public void arm(){
+        if(gamepad1.dpad_up){
+            armServo.setPower(armPower);
+        }
+        if(gamepad1.dpad_down){
+            armServo.setPower(-armPower);
+        } else {
+            armServo.setPower(0);
+        }
+        idle();
+    }
+
+    public void drone(){
+        if(gamepad1.left_bumper){
+            drone.setPosition(dronePosition);
+        }
+    }
+
 
     public void init_hardware(){
         //chassis_Base
@@ -193,10 +251,10 @@ public class TeleOpMode extends LinearOpMode {
         FR.setDirection(DcMotorSimple.Direction.REVERSE);
         BR.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        FR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        FL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        BR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        BL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        FR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        FL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         FL.setZeroPowerBehavior(BRAKE);
         BL.setZeroPowerBehavior(BRAKE);
@@ -215,6 +273,14 @@ public class TeleOpMode extends LinearOpMode {
         slide_right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         slide_left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        slide_left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slide_right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slide_left.setTargetPosition(0);
+        slide_right.setTargetPosition(0);
+
+        slidepos = Math.min(Math.max(slidepos, 0), maxEncoderValue);
+
+
         //intake_Base
         intake=hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -222,8 +288,17 @@ public class TeleOpMode extends LinearOpMode {
         intake.setZeroPowerBehavior(FLOAT);
         intake.setPower(0);
 
-        // Servo_Base
-        //clawServo = hardwareMap.get(Servo.class, "claw");
+        //Servo_Base
+        clawServo = hardwareMap.get(Servo.class, "claw");
+        clawServo.setPosition(clawPosition);
+
+        drone = hardwareMap.get(Servo.class, "drone");
+        drone.setPosition(0.55);
+
+        armServo = hardwareMap.get(CRServo.class, "arm");
+        armServo.setPower(0);
+
+
     }
 
     public double scaling_power(double fr, double fl, double br, double bl){
@@ -236,11 +311,13 @@ public class TeleOpMode extends LinearOpMode {
 
     public void init_telemetry(){
         //Slide
+        telemetry.addData("slidepos", slidepos);
         telemetry.addData("Slide_right", slide_right.getCurrentPosition());
         telemetry.addData("Slide_left", slide_left.getCurrentPosition());
         telemetry.addData("left_trigger", gamepad1.left_trigger);
         telemetry.addData("right_trigger", gamepad1.right_trigger);
         telemetry.addData("Slide_speed", slide_speed);
+
 
         //drive
         telemetry.addData("drive_speed", drive_speed);
@@ -251,8 +328,11 @@ public class TeleOpMode extends LinearOpMode {
         telemetry.addData("left_stick_x", -gamepad1.left_stick_x);
         telemetry.addData("left_stick_y", -gamepad1.left_stick_y);
         telemetry.addData("right_stick_x", gamepad1.right_stick_x);
-        telemetry.update();
 
         //claw
+        telemetry.addData("clawPosition",clawPosition);
+        telemetry.addData("claw", clawServo.getPosition());
+
+        telemetry.update();
     }
 }
