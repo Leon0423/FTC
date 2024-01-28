@@ -23,7 +23,7 @@ public class TeleOpMode extends LinearOpMode {
     //slide
     private DcMotorEx slide_left = null, slide_right = null;
     private double slidepos = 0;
-    private double slide_speed = 0.6;
+    private double slide_speed = 0.7;
     private int maxEncoderValue = 2800;
     private int minEncoderValue = 0;
     private ElapsedTime xTimer = new ElapsedTime();
@@ -98,35 +98,30 @@ public class TeleOpMode extends LinearOpMode {
         double rightTriggerValue = gamepad1.right_trigger;
         double leftTriggerValue = gamepad1.left_trigger;
 
-        // 如果右 trigger 被按下，啟動滑軌
-        if (rightTriggerValue > 0 && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
+        slide_left.setTargetPosition( (int) slidepos);
+        slide_right.setTargetPosition((int) slidepos);
 
-            slidepos += 0.1;
+        slide_left.setPower(slide_speed);
+        slide_right.setPower(slide_speed);
 
-            // 啟動馬達運動
-            slide_left.setPower(slide_speed);  // 設定馬達功率，可以根據需要調整
+        if(rightTriggerValue > 0){
+            slide_left.setPower(slide_speed);
             slide_right.setPower(slide_speed);
-
-            slide_left.setTargetPosition( (int) slidepos);
-            slide_right.setTargetPosition((int) slidepos);
-
-
-        } else if (leftTriggerValue > 0 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
-
-            slidepos -= 0.1;
-
-            // 如果左 trigger 被按下，反向啟動滑軌
-            slide_left.setPower(-slide_speed);  // 設定馬達功率，可以根據需要調整
-            slide_right.setPower(-slide_speed);
-
-            slide_left.setTargetPosition((int) slidepos);
-            slide_right.setTargetPosition((int) slidepos);
-
-        } else {
-            // 如果 trigger 都沒有被按下，停止滑軌
-            slide_left.setPower(0);
-            slide_right.setPower(0);
         }
+
+        //TODO:check
+        /*
+        if (rightTriggerValue > 0 && slidepos < maxEncoderValue - 30 && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
+
+            slidepos += 10;
+
+        }
+        if (leftTriggerValue > 0 && slidepos > minEncoderValue + 30 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
+
+            slidepos -= 10;
+
+        }
+         */
 
         if (gamepad1.y) {
             if (xTimer.seconds() >= xInterval) {
@@ -225,13 +220,14 @@ public class TeleOpMode extends LinearOpMode {
     public void arm(){
         if(gamepad1.dpad_up){
             armServo.setPower(armPower);
+            armServo.setDirection(DcMotorSimple.Direction.FORWARD);
         }
         if(gamepad1.dpad_down){
-            armServo.setPower(-armPower);
+            armServo.setPower(armPower);
+            armServo.setDirection(DcMotorSimple.Direction.REVERSE);
         } else {
-            armServo.setPower(0);
+            armServo.setPower(0.000001);
         }
-        idle();
     }
 
     public void drone(){
