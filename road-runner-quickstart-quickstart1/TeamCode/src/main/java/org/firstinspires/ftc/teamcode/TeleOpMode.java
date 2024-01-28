@@ -45,8 +45,9 @@ public class TeleOpMode extends LinearOpMode {
     private double dronePosition = 0.62;
 
     //arm
-    private CRServo armServo = null;
-    private double armPower = 0.3;
+    private Servo armServo = null;
+    private double initialPosition = 0.5; // 初始位置
+    private double forwardPosition = 0.8; // 正轉位置
 
 
     @Override
@@ -98,28 +99,31 @@ public class TeleOpMode extends LinearOpMode {
         double rightTriggerValue = gamepad1.right_trigger;
         double leftTriggerValue = gamepad1.left_trigger;
 
-        slide_left.setTargetPosition( (int) slidepos);
-        slide_right.setTargetPosition((int) slidepos);
-
         slide_left.setPower(slide_speed);
         slide_right.setPower(slide_speed);
 
         if(rightTriggerValue > 0){
             slide_left.setPower(slide_speed);
             slide_right.setPower(slide_speed);
+        } else if(leftTriggerValue > 0){
+            slide_left.setPower(-slide_speed);
+            slide_right.setPower(-slide_speed);
+        } else {
+            slide_left.setPower(0.00001);
+            slide_right.setPower(0.00001);
         }
 
         //TODO:check
         /*
+
+        slide_left.setTargetPosition( (int) slidepos);
+        slide_right.setTargetPosition((int) slidepos);
+
         if (rightTriggerValue > 0 && slidepos < maxEncoderValue - 30 && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
-
             slidepos += 10;
-
         }
         if (leftTriggerValue > 0 && slidepos > minEncoderValue + 30 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
-
             slidepos -= 10;
-
         }
          */
 
@@ -128,9 +132,7 @@ public class TeleOpMode extends LinearOpMode {
                 slide_speed += 0.05;
                 xTimer.reset();
             }
-        }
-
-        if (gamepad1.x) {
+        } else if (gamepad1.x) {
             if (xTimer.seconds() >= xInterval) {
                 slide_speed -= 0.05;
                 xTimer.reset();
@@ -140,56 +142,29 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void intake() {
+        if (gamepad1.a && !intakeRunning) {
+            intake.setPower(1.0); // 正轉
+            intakeRunning = true;
+        } else if (gamepad1.a && intakeRunning) {
+            intake.setPower(0.0); // 停止
+            intakeRunning = false;
+        }
+        // 等待按鍵釋放，避免連續多次啟動或停止
+        while (gamepad1.a) {
+            // 等待按鍵釋放
+            idle();
+        }
 
-        if(gamepad1.a || gamepad1.b) {
-            if (gamepad1.a) {
-                // 如果 A 按鍵被按下
-                if (!intakeRunning) {
-                    // 如果 intake 沒有在運行，啟動 intake
-                    intake.setPower(1.0);  // 可以根據需要調整功率
-                    intakeRunning = true;
-                } else if (gamepad1.b){
-                    intake.setPower(-1.0);  // 可以根據需要調整功率
-                    intakeRunning = false;
-                } else {
-                    // 如果 intake 已經在運行，停止 intake
-                    intake.setPower(0);
-                    intakeRunning = false;
-                }
-
-                // 等待按鍵釋放，避免連續多次啟動或停止
-                while (gamepad1.a || gamepad1.b) {
-                    // 等待按鍵釋放
-                    idle();
-                }
-
-
-            }
-
-            if (gamepad1.b) {
-                // 如果 B 按鍵被按下
-                if (!intakeRunning) {
-                    // 如果 intake 沒有在運行，啟動 intake
-                    intake.setPower(-1.0);  // 可以根據需要調整功率
-                    intakeRunning = true;
-                } else if(gamepad1.a){
-                    // 如果 intake 沒有在運行，啟動 intake
-                    intake.setPower(1.0);  // 可以根據需要調整功率
-                    intakeRunning = false;
-                }else {
-                    // 如果 intake 已經在運行，停止 intake
-                    intake.setPower(0);
-                    intakeRunning = false;
-                }
-
-                // 等待按鍵釋放，避免連續多次啟動或停止
-                while (gamepad1.b || gamepad1.a) {
-                    // 等待按鍵釋放
-                    idle();
-                }
-
-
-            }
+        if (gamepad1.b && !intakeRunning) {
+            intake.setPower(1.0); // 正轉
+            intakeRunning = true;
+        } else if (gamepad1.b && intakeRunning) {
+            intake.setPower(0.0); // 停止
+            intakeRunning = false;
+        }
+        while (gamepad1.b) {
+            // 等待按鍵釋放
+            idle();
         }
     }
 
@@ -218,15 +193,10 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void arm(){
-        if(gamepad1.dpad_up){
-            armServo.setPower(armPower);
-            armServo.setDirection(DcMotorSimple.Direction.FORWARD);
-        }
-        if(gamepad1.dpad_down){
-            armServo.setPower(armPower);
-            armServo.setDirection(DcMotorSimple.Direction.REVERSE);
-        } else {
-            armServo.setPower(0.000001);
+        if (gamepad1.dpad_up) {
+            armServo.setPosition(forwardPosition); // 正轉
+        } else if (gamepad1.dpad_down) {
+            armServo.setPosition(initialPosition); // 回到初始位置
         }
     }
 
@@ -274,7 +244,7 @@ public class TeleOpMode extends LinearOpMode {
         slide_left.setTargetPosition(0);
         slide_right.setTargetPosition(0);
 
-        slidepos = Math.min(Math.max(slidepos, 0), maxEncoderValue);
+        slidepos = Math.min(Math.max(slidepos, minEncoderValue), maxEncoderValue);
 
 
         //intake_Base
@@ -291,8 +261,8 @@ public class TeleOpMode extends LinearOpMode {
         drone = hardwareMap.get(Servo.class, "drone");
         drone.setPosition(0.55);
 
-        armServo = hardwareMap.get(CRServo.class, "arm");
-        armServo.setPower(0);
+        armServo = hardwareMap.get(Servo.class, "arm");
+        armServo.setPosition(initialPosition);
 
 
     }
