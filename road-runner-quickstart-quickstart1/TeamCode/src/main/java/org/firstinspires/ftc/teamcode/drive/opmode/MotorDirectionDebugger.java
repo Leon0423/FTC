@@ -27,7 +27,7 @@ import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
  *                   / ______ \
  *     ------------.-'   _  '-..+              Front of Bot
  *              /   _  ( Y )  _  \                  ^
- *             |  ( X )  _  ( B ) |     Front Left   \    Front Right
+ *             |  ( X )  _  ( B ) |     Front Left   \    Front Ri
  *        ___  '.      ( A )     /|       Wheel       \      Wheel
  *      .'    '.    '-._____.-'  .'       (x/▢)        \     (Y/Δ)
  *     |       |                 |                      \

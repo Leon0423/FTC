@@ -2,15 +2,10 @@ package org.firstinspires.ftc.teamcode.Angle_PID_Tutorial;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgproc.Moments;
@@ -22,9 +17,9 @@ import org.openftc.easyopencv.OpenCvPipeline;
 import java.util.ArrayList;
 import java.util.List;
 
-@TeleOp(name = "OpenCV Testing")
+@Autonomous(name = "Autonomous_RedRight")
 
-public class opencv extends LinearOpMode {
+public class Autonomous_RedRight extends LinearOpMode {
 
     double cX = 0;
     double cY = 0;
@@ -47,12 +42,44 @@ public class opencv extends LinearOpMode {
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
         FtcDashboard.getInstance().startCameraStream(controlHubCam, 30);
 
+        boolean LEFTmode = false, CENTERmode = false, RIGHTmode = false;
 
-        waitForStart();
+        while(!opModeIsActive()){
+            telemetry.addData("LEFT", LEFTmode);
+            telemetry.addData("CENTER", CENTERmode);
+            telemetry.addData("RIGHT", RIGHTmode);
+            if (cX < 150){
+                LEFTmode = true;
+                CENTERmode = false;
+                RIGHTmode = false;
+            } else if (cX < 450) {
+                LEFTmode = false;
+                CENTERmode = true;
+                RIGHTmode = false;
+            } else if(cX < 700){
+                LEFTmode = true;
+                CENTERmode = false;
+                RIGHTmode = true;
+            }
+            telemetry.addData("cX", cX);
+            telemetry.update();
+        }
+
+
 
         while (opModeIsActive()) {
-            telemetry.addData("Coordinate", "(" + (int) cX + ", " + (int) cY + ")");
-            telemetry.addData("Distance in Inch", (getDistance(width)));
+
+            if(LEFTmode){
+
+            }
+            if (CENTERmode){
+
+            }
+            if (RIGHTmode){
+
+            }
+
+
             telemetry.update();
 
             // The OpenCV pipeline automatically processes frames and handles detection
@@ -122,8 +149,8 @@ public class opencv extends LinearOpMode {
             Mat hsvFrame = new Mat();
             Imgproc.cvtColor(frame, hsvFrame, Imgproc.COLOR_BGR2HSV);
 
-            Scalar lowerYellow = new Scalar(0, 20, 170);
-            Scalar upperYellow = new Scalar(180, 255, 255);
+            Scalar lowerYellow = new Scalar(107, 110, 3);
+            Scalar upperYellow = new Scalar(150, 255, 145);
 
 
             Mat yellowMask = new Mat();

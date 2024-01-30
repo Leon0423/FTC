@@ -30,7 +30,7 @@ public class SampleVisionOpMode extends LinearOpMode {
             telemetry.update();
         }
 
-        //visionPortal.stopStreaming();
+        visionPortal.stopStreaming();
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
