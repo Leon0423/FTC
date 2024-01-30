@@ -22,8 +22,8 @@ public class TeleOpMode extends LinearOpMode {
 
     //slide
     private DcMotorEx slide_left = null, slide_right = null;
-    private double slidepos = 0;
-    private double slide_speed = 0.7;
+    private int slidepos = 0;
+    private double slide_speed = 0.6;
     private int maxEncoderValue = 2800;
     private int minEncoderValue = 0;
     private ElapsedTime xTimer = new ElapsedTime();
@@ -46,8 +46,8 @@ public class TeleOpMode extends LinearOpMode {
 
     //arm
     private Servo armServo = null;
-    private double initialPosition = 0.5; // 初始位置
-    private double forwardPosition = 0.8; // 正轉位置
+    private double initialPosition = 0; // 初始位置
+    private double forwardPosition = 0.92; // 正轉位置
 
 
     @Override
@@ -99,33 +99,19 @@ public class TeleOpMode extends LinearOpMode {
         double rightTriggerValue = gamepad1.right_trigger;
         double leftTriggerValue = gamepad1.left_trigger;
 
-        slide_left.setPower(slide_speed);
-        slide_right.setPower(slide_speed);
+        slide_left.setTargetPosition( slidepos );
+        slide_right.setTargetPosition( slidepos );
 
-        if(rightTriggerValue > 0){
-            slide_left.setPower(slide_speed);
-            slide_right.setPower(slide_speed);
-        } else if(leftTriggerValue > 0){
-            slide_left.setPower(-slide_speed);
-            slide_right.setPower(-slide_speed);
-        } else {
-            slide_left.setPower(0.00001);
-            slide_right.setPower(0.00001);
-        }
-
-        //TODO:check
-        /*
-
-        slide_left.setTargetPosition( (int) slidepos);
-        slide_right.setTargetPosition((int) slidepos);
-
-        if (rightTriggerValue > 0 && slidepos < maxEncoderValue - 30 && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
+        if (rightTriggerValue > 0 && slidepos < maxEncoderValue && slide_left.getCurrentPosition() < maxEncoderValue && slide_right.getCurrentPosition() < maxEncoderValue) {
             slidepos += 10;
-        }
-        if (leftTriggerValue > 0 && slidepos > minEncoderValue + 30 && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
+            slide_right.setPower(slide_speed);
+            slide_left.setPower(slide_speed);
+        } else if (leftTriggerValue > 0 && slidepos > minEncoderValue && slide_left.getCurrentPosition() > minEncoderValue && slide_right.getCurrentPosition() > minEncoderValue) {
             slidepos -= 10;
+            slide_right.setPower(slide_speed);
+            slide_left.setPower(slide_speed);
+
         }
-         */
 
         if (gamepad1.y) {
             if (xTimer.seconds() >= xInterval) {
@@ -156,7 +142,7 @@ public class TeleOpMode extends LinearOpMode {
         }
 
         if (gamepad1.b && !intakeRunning) {
-            intake.setPower(1.0); // 正轉
+            intake.setPower(-1.0); // 正轉
             intakeRunning = true;
         } else if (gamepad1.b && intakeRunning) {
             intake.setPower(0.0); // 停止
@@ -263,7 +249,6 @@ public class TeleOpMode extends LinearOpMode {
 
         armServo = hardwareMap.get(Servo.class, "arm");
         armServo.setPosition(initialPosition);
-
 
     }
 
