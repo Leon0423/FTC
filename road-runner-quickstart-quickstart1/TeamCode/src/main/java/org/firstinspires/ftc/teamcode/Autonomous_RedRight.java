@@ -1,16 +1,15 @@
-package org.firstinspires.ftc.teamcode.Angle_PID_Tutorial;
+package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
+import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgproc.Moments;
@@ -22,29 +21,17 @@ import org.openftc.easyopencv.OpenCvPipeline;
 import java.util.ArrayList;
 import java.util.List;
 
-@TeleOp(name = "Cone Tracker")
+@Autonomous(name = "Autonomous_RedRight")
 
-public class CameraFusedPID extends LinearOpMode {
-    double integralSum = 0;
-    double Kp = PIDConstants.Kp;
-    double Ki = PIDConstants.Ki;
-    double Kd = PIDConstants.Kd;
+public class Autonomous_RedRight extends LinearOpMode {
 
-    Drivetrain drivetrain = new Drivetrain();
-
-    ElapsedTime timer = new ElapsedTime();
-    private double lastError = 0;
-
-    private BNO055IMU imu;
     double cX = 0;
     double cY = 0;
     double width = 0;
 
     private OpenCvCamera controlHubCam;  // Use OpenCvCamera class from FTC SDK
-    /** MAKE SURE TO CHANGE THE FOV AND THE RESOLUTIONS ACCORDINGLY **/
     private static final int CAMERA_WIDTH = 640; // width  of wanted camera resolution
     private static final int CAMERA_HEIGHT = 360; // height of wanted camera resolution
-    private static final double FOV = 40;
 
     // Calculate the distance using the formula
     public static final double objectWidthInRealWorldUnits = 3.75;  // Replace with the actual width of the object in real-world units
@@ -53,29 +40,52 @@ public class CameraFusedPID extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        drivetrain.init(hardwareMap);
-
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.mode = BNO055IMU.SensorMode.IMU;
-        parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
-        imu.initialize(parameters);
 
         initOpenCV();
         FtcDashboard dashboard = FtcDashboard.getInstance();
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
         FtcDashboard.getInstance().startCameraStream(controlHubCam, 30);
 
+        boolean LEFTmode = false, CENTERmode = false, RIGHTmode = false;
 
-        waitForStart();
+
+
+        while(!opModeIsActive()){
+            telemetry.addData("LEFT", LEFTmode);
+            telemetry.addData("CENTER", CENTERmode);
+            telemetry.addData("RIGHT", RIGHTmode);
+            if (cX < 150){
+                LEFTmode = true;
+                CENTERmode = false;
+                RIGHTmode = false;
+            } else if (cX < 450) {
+                LEFTmode = false;
+                CENTERmode = true;
+                RIGHTmode = false;
+            } else if(cX < 700){
+                LEFTmode = true;
+                CENTERmode = false;
+                RIGHTmode = true;
+            }
+            telemetry.addData("cX", cX);
+            telemetry.update();
+        }
+
+
 
         while (opModeIsActive()) {
-            telemetry.addData("Target IMU Angle", getAngleTarget(cX));
-            telemetry.addData("Current IMU Angle", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle);
-            double power = PIDControl(Math.toRadians(0 + getAngleTarget(cX)), imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS).firstAngle);
-            drivetrain.power(power);
-            telemetry.addData("Coordinate", "(" + (int) cX + ", " + (int) cY + ")");
-            telemetry.addData("Distance in Inch", (getDistance(width)));
+
+            if(LEFTmode){
+
+            }
+            if (CENTERmode){
+
+            }
+            if (RIGHTmode){
+
+            }
+
+
             telemetry.update();
 
             // The OpenCV pipeline automatically processes frames and handles detection
@@ -145,8 +155,8 @@ public class CameraFusedPID extends LinearOpMode {
             Mat hsvFrame = new Mat();
             Imgproc.cvtColor(frame, hsvFrame, Imgproc.COLOR_BGR2HSV);
 
-            Scalar lowerYellow = new Scalar(100, 100, 100);
-            Scalar upperYellow = new Scalar(180, 255, 255);
+            Scalar lowerYellow = new Scalar(107, 110, 3);
+            Scalar upperYellow = new Scalar(150, 255, 145);
 
 
             Mat yellowMask = new Mat();
@@ -179,32 +189,9 @@ public class CameraFusedPID extends LinearOpMode {
         }
 
     }
-    private static double getAngleTarget(double objMidpoint){
-        double midpoint = -((objMidpoint - (CAMERA_WIDTH/2))*FOV)/CAMERA_WIDTH;
-        return midpoint;
-    }
     private static double getDistance(double width){
         double distance = (objectWidthInRealWorldUnits * focalLength) / width;
         return distance;
-    }
-    public double PIDControl(double refrence, double state) {
-        double error = angleWrap(refrence - state);
-        telemetry.addData("Error: ", error);
-        integralSum += error * timer.seconds();
-        double derivative = (error - lastError) / (timer.seconds());
-        lastError = error;
-        timer.reset();
-        double output = (error * Kp) + (derivative * Kd) + (integralSum * Ki);
-        return output;
-    }
-    public double angleWrap(double radians){
-        while(radians > Math.PI){
-            radians -= 2 * Math.PI;
-        }
-        while(radians < -Math.PI){
-            radians += 2 * Math.PI;
-        }
-        return radians;
     }
 
 
