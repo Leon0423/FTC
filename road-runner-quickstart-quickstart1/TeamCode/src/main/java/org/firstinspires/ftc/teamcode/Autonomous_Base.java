@@ -1,12 +1,15 @@
 package org.firstinspires.ftc.teamcode;
 
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
+import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.FLOAT;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -20,8 +23,29 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 
 public abstract class Autonomous_Base extends LinearOpMode {
     private DcMotorEx FR, FL, BR, BL;
-    private BNO055IMU imu;
+    //slide
+    private DcMotorEx slide_left = null, slide_right = null;
+    private int slidepos = 0;
+    private double slide_speed = 0.6;
+    private int maxEncoderValue = 2800;
+    private int minEncoderValue = 0;
+
+    //intake
+    private DcMotorEx intake = null;
+
+    //claw
+    private Servo clawServo = null;
+    // 伺服馬達的初始位置
+    private double clawPosition = 0.5;
+
+    //drone
+    private Servo drone = null;
+
+    //arm
+    private Servo armServo = null;
+    private double initialPosition = 0; // 初始位置
     public void init_hardware(){
+        //chassis_Base
         FR=hardwareMap.get(DcMotorEx.class, "FR");
         FL=hardwareMap.get(DcMotorEx.class, "FL");
         BR=hardwareMap.get(DcMotorEx.class, "BR");
@@ -30,63 +54,53 @@ public abstract class Autonomous_Base extends LinearOpMode {
         FR.setDirection(DcMotorSimple.Direction.REVERSE);
         BR.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        FR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        FL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        BR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        BL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        FR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        FL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         FL.setZeroPowerBehavior(BRAKE);
         BL.setZeroPowerBehavior(BRAKE);
         FR.setZeroPowerBehavior(BRAKE);
         BR.setZeroPowerBehavior(BRAKE);
 
-        //set imu
-        BNO055IMU.Parameters IMU_Parameters = new BNO055IMU.Parameters();
-        IMU_Parameters.mode = BNO055IMU.SensorMode.IMU;
-        IMU_Parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
-        IMU_Parameters.calibrationDataFile = "BNO055IMUCalibration. json";
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        imu.initialize (IMU_Parameters);
-    }
+        //slide_Base
+        slide_left=hardwareMap.get(DcMotorEx.class, "SL");
+        slide_right=hardwareMap.get(DcMotorEx.class, "SR");
+        slide_left.setDirection(DcMotorSimple.Direction.REVERSE);
+        slide_right.setZeroPowerBehavior(BRAKE);
+        slide_left.setZeroPowerBehavior(BRAKE);
 
-    public void DriveStraight(double distance, double heading, double speed, double kp){
-        double error;
-        double angle = (imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZXY, AngleUnit.DEGREES).firstAngle);
-        double output;
-        double LeftMotor = (FL.getCurrentPosition() + BL.getCurrentPosition()) / 2;
-        double RightMotor = (FR.getCurrentPosition() + BR.getCurrentPosition()) / 2;
+        slide_left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        slide_right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        slide_right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        slide_left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        //Fine tune Kp based on your robot design and speed
-        FR.setMode(DcMotor.RunMode. STOP_AND_RESET_ENCODER);
-        FL.setMode(DcMotor.RunMode. STOP_AND_RESET_ENCODER);
-        BR.setMode(DcMotor.RunMode. STOP_AND_RESET_ENCODER);
-        BL.setMode(DcMotor.RunMode. STOP_AND_RESET_ENCODER);
+        slide_left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slide_right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slide_left.setTargetPosition(0);
+        slide_right.setTargetPosition(0);
 
-        if (speed > 0){
-            //Going forward
-            while (LeftMotor < distance || RightMotor < distance){
-                error = heading - angle;
-                output = error * kp;
-                FL.setPower((speed - output) * 0.01);
-                BL.setPower((speed - output) * 0.01);
-                FR.setPower((speed + output) * 0.01);
-                BR.setPower((speed + output) * 0.01);
-            }
-        } else {
-            //Going backward
-            while (LeftMotor > distance || RightMotor > distance){
-                error = heading - angle;
-                output = error * kp;
-                FL.setPower((speed - output) * 0.01);
-                BL.setPower((speed - output) * 0.01);
-                FR.setPower((speed + output) * 0.01);
-                BR.setPower((speed + output) * 0.01);
-            }
-        }
-        FL.setPower(0);
-        BL.setPower(0);
-        FR.setPower(0);
-        BR.setPower(0);
+        slidepos = Math.min(Math.max(slidepos, minEncoderValue), maxEncoderValue);
+
+
+        //intake_Base
+        intake=hardwareMap.get(DcMotorEx.class, "intake");
+        intake.setDirection(DcMotorSimple.Direction.REVERSE);
+        intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        intake.setZeroPowerBehavior(FLOAT);
+        intake.setPower(0);
+
+        //Servo_Base
+        clawServo = hardwareMap.get(Servo.class, "claw");
+        clawServo.setPosition(clawPosition);
+
+        drone = hardwareMap.get(Servo.class, "drone");
+        drone.setPosition(0.55);
+
+        armServo = hardwareMap.get(Servo.class, "arm");
+        armServo.setPosition(initialPosition);
+
     }
 
 }

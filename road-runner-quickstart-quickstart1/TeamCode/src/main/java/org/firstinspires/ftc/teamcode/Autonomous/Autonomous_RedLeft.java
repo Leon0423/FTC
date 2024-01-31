@@ -1,13 +1,15 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Autonomous;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.acmerobotics.roadrunner.trajectory.Trajectory;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.Autonomous_Base;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.opencv.core.*;
@@ -21,9 +23,9 @@ import org.openftc.easyopencv.OpenCvPipeline;
 import java.util.ArrayList;
 import java.util.List;
 
-@Autonomous(name = "Autonomous_RedRight")
+@Autonomous(name = "Autonomous_RedLeft")
 
-public class Autonomous_RedRight extends LinearOpMode {
+public class Autonomous_RedLeft extends Autonomous_Base {
 
     double cX = 0;
     double cY = 0;
@@ -37,6 +39,7 @@ public class Autonomous_RedRight extends LinearOpMode {
     public static final double objectWidthInRealWorldUnits = 3.75;  // Replace with the actual width of the object in real-world units
     public static final double focalLength = 728;  // Replace with the focal length of the camera in pixels
 
+    boolean LEFTmode = false, CENTERmode = false, RIGHTmode = false;
 
     @Override
     public void runOpMode() {
@@ -46,15 +49,21 @@ public class Autonomous_RedRight extends LinearOpMode {
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
         FtcDashboard.getInstance().startCameraStream(controlHubCam, 30);
 
-        boolean LEFTmode = false, CENTERmode = false, RIGHTmode = false;
+        SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
+        Pose2d startPose = new Pose2d(-33.00, -63.50, Math.toRadians(90.00));
 
-
+        TrajectorySequence Righttrail = drive.trajectorySequenceBuilder(startPose)
+                .lineToLinearHeading(new Pose2d(40, 40, Math.toRadians(90)))
+                //.splineTo(new Vector2d(-35.00, -33.00), Math.toRadians(90.00))
+                //.splineTo(new Vector2d(51.00, -15.00), Math.toRadians(0.00))
+                //.lineTo(new Vector2d(51.00, -27.00))
+                .build();
 
         while(!opModeIsActive()){
             telemetry.addData("LEFT", LEFTmode);
             telemetry.addData("CENTER", CENTERmode);
             telemetry.addData("RIGHT", RIGHTmode);
-            if (cX < 150){
+            if (cX > 0 && cX < 150){
                 LEFTmode = true;
                 CENTERmode = false;
                 RIGHTmode = false;
@@ -63,7 +72,7 @@ public class Autonomous_RedRight extends LinearOpMode {
                 CENTERmode = true;
                 RIGHTmode = false;
             } else if(cX < 700){
-                LEFTmode = true;
+                LEFTmode = false;
                 CENTERmode = false;
                 RIGHTmode = true;
             }
@@ -80,13 +89,12 @@ public class Autonomous_RedRight extends LinearOpMode {
             }
             if (CENTERmode){
 
+
             }
             if (RIGHTmode){
-
+                drive.setPoseEstimate(Righttrail.start());
+                drive.followTrajectorySequence(Righttrail);
             }
-
-
-            telemetry.update();
 
             // The OpenCV pipeline automatically processes frames and handles detection
         }
@@ -196,3 +204,4 @@ public class Autonomous_RedRight extends LinearOpMode {
 
 
 }
+
