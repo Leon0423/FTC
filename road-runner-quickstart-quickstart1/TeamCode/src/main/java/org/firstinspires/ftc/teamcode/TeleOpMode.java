@@ -248,6 +248,7 @@ public class TeleOpMode extends LinearOpMode {
         drone.setPosition(0.55);
 
         armServo = hardwareMap.get(Servo.class, "arm");
+        armServo.setDirection(Servo.Direction.REVERSE);
         armServo.setPosition(initialPosition);
 
     }

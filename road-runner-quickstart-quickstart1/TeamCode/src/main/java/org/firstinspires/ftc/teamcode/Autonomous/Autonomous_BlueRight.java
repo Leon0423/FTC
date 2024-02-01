@@ -6,6 +6,8 @@ import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
@@ -49,33 +51,9 @@ public class Autonomous_BlueRight extends LinearOpMode {
         boolean LEFTmode = false, CENTERmode = false, RIGHTmode = false;
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
 
-        TrajectorySequence Lefttrail = drive.trajectorySequenceBuilder(new Pose2d(-40.00, 62.50, Math.toRadians(-90.00)))
-                .splineTo(new Vector2d(-31.00, 40.00), Math.toRadians(-45.00))
-                .lineToSplineHeading(new Pose2d(-37.00, 11.50, Math.toRadians(0.00)))
-                .lineTo(new Vector2d(30.35, 11.50))
-                .lineToSplineHeading(new Pose2d(51.50, 42.00, Math.toRadians(180.00)))
-                .lineTo(new Vector2d(51.50, 63.00))
+        TrajectorySequence trail = drive.trajectorySequenceBuilder(new Pose2d(-35.35, 63.00, Math.toRadians(270.00)))
+                .lineToConstantHeading(new Vector2d(61.66, 59.15))
                 .build();
-        ;
-
-
-        TrajectorySequence Centertrail = drive.trajectorySequenceBuilder(new Pose2d(-40.00, 62.50, Math.toRadians(-90.00)))
-                .lineTo(new Vector2d(-40.00, 34.00))
-                .lineTo(new Vector2d(16.27, 34.00))
-                .lineToSplineHeading(new Pose2d(51.50, 34.00, Math.toRadians(180.00)))
-                .lineTo(new Vector2d(51.50, 63.00))
-                .build();
-
-
-        TrajectorySequence Righttrail = drive.trajectorySequenceBuilder(new Pose2d(-40.00, 62.50, Math.toRadians(-90.00)))
-                .splineTo(new Vector2d(-44.00, 37.50), Math.toRadians(245.00))
-                .lineToSplineHeading(new Pose2d(-34.00, 11.50, Math.toRadians(0.00)))
-                .lineTo(new Vector2d(39.00, 11.50))
-                .lineToSplineHeading(new Pose2d(51.50, 31.00, Math.toRadians(180.00)))
-                .lineTo(new Vector2d(51.50, 63.00))
-                .build();
-        ;
-        ;
 
 
 
@@ -104,25 +82,9 @@ public class Autonomous_BlueRight extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            if(LEFTmode){
-                drive.setPoseEstimate(Lefttrail.start());
-                drive.followTrajectorySequence(Lefttrail);
-                break;
-            }
-            if (CENTERmode){
-                drive.setPoseEstimate(Centertrail.start());
-                drive.followTrajectorySequence(Centertrail);
-                break;
-
-            }
-            if (RIGHTmode){
-                drive.setPoseEstimate(Righttrail.start());
-                drive.followTrajectorySequence(Righttrail);
-                break;
-            }
-
-
-            telemetry.update();
+            drive.setPoseEstimate(trail.start());
+            drive.followTrajectorySequence(trail);
+            break;
 
             // The OpenCV pipeline automatically processes frames and handles detection
         }
