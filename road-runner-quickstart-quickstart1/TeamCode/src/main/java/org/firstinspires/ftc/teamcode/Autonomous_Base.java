@@ -36,7 +36,7 @@ public abstract class Autonomous_Base extends LinearOpMode {
     //claw
     private Servo clawServo = null;
     // 伺服馬達的初始位置
-    private double clawPosition = 0.5;
+    private double clawPosition = 0.65;
 
     //drone
     private Servo drone = null;
@@ -45,24 +45,6 @@ public abstract class Autonomous_Base extends LinearOpMode {
     private Servo armServo = null;
     private double initialPosition = 0; // 初始位置
     public void init_hardware(){
-        //chassis_Base
-        FR=hardwareMap.get(DcMotorEx.class, "FR");
-        FL=hardwareMap.get(DcMotorEx.class, "FL");
-        BR=hardwareMap.get(DcMotorEx.class, "BR");
-        BL=hardwareMap.get(DcMotorEx.class, "BL");
-
-        FR.setDirection(DcMotorSimple.Direction.REVERSE);
-        BR.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        FR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        FL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        BR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        BL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        FL.setZeroPowerBehavior(BRAKE);
-        BL.setZeroPowerBehavior(BRAKE);
-        FR.setZeroPowerBehavior(BRAKE);
-        BR.setZeroPowerBehavior(BRAKE);
 
         //slide_Base
         slide_left=hardwareMap.get(DcMotorEx.class, "SL");

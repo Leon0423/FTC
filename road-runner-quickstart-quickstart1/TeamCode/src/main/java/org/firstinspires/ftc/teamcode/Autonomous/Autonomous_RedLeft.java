@@ -7,6 +7,9 @@ import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.acmerobotics.roadrunner.trajectory.Trajectory;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Autonomous_Base;
@@ -27,6 +30,23 @@ import java.util.List;
 
 public class Autonomous_RedLeft extends Autonomous_Base {
 
+    //slide
+    private DcMotorEx slide_left = null, slide_right = null;
+    private int slidepos =800;
+    private double slide_speed = 0.65;
+
+    //intake
+    private DcMotorEx intake = null;
+
+    //claw
+    private Servo clawServo = null;
+    // 伺服馬達的初始位置
+    private double clawPosition = 0.5;
+
+    //arm
+    private Servo armServo = null;
+    private double forwardPosition = 0.92; // 正轉位置
+
     double cX = 0;
     double cY = 0;
     double width = 0;
@@ -44,19 +64,105 @@ public class Autonomous_RedLeft extends Autonomous_Base {
     @Override
     public void runOpMode() {
 
+        init_hardware();
         initOpenCV();
         FtcDashboard dashboard = FtcDashboard.getInstance();
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
         FtcDashboard.getInstance().startCameraStream(controlHubCam, 30);
 
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
-        Pose2d startPose = new Pose2d(-33.00, -63.50, Math.toRadians(90.00));
 
-        TrajectorySequence Righttrail = drive.trajectorySequenceBuilder(startPose)
-                .lineToLinearHeading(new Pose2d(40, 40, Math.toRadians(90)))
-                //.splineTo(new Vector2d(-35.00, -33.00), Math.toRadians(90.00))
-                //.splineTo(new Vector2d(51.00, -15.00), Math.toRadians(0.00))
-                //.lineTo(new Vector2d(51.00, -27.00))
+        TrajectorySequence Lefttrail = drive.trajectorySequenceBuilder(new Pose2d(-35.35, -62.50, Math.toRadians(90.00)))
+                .UNSTABLE_addTemporalMarkerOffset(1.86,() -> {
+                    intake.setPower(-0.5);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(2.19,() -> {
+                    intake.setPower(0);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(8.5,() -> {
+                    slide_left.setTargetPosition( slidepos );
+                    slide_right.setTargetPosition( slidepos );
+                    slide_right.setPower(slide_speed);
+                    slide_left.setPower(slide_speed);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(10,() -> {
+                    armServo.setPosition(forwardPosition);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(12, () -> {
+                    clawPosition = 0.65;
+                    clawServo.setPosition(clawPosition);
+                    slide_left.setTargetPosition(0);
+                    slide_right.setTargetPosition(0);
+                })
+                .lineToSplineHeading(new Pose2d(-38.00, -30.50, Math.toRadians(180.00)))
+                .lineToSplineHeading(new Pose2d(-34.50, -11.50, Math.toRadians(0.00)))
+                .lineTo(new Vector2d(9.00, -11.50))
+                .lineToSplineHeading(new Pose2d(51.50, -11.50, Math.toRadians(180.00)))
+                .lineTo(new Vector2d(51.50, -31.00))
+                .waitSeconds(3.5)
+                .lineTo(new Vector2d(51.50, -11.50))
+                .build();
+        ;
+
+
+        TrajectorySequence Centertrail = drive.trajectorySequenceBuilder(new Pose2d(-35.50, -62.50, Math.toRadians(90.00)))
+                .UNSTABLE_addTemporalMarkerOffset(1.55,() -> {
+                    intake.setPower(-0.5);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(1.87,() -> {
+                    intake.setPower(0);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(5.84,() -> {
+                    slide_left.setTargetPosition( slidepos );
+                    slide_right.setTargetPosition( slidepos );
+                    slide_right.setPower(slide_speed);
+                    slide_left.setPower(slide_speed);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(7,() -> {
+                    armServo.setPosition(forwardPosition);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(8.5,() -> {
+                    clawPosition = 0.65;
+                    clawServo.setPosition(clawPosition);
+                    slide_left.setTargetPosition(0);
+                    slide_right.setTargetPosition(0);
+                })
+                .lineToConstantHeading(new Vector2d(-38.00, -35.50))
+                .lineToConstantHeading(new Vector2d(10.00, -35.50))
+                .lineToLinearHeading(new Pose2d(51.50, -35.50, Math.toRadians(180.00)))
+                .waitSeconds(3.5)
+                .lineTo(new Vector2d(51.50, -12.00))
+                .build();
+
+        TrajectorySequence Righttrail = drive.trajectorySequenceBuilder(new Pose2d(-35.50, -62.50, Math.toRadians(90.00)))
+                .UNSTABLE_addTemporalMarkerOffset(1.55,() -> {
+                    intake.setPower(-0.5);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(1.82,() -> {
+                    intake.setPower(0);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(8.50,() -> {
+                    slide_left.setTargetPosition( slidepos );
+                    slide_right.setTargetPosition( slidepos );
+                    slide_right.setPower(slide_speed);
+                    slide_left.setPower(slide_speed);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(10.00,() -> {
+                    armServo.setPosition(forwardPosition);
+                })
+                .UNSTABLE_addTemporalMarkerOffset(11.00,() -> {
+                    clawPosition = 0.65;
+                    clawServo.setPosition(clawPosition);
+                    slide_left.setTargetPosition(0);
+                    slide_right.setTargetPosition(0);
+                })
+                .splineTo(new Vector2d(-32.50, -38.00), Math.toRadians(45.00))
+                .lineToLinearHeading(new Pose2d(-42.50, -11.50, Math.toRadians(0.00)))
+                .lineTo(new Vector2d(15.00, -11.50))
+                .lineToSplineHeading(new Pose2d(51.50, -11.50, Math.toRadians(180.00)))
+                .lineTo(new Vector2d(51.50, -31.00))
+                .waitSeconds(3)
+                .lineTo(new Vector2d(51.50, -13.00))
                 .build();
 
         while(!opModeIsActive()){
@@ -85,15 +191,20 @@ public class Autonomous_RedLeft extends Autonomous_Base {
         while (opModeIsActive()) {
 
             if(LEFTmode){
-
+                drive.setPoseEstimate(Lefttrail.start());
+                drive.followTrajectorySequence(Lefttrail);
+                break;
             }
             if (CENTERmode){
-
+                drive.setPoseEstimate(Centertrail.start());
+                drive.followTrajectorySequence(Centertrail);
+                break;
 
             }
             if (RIGHTmode){
                 drive.setPoseEstimate(Righttrail.start());
                 drive.followTrajectorySequence(Righttrail);
+                break;
             }
 
             // The OpenCV pipeline automatically processes frames and handles detection

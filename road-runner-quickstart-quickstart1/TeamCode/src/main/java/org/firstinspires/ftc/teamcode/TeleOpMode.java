@@ -129,7 +129,7 @@ public class TeleOpMode extends LinearOpMode {
 
     public void intake() {
         if (gamepad1.a && !intakeRunning) {
-            intake.setPower(1.0); // 正轉
+            intake.setPower(0.5); // 正轉
             intakeRunning = true;
         } else if (gamepad1.a && intakeRunning) {
             intake.setPower(0.0); // 停止
@@ -142,7 +142,7 @@ public class TeleOpMode extends LinearOpMode {
         }
 
         if (gamepad1.b && !intakeRunning) {
-            intake.setPower(-1.0); // 正轉
+            intake.setPower(-0.5); // 正轉
             intakeRunning = true;
         } else if (gamepad1.b && intakeRunning) {
             intake.setPower(0.0); // 停止
