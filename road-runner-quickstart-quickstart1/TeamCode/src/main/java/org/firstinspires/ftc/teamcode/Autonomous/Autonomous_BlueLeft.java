@@ -76,8 +76,6 @@ public class Autonomous_BlueLeft extends LinearOpMode {
             telemetry.update();
         }
 
-
-
         while (opModeIsActive()) {
 
             drive.setPoseEstimate(trail.start());

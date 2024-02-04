@@ -53,8 +53,9 @@ public class Autonomous_RedLeft extends LinearOpMode {
 
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
 
-        TrajectorySequence trail = drive.trajectorySequenceBuilder(new Pose2d(-35.27, -62.50, Math.toRadians(90.00)))
-                .lineToConstantHeading(new Vector2d(60.00, -60.00))
+        TrajectorySequence trail = drive.trajectorySequenceBuilder(new Pose2d(-35.50, -62.50, Math.toRadians(90.00)))
+                .lineToSplineHeading(new Pose2d(-38.00, -11.75, Math.toRadians(0.00)))
+                .lineToConstantHeading(new Vector2d(51.50, -11.75))
                 .build();
 
         while(!opModeIsActive()){

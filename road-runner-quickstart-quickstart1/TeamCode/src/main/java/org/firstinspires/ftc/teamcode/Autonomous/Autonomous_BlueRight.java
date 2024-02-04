@@ -51,8 +51,9 @@ public class Autonomous_BlueRight extends LinearOpMode {
         boolean LEFTmode = false, CENTERmode = false, RIGHTmode = false;
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
 
-        TrajectorySequence trail = drive.trajectorySequenceBuilder(new Pose2d(-35.35, 63.00, Math.toRadians(270.00)))
-                .lineToConstantHeading(new Vector2d(61.66, 59.15))
+        TrajectorySequence trail = drive.trajectorySequenceBuilder(new Pose2d(-40.00, 62.50, Math.toRadians(-90.00)))
+                .lineToSplineHeading(new Pose2d(-37.00, 11.75, Math.toRadians(0.00)))
+                .lineTo(new Vector2d(53.00, 11.75))
                 .build();
 
 

@@ -18,7 +18,7 @@ public class TeleOpMode extends LinearOpMode {
     //chassis
     private DcMotorEx FR = null, FL = null, BR = null, BL = null;
     private double fl, fr, bl, br;
-    private double drive_speed = 0.8 ;
+    private double drive_speed = 0.7 ;
 
     //slide
     private DcMotorEx slide_left = null, slide_right = null;
@@ -42,12 +42,12 @@ public class TeleOpMode extends LinearOpMode {
 
     //drone
     private Servo drone = null;
-    private double dronePosition = 0.62;
+    private double dronePosition = 0.65;
 
     //arm
     private Servo armServo = null;
     private double initialPosition = 0; // 初始位置
-    private double forwardPosition = 0.92; // 正轉位置
+    private double forwardPosition = 0.3; // 正轉位置
 
 
     @Override
@@ -129,7 +129,7 @@ public class TeleOpMode extends LinearOpMode {
 
     public void intake() {
         if (gamepad1.a && !intakeRunning) {
-            intake.setPower(0.5); // 正轉
+            intake.setPower(0.75); // 正轉
             intakeRunning = true;
         } else if (gamepad1.a && intakeRunning) {
             intake.setPower(0.0); // 停止
@@ -142,7 +142,7 @@ public class TeleOpMode extends LinearOpMode {
         }
 
         if (gamepad1.b && !intakeRunning) {
-            intake.setPower(-0.5); // 正轉
+            intake.setPower(-0.75); // 正轉
             intakeRunning = true;
         } else if (gamepad1.b && intakeRunning) {
             intake.setPower(0.0); // 停止
