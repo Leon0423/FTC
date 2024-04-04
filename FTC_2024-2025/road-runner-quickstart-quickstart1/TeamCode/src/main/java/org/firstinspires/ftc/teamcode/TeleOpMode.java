@@ -110,7 +110,6 @@ public class TeleOpMode extends LinearOpMode {
             slidepos -= 10;
             slide_right.setPower(slide_speed);
             slide_left.setPower(slide_speed);
-
         }
 
         if (gamepad1.y) {
