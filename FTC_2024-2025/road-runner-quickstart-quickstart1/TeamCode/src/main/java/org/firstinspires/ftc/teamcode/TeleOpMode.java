@@ -78,9 +78,9 @@ public class TeleOpMode extends LinearOpMode {
 
     public  void drive(){
         //drive_part
-        double drive = -gamepad1.left_stick_y;     //前進
-        double strafe = -gamepad1.left_stick_x;    //平移
-        double turn = gamepad1.right_stick_x;      //自旋
+        double drive = -gamepad1.left_stick_y;     // * 前進
+        double strafe = -gamepad1.left_stick_x;    // * 平移
+        double turn = gamepad1.right_stick_x;      // * 自旋
 
         fr = (-drive - strafe + turn) * drive_speed;
         fl = (-drive + strafe - turn) * drive_speed;
@@ -95,7 +95,7 @@ public class TeleOpMode extends LinearOpMode {
     }
 
     public void slide(){
-        //Slide_part
+        // * Slide_part
         double rightTriggerValue = gamepad1.right_trigger;
         double leftTriggerValue = gamepad1.left_trigger;
 
@@ -113,7 +113,7 @@ public class TeleOpMode extends LinearOpMode {
         }
 
         if (gamepad1.y) {
-            if (xTimer.seconds() >= xInterval) {
+            if (xTimer.seconds() >=  xInterval) {
                 slide_speed += 0.05;
                 xTimer.reset();
             }
@@ -286,4 +286,4 @@ public class TeleOpMode extends LinearOpMode {
 
         telemetry.update();
     }
-}
+} 
