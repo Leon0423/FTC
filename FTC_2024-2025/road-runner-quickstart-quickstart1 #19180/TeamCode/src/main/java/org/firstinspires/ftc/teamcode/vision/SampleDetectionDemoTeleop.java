@@ -1,17 +1,22 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.vision;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.openftc.easyopencv.OpenCvCameraRotation;
 
 import java.util.ArrayList;
 
 @TeleOp(name = "Sample Detection Demo Teleop")
 public class SampleDetectionDemoTeleop extends LinearOpMode {
     OpenCvCamera webcam;
-    SampleDetectionPipelinePNP pipeline;
+    RedBlueDetectionPipelineNoPNP pipeline;
+
 
     @Override
     public void runOpMode() {
@@ -19,10 +24,14 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
                 "cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
 
-        webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
+        webcam = OpenCvCameraFactory.getInstance().createWebcam(
+                hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
 
-        pipeline = new SampleDetectionPipelinePNP();
+        pipeline = new RedBlueDetectionPipelineNoPNP();
         webcam.setPipeline(pipeline);
+
+        webcam.openCameraDevice();
+        webcam.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
 
         webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
             @Override
@@ -37,15 +46,18 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
             }
         });
 
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry()); // stream on the FTC dashboard
+        FtcDashboard.getInstance().startCameraStream(webcam, 30);
+
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
         waitForStart();
 
         while (opModeIsActive()) {
-            ArrayList<SampleDetectionPipelinePNP.AnalyzedStone> objectCount = pipeline.getDetectedStones();
+            ArrayList<RedBlueDetectionPipelineNoPNP.AnalyzedStone> objectCount = pipeline.getDetectedStones();
             telemetry.addData("Objects Detected", objectCount);
-
             telemetry.update();
         }
         webcam.stopStreaming();
