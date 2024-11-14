@@ -56,6 +56,8 @@ public class opencv extends LinearOpMode {
         while (opModeIsActive()) {
             telemetry.addData("Coordinate", "(" + (int) cX + ", " + (int) cY + ")");
             telemetry.addData("Distance in Inch", (getDistance(width)));
+            // open webcam streaming
+
             telemetry.update();
 
             // The OpenCV pipeline automatically processes frames and handles detection

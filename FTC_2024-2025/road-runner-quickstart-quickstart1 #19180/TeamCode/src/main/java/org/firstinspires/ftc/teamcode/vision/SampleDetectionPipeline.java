@@ -2,15 +2,10 @@ package org.firstinspires.ftc.teamcode.vision;
 
 import org.openftc.easyopencv.OpenCvPipeline;
 
-import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.MatOfPoint3f;
-import org.opencv.core.Point3;
 import org.opencv.core.Point;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
@@ -19,10 +14,10 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 
-public class SampleDetectionPipelinePNP extends OpenCvPipeline
+public class SampleDetectionPipeline extends OpenCvPipeline
 {
     /*
-     * Our working image buffers
+     * Working image buffers
      */
     Mat ycrcbMat = new Mat();
     Mat crMat = new Mat();
@@ -41,12 +36,12 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     /*
      * Threshold values
      */
-    static final int YELLOW_MASK_THRESHOLD = 56;
-    static final int BLUE_MASK_THRESHOLD = 145;
-    static final int RED_MASK_THRESHOLD = 170;
+    static final int YELLOW_MASK_THRESHOLD = 57;
+    static final int BLUE_MASK_THRESHOLD = 150;
+    static final int RED_MASK_THRESHOLD = 198;
 
     /*
-     * The elements we use for noise reduction
+     * Elements for noise reduction
      */
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3.5, 3.5));
     Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3.5, 3.5));
@@ -60,27 +55,17 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
 
     static final int CONTOUR_LINE_THICKNESS = 2;
 
-    public class AnalyzedStone
+    static class AnalyzedStone
     {
-        public double angle;
-        public double area;
+        double angle;
         String color;
-        Mat rvec;
-        Mat tvec;
-        MatOfPoint contour;
     }
 
     ArrayList<AnalyzedStone> internalStoneList = new ArrayList<>();
     volatile ArrayList<AnalyzedStone> clientStoneList = new ArrayList<>();
 
     /*
-     * Camera Calibration Parameters
-     */
-    Mat cameraMatrix = new Mat(3, 3, CvType.CV_64FC1);
-    MatOfDouble distCoeffs = new MatOfDouble();
-
-    /*
-     * Some stuff to handle returning our various buffers
+     * Viewport stages
      */
     enum Stage
     {
@@ -92,31 +77,8 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     }
 
     Stage[] stages = Stage.values();
-
-    // Keep track of what stage the viewport is showing
     int stageNum = 0;
 
-    public SampleDetectionPipelinePNP()
-    {
-        // Initialize camera parameters
-        // Replace these values with your actual camera calibration parameters
-
-        // Focal lengths (fx, fy) and principal point (cx, cy)
-        double fx = 800; // Replace with your camera's focal length in pixels
-        double fy = 800;
-        double cx = 320; // Replace with your camera's principal point x-coordinate (usually image width / 2)
-        double cy = 240; // Replace with your camera's principal point y-coordinate (usually image height / 2)
-
-        cameraMatrix.put(0, 0,
-                fx, 0, cx,
-                0, fy, cy,
-                0, 0, 1);
-
-        // Distortion coefficients (k1, k2, p1, p2, k3)
-        // If you have calibrated your camera and have these values, use them
-        // Otherwise, you can assume zero distortion for simplicity
-        distCoeffs = new MatOfDouble(0, 0, 0, 0, 0);
-    }
 
     @Override
     public void onViewportTapped()
@@ -134,7 +96,6 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     @Override
     public Mat processFrame(Mat input)
     {
-        // We'll be updating this with new data below
         internalStoneList.clear();
 
         /*
@@ -179,9 +140,12 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
             {
                 return contoursOnPlainImageMat;
             }
-        }
 
-        return input;
+            default:
+            {
+                return input;
+            }
+        }
     }
 
     public ArrayList<AnalyzedStone> getDetectedStones()
@@ -194,19 +158,13 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
         // Convert the input image to YCrCb color space
         Imgproc.cvtColor(input, ycrcbMat, Imgproc.COLOR_RGB2YCrCb);
 
-        // Extract the Cb channel for blue detection
+        // Extract the Cb and Cr channels
         Core.extractChannel(ycrcbMat, cbMat, 2); // Cb channel index is 2
-
-        // Extract the Cr channel for red detection
         Core.extractChannel(ycrcbMat, crMat, 1); // Cr channel index is 1
 
-        // Threshold the Cb channel to form a mask for blue
+        // Threshold the channels to form masks
         Imgproc.threshold(cbMat, blueThresholdMat, BLUE_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY);
-
-        // Threshold the Cr channel to form a mask for red
         Imgproc.threshold(crMat, redThresholdMat, RED_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY);
-
-        // Threshold the Cb channel to form a mask for yellow
         Imgproc.threshold(cbMat, yellowThresholdMat, YELLOW_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY_INV);
 
         // Apply morphology to the masks
@@ -224,7 +182,10 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
         ArrayList<MatOfPoint> yellowContoursList = new ArrayList<>();
         Imgproc.findContours(morphedYellowThreshold, yellowContoursList, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
-        // Now analyze the contours
+        // Create a plain image for drawing contours
+        contoursOnPlainImageMat = Mat.zeros(input.size(), input.type());
+
+        // Analyze and draw contours
         for(MatOfPoint contour : blueContoursList)
         {
             analyzeContour(contour, input, "Blue");
@@ -244,9 +205,8 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     void morphMask(Mat input, Mat output)
     {
         /*
-         * Apply some erosion and dilation for noise reduction
+         * Apply erosion and dilation for noise reduction
          */
-
         Imgproc.erode(input, output, erodeElement);
         Imgproc.erode(output, output, erodeElement);
 
@@ -260,12 +220,12 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
         Point[] points = contour.toArray();
         MatOfPoint2f contour2f = new MatOfPoint2f(points);
 
-        // Do a rect fit to the contour, and draw it on the screen
+        // Fit a rotated rectangle to the contour and draw it
         RotatedRect rotatedRectFitToContour = Imgproc.minAreaRect(contour2f);
         drawRotatedRect(rotatedRectFitToContour, input, color);
+        drawRotatedRect(rotatedRectFitToContour, contoursOnPlainImageMat, color);
 
-        // The angle OpenCV gives us can be ambiguous, so look at the shape of
-        // the rectangle to fix that.
+        // Adjust the angle based on rectangle dimensions
         double rotRectAngle = rotatedRectFitToContour.angle;
         if (rotatedRectFitToContour.size.width < rotatedRectFitToContour.size.height)
         {
@@ -276,149 +236,11 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
         double angle = -(rotRectAngle - 180);
         drawTagText(rotatedRectFitToContour, Integer.toString((int) Math.round(angle)) + " deg", input, color);
 
-        // Prepare object points and image points for solvePnP
-        // Assuming the object is a rectangle with known dimensions
-        double objectWidth = 10.0;  // Replace with your object's width in real-world units (e.g., centimeters)
-        double objectHeight = 5.0;  // Replace with your object's height in real-world units
-
-        // Define the 3D coordinates of the object corners in the object coordinate space
-        MatOfPoint3f objectPoints = new MatOfPoint3f(
-                new Point3(-objectWidth / 2, -objectHeight / 2, 0),
-                new Point3(objectWidth / 2, -objectHeight / 2, 0),
-                new Point3(objectWidth / 2, objectHeight / 2, 0),
-                new Point3(-objectWidth / 2, objectHeight / 2, 0)
-        );
-
-        // Get the 2D image points from the detected rectangle corners
-        Point[] rectPoints = new Point[4];
-        rotatedRectFitToContour.points(rectPoints);
-
-        // Order the image points in the same order as object points
-        Point[] orderedRectPoints = orderPoints(rectPoints);
-
-        MatOfPoint2f imagePoints = new MatOfPoint2f(orderedRectPoints);
-
-        // Solve PnP
-        Mat rvec = new Mat();
-        Mat tvec = new Mat();
-
-        boolean success = Calib3d.solvePnP(
-                objectPoints, // Object points in 3D
-                imagePoints,  // Corresponding image points
-                cameraMatrix,
-                distCoeffs,
-                rvec,
-                tvec
-        );
-
-        if (success)
-        {
-            // Draw the coordinate axes on the image
-            drawAxis(input, rvec, tvec, cameraMatrix, distCoeffs);
-
-            // Store the pose information
-            double area = Imgproc.contourArea(contour);
-
-            AnalyzedStone analyzedStone = new AnalyzedStone();
-            analyzedStone.angle = rotRectAngle;
-            analyzedStone.color = color;
-            analyzedStone.rvec = rvec;
-            analyzedStone.tvec = tvec;
-            analyzedStone.contour = contour;
-            analyzedStone.area = area;
-            internalStoneList.add(analyzedStone);
-        }
-    }
-
-    void drawAxis(Mat img, Mat rvec, Mat tvec, Mat cameraMatrix, MatOfDouble distCoeffs)
-    {
-        // Length of the axis lines
-        double axisLength = 5.0;
-
-        // Define the points in 3D space for the axes
-        MatOfPoint3f axisPoints = new MatOfPoint3f(
-                new Point3(0, 0, 0),
-                new Point3(axisLength, 0, 0),
-                new Point3(0, axisLength, 0),
-                new Point3(0, 0, -axisLength) // Z axis pointing away from the camera
-        );
-
-        // Project the 3D points to 2D image points
-        MatOfPoint2f imagePoints = new MatOfPoint2f();
-        Calib3d.projectPoints(axisPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints);
-
-        Point[] imgPts = imagePoints.toArray();
-
-        // Draw the axis lines
-        Imgproc.line(img, imgPts[0], imgPts[1], new Scalar(0, 0, 255), 2); // X axis in red
-        Imgproc.line(img, imgPts[0], imgPts[2], new Scalar(0, 255, 0), 2); // Y axis in green
-        Imgproc.line(img, imgPts[0], imgPts[3], new Scalar(255, 0, 0), 2); // Z axis in blue
-    }
-
-    static Point[] orderPoints(Point[] pts)
-    {
-        // Orders the array of 4 points in the order: top-left, top-right, bottom-right, bottom-left
-        Point[] orderedPts = new Point[4];
-
-        // Sum and difference of x and y coordinates
-        double[] sum = new double[4];
-        double[] diff = new double[4];
-
-        for (int i = 0; i < 4; i++)
-        {
-            sum[i] = pts[i].x + pts[i].y;
-            diff[i] = pts[i].y - pts[i].x;
-        }
-
-        // Top-left point has the smallest sum
-        int tlIndex = indexOfMin(sum);
-        orderedPts[0] = pts[tlIndex];
-
-        // Bottom-right point has the largest sum
-        int brIndex = indexOfMax(sum);
-        orderedPts[2] = pts[brIndex];
-
-        // Top-right point has the smallest difference
-        int trIndex = indexOfMin(diff);
-        orderedPts[1] = pts[trIndex];
-
-        // Bottom-left point has the largest difference
-        int blIndex = indexOfMax(diff);
-        orderedPts[3] = pts[blIndex];
-
-        return orderedPts;
-    }
-
-    static int indexOfMin(double[] array)
-    {
-        int index = 0;
-        double min = array[0];
-
-        for (int i = 1; i < array.length; i++)
-        {
-            if (array[i] < min)
-            {
-                min = array[i];
-                index = i;
-            }
-        }
-        return index;
-    }
-
-    static int indexOfMax(double[] array)
-    {
-        int index = 0;
-        double max = array[0];
-
-        for (int i = 1; i < array.length; i++)
-        {
-            if (array[i] > max)
-            {
-                max = array[i];
-                index = i;
-            }
-        }
-        return index;
+        // Store the detected stone information
+        AnalyzedStone analyzedStone = new AnalyzedStone();
+        analyzedStone.angle = rotRectAngle;
+        analyzedStone.color = color;
+        internalStoneList.add(analyzedStone);
     }
 
     static void drawTagText(RotatedRect rect, String text, Mat mat, String color)
@@ -440,9 +262,8 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     static void drawRotatedRect(RotatedRect rect, Mat drawOn, String color)
     {
         /*
-         * Draws a rotated rect by drawing each of the 4 lines individually
+         * Draws a rotated rectangle by drawing each of the 4 lines individually
          */
-
         Point[] points = new Point[4];
         rect.points(points);
 
@@ -467,4 +288,3 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
         }
     }
 }
-
