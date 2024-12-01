@@ -153,8 +153,7 @@ public class SampleDetectionPipeline extends OpenCvPipeline
         return clientStoneList;
     }
 
-    void findContours(Mat input)
-    {
+    void findContours(Mat input) {
         // Convert the input image to YCrCb color space
         Imgproc.cvtColor(input, ycrcbMat, Imgproc.COLOR_RGB2YCrCb);
 
@@ -186,18 +185,15 @@ public class SampleDetectionPipeline extends OpenCvPipeline
         contoursOnPlainImageMat = Mat.zeros(input.size(), input.type());
 
         // Analyze and draw contours
-        for(MatOfPoint contour : blueContoursList)
-        {
+        for(MatOfPoint contour : blueContoursList) {
             analyzeContour(contour, input, "Blue");
         }
 
-        for(MatOfPoint contour : redContoursList)
-        {
+        for(MatOfPoint contour : redContoursList) {
             analyzeContour(contour, input, "Red");
         }
 
-        for(MatOfPoint contour : yellowContoursList)
-        {
+        for(MatOfPoint contour : yellowContoursList) {
             analyzeContour(contour, input, "Yellow");
         }
     }

@@ -17,6 +17,12 @@ import java.util.ArrayList;
 
 @TeleOp(name = "Sample Detection Demo Teleop")
 public class SampleDetectionDemoTeleop extends LinearOpMode {
+    private static final int MIN_ANGLE = 1;
+    private static final int MAX_ANGLE = 180;
+
+    private double rotation = 0; // Rotation variable to keep track of the angle (0-360)
+    private double previousAdjustedAngle = 0; // To track the previous value of adjustedAngle
+
     private Servo servo;
     OpenCvCamera webcam;
     SampleDetectionPipelinePNP pipeline;
@@ -25,7 +31,9 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
     @Override
     public void runOpMode() {
 
+        // ! Initialize the servo
         servo = hardwareMap.get(Servo.class, "servo");
+        servo.setDirection(Servo.Direction.REVERSE);
 
         // Get the camera monitor view ID
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
@@ -65,7 +73,11 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            int adjustedAngle = 0;
+
+
+
+            double adjustedAngle = 0;
+
             ArrayList<SampleDetectionPipelinePNP.AnalyzedStone> stones = pipeline.getDetectedStones();
             telemetry.addData("Number of stones", stones.size());
             if (!stones.isEmpty()) {
@@ -73,14 +85,61 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
                 for (SampleDetectionPipelinePNP.AnalyzedStone stone : stones) {
                     if (stone.area > largestStone.area) largestStone = stone;
                 }
-                adjustedAngle = ((int) largestStone.angle - 180) * -1;
-                telemetry.addData("Largest Stone Angle", adjustedAngle);
+                adjustedAngle = ( largestStone.angle - 180.0) * -1;
+                telemetry.addData("DetectionAngle", adjustedAngle);
+                telemetry.addData("largestStoneColor", largestStone.color);
             }
 
-            servo.setPosition( (double) adjustedAngle / 180 );
+            // ! Update the rotation based on the adjusted angle
+            updateRotation(adjustedAngle);
+            telemetry.addData("Rotation", rotation);
+
+            // ! Set the servo position based on the rotation
+            if (adjustedAngle < 90 && adjustedAngle > 60 && getRelativeRotation() > 330 && getRelativeRotation() < 360) {
+                servo.setPosition((getRelativeRotation() - 180) / 330);
+            } else {
+                servo.setPosition(getRelativeRotation() / 330);
+            }
 
             telemetry.update();
         }
         webcam.stopStreaming();
     }
+
+
+    public void updateRotation(double adjustedAngle) {
+        // Determine if the rotation is clockwise or counterclockwise
+        double angleDifference = adjustedAngle - previousAdjustedAngle;
+
+        // Handle wrap-around at 180 to 1 or 1 to 180
+        if (angleDifference > 90) { // Jump from 180 to 1 (clockwise)
+            angleDifference -= 180;
+        } else if (angleDifference < -90) { // Jump from 1 to 180 (counterclockwise)
+            angleDifference += 180;
+        }
+
+        // Update the rotation
+        rotation += angleDifference;
+
+        // Ensure rotation stays within 0-360 range
+        if (rotation < 0) {
+            rotation += 360;
+        } else if (rotation >= 360) {
+            rotation -= 360;
+        }
+
+        // Update the previous angle
+        previousAdjustedAngle = adjustedAngle;
+    }
+
+    public double getRotation() {
+        return rotation;
+    }
+
+    // Get the relative rotation (rotation + 90, adjusted to 0-360 range)
+    public double getRelativeRotation() {
+        return (rotation + 90) % 360;
+    }
+
+
 }

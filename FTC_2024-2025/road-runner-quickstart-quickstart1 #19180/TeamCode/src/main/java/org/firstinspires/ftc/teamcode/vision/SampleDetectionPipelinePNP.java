@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.vision;
 
+import com.acmerobotics.dashboard.config.Config;
+
 import org.openftc.easyopencv.OpenCvPipeline;
 
 import org.opencv.calib3d.Calib3d;
@@ -19,6 +21,7 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 
+@Config
 public class SampleDetectionPipelinePNP extends OpenCvPipeline
 {
     /*
@@ -41,9 +44,12 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     /*
      * Threshold values
      */
-    static final int YELLOW_MASK_THRESHOLD = 56;
-    static final int BLUE_MASK_THRESHOLD = 145;
-    static final int RED_MASK_THRESHOLD = 170;
+    public static int YELLOW_MASK_THRESHOLD_MIN = 18;
+    public static int YELLOW_MASK_THRESHOLD_MAX = 70;
+
+
+    public static int BLUE_MASK_THRESHOLD = 145;
+    public static int RED_MASK_THRESHOLD = 185;
 
     /*
      * The elements we use for noise reduction
@@ -207,7 +213,10 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
         Imgproc.threshold(crMat, redThresholdMat, RED_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY);
 
         // Threshold the Cb channel to form a mask for yellow
-        Imgproc.threshold(cbMat, yellowThresholdMat, YELLOW_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY_INV);
+        // * 新的黃色掩膜生成程式碼
+         Core.inRange(cbMat, new Scalar(YELLOW_MASK_THRESHOLD_MIN),
+                new Scalar(YELLOW_MASK_THRESHOLD_MAX),
+                yellowThresholdMat);
 
         // Apply morphology to the masks
         morphMask(blueThresholdMat, morphedBlueThreshold);
@@ -223,6 +232,7 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
 
         ArrayList<MatOfPoint> yellowContoursList = new ArrayList<>();
         Imgproc.findContours(morphedYellowThreshold, yellowContoursList, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+
 
         // Now analyze the contours
         for(MatOfPoint contour : blueContoursList)
@@ -244,14 +254,16 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     void morphMask(Mat input, Mat output)
     {
         /*
-         * Apply some erosion and dilation for noise reduction
+         * Apply more aggressive erosion and dilation for noise reduction
          */
+        Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+        Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
 
-        Imgproc.erode(input, output, erodeElement);
-        Imgproc.erode(output, output, erodeElement);
+        Imgproc.erode(input, output, erodeElement, new Point(-1, -1), 1);
+        Imgproc.erode(output, output, erodeElement, new Point(-1, -1), 1);
 
-        Imgproc.dilate(output, output, dilateElement);
-        Imgproc.dilate(output, output, dilateElement);
+        Imgproc.dilate(output, output, dilateElement, new Point(-1, -1), 2);
+        Imgproc.dilate(output, output, dilateElement, new Point(-1, -1), 2);
     }
 
     void analyzeContour(MatOfPoint contour, Mat input, String color)
