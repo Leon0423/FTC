@@ -95,10 +95,10 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
             telemetry.addData("Rotation", rotation);
 
             // ! Set the servo position based on the rotation
-            if (adjustedAngle < 90 && adjustedAngle > 60 && getRelativeRotation() > 330 && getRelativeRotation() < 360) {
-                servo.setPosition((getRelativeRotation() - 180) / 330);
+            if (getRotation() > 330 && getRotation() < 360) {
+                servo.setPosition((getRotation() - 180) / 327);
             } else {
-                servo.setPosition(getRelativeRotation() / 330);
+                servo.setPosition(getRotation() / 327);
             }
 
             telemetry.update();
@@ -134,11 +134,6 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
 
     public double getRotation() {
         return rotation;
-    }
-
-    // Get the relative rotation (rotation + 90, adjusted to 0-360 range)
-    public double getRelativeRotation() {
-        return (rotation + 90) % 360;
     }
 
 

@@ -52,7 +52,7 @@ public class SampleDetectionPipelinePNP extends OpenCvPipeline
     public static int RED_MASK_THRESHOLD = 185;
 
     /*
-     * The elements we use for noise reduction
+     * The elements we use for noise reduction+
      */
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3.5, 3.5));
     Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3.5, 3.5));
