@@ -73,7 +73,11 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-
+            if(gamepad1.a) {
+                webcam.startStreaming(640, 480); // Set your preferred resolution
+            } else if(gamepad1.b) {
+                webcam.stopStreaming();
+            }
 
 
             double adjustedAngle = 0;
