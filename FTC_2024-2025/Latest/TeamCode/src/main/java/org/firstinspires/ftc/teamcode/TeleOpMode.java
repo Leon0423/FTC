@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
@@ -32,6 +33,11 @@ public class TeleOpMode extends LinearOpMode {
             BR.setPower(br/scale);
             BL.setPower(bl/scale);
 
+            //TODO: add negative power to the motors
+            telemetry.addData("center", FR.getCurrentPosition());
+            telemetry.addData("left", FL.getCurrentPosition());
+            telemetry.addData("right", BL.getCurrentPosition());
+
             telemetry.update();
         }
     }
@@ -43,6 +49,17 @@ public class TeleOpMode extends LinearOpMode {
 
         FL.setDirection(DcMotorSimple.Direction.REVERSE);
         BL.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        FR.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        FL.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        BL.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+
+        FR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        FL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        BR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        BL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+
+
 
     }
     public double scaling_power(double fr, double fl, double br, double bl) {
