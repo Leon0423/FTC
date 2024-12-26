@@ -33,11 +33,9 @@ public class TeleOpMode extends LinearOpMode {
             BR.setPower(br/scale);
             BL.setPower(bl/scale);
 
-            //TODO: add negative power to the motors
             telemetry.addData("center", FR.getCurrentPosition());
             telemetry.addData("left", FL.getCurrentPosition());
             telemetry.addData("right", BL.getCurrentPosition());
-
             telemetry.update();
         }
     }
@@ -50,15 +48,13 @@ public class TeleOpMode extends LinearOpMode {
         FL.setDirection(DcMotorSimple.Direction.REVERSE);
         BL.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        FR.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-        FL.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-        BL.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        FR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        FL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        BL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        FR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        FL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        BR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        BL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-
+        FR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        FL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
 
     }
