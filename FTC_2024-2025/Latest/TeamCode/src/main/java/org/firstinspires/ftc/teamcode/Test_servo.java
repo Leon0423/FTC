@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
-@TeleOp(name = "TeleOpMode")
+@TeleOp(name = "Test_servo", group = "Test")
 public class Test_servo extends LinearOpMode{
     //變數設定
 
@@ -24,7 +24,8 @@ public class Test_servo extends LinearOpMode{
 
             if(gamepad1.a) {
                 ServoTargetPosition += 0.01;
-            } else if(gamepad1.b) {
+            }
+            if(gamepad1.b) {
                 ServoTargetPosition -= 0.01;
             }
             Servo.setPosition(ServoTargetPosition);
