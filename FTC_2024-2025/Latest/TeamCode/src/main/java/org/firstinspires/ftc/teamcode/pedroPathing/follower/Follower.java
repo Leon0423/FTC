@@ -716,6 +716,8 @@ public class Follower {
         Vector forwardHeadingVector = new Vector(1.0, poseUpdater.getPose().getHeading());
         double forwardVelocity = MathFunctions.dotProduct(forwardHeadingVector, velocity);
         double forwardDistanceToGoal = MathFunctions.dotProduct(forwardHeadingVector, distanceToGoalVector);
+
+        
         double forwardVelocityGoal = MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * forwardZeroPowerAcceleration * forwardDistanceToGoal));
         double forwardVelocityZeroPowerDecay = forwardVelocity - MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(forwardVelocity, 2) + 2 * forwardZeroPowerAcceleration * forwardDistanceToGoal));
 
