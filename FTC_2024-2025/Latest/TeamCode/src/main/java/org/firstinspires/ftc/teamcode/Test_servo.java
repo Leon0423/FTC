@@ -2,15 +2,17 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
-@TeleOp(name = "Axon_Mode")
-public class Axon_Mode extends LinearOpMode{
+@TeleOp(name = "TeleOpMode")
+public class Test_servo extends LinearOpMode{
     //變數設定
-    Servo servo;
-    double position = 0.0;
+
+    Servo Servo;
+    double ServoTargetPosition = 0;
+    int max_angle = 180;
+
     //創建物件
     @Override
     public void runOpMode() throws InterruptedException {
@@ -19,17 +21,18 @@ public class Axon_Mode extends LinearOpMode{
         //初始狀態設定，例如Servo初始位置
         while(opModeIsActive()) {
             //迴圈執行內容
-            //例如：控制伺服馬達轉動
-            if(gamepad1.right_stick_x != 0) {
-                position += gamepad1.right_stick_x * 0.001;
+
+            if(gamepad1.a) {
+                ServoTargetPosition += 0.01;
+            } else if(gamepad1.b) {
+                ServoTargetPosition -= 0.01;
             }
-            position = Math.min(1, Math.max(0, position));
-            servo.setPosition(position);
+            Servo.setPosition(ServoTargetPosition);
 
-
-            telemetry.addData("position", position * 325);
+            telemetry.addData("ServoTargetPosition", ServoTargetPosition);
+            telemetry.addData("Servo.getPosition()", Servo.getPosition());
+            telemetry.addData("Servo angle", Servo.getPosition() * max_angle);
             telemetry.update();
-
             idle();
         }
     }
@@ -37,9 +40,7 @@ public class Axon_Mode extends LinearOpMode{
     private void init_hardware() {
         //設定物件
 
-        servo = hardwareMap.get(Servo.class, "servo");
-        servo.setDirection(Servo.Direction.REVERSE);
-        servo.setPosition(position);
+        Servo = hardwareMap.get(Servo.class, "Servo");
 
         idle();
     }
