@@ -53,15 +53,11 @@ public class ExampleBucketAuto extends OpMode {
     /** Lowest (First) Sample from the Spike Mark */
     private final Pose pickup1Pose = new Pose(37, 121, Math.toRadians(0));
 
-    private final Pose pickup1ControlPose = new Pose(14, 121);
-
     /** Middle (Second) Sample from the Spike Mark */
     private final Pose pickup2Pose = new Pose(37, 130, Math.toRadians(0));
 
     /** Highest (Third) Sample from the Spike Mark */
     private final Pose pickup3Pose = new Pose(45.5, 133, Math.toRadians(90));
-
-    private final Pose pickup3ControlPose = new Pose(45.5, 121);
 
     /** Park Pose for our robot, after we do all of the scoring. */
     private final Pose parkPose = new Pose(60, 98, Math.toRadians(270));
@@ -108,9 +104,8 @@ public class ExampleBucketAuto extends OpMode {
         /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup1 = follower.pathBuilder()
                 .addPath(
-                    new BezierCurve(
+                    new BezierLine(
                         new Point(scorePose),
-                        new Point(pickup1ControlPose),
                         new Point(pickup1Pose)
                     )
                 )
@@ -120,9 +115,8 @@ public class ExampleBucketAuto extends OpMode {
         /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup1 = follower.pathBuilder()
                 .addPath(
-                    new BezierCurve(
+                    new BezierLine(
                         new Point(pickup1Pose),
-                        new Point(pickup1ControlPose),
                         new Point(scorePose)
                     )
                 )
@@ -154,9 +148,8 @@ public class ExampleBucketAuto extends OpMode {
         /* This is our grabPickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup3 = follower.pathBuilder()
                 .addPath(
-                    new BezierCurve(
+                    new BezierLine(
                         new Point(scorePose),
-                        new Point(pickup3ControlPose),
                         new Point(pickup3Pose)
                     )
                 )
@@ -208,7 +201,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup1,true);
-                    setPathState(2);
+                    if (!follower.isBusy()) {
+                        setPathState(2);
+                    }
                 }
                 break;
             case 2:
@@ -218,7 +213,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                     follower.followPath(scorePickup1,true);
-                    setPathState(3);
+                    if (!follower.isBusy()) {
+                        setPathState(3);
+                    }
                 }
                 break;
             case 3:
@@ -228,7 +225,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup2,true);
-                    setPathState(4);
+                     if (!follower.isBusy()) {
+                         setPathState(4);
+                     }
                 }
                 break;
             case 4:
@@ -238,7 +237,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                     follower.followPath(scorePickup2,true);
-                    setPathState(5);
+                    if (!follower.isBusy()) {
+                        setPathState(5);
+                    }
                 }
                 break;
             case 5:
@@ -248,7 +249,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup3,true);
-                    setPathState(6);
+                    if (!follower.isBusy()) {
+                        setPathState(6);
+                    }
                 }
                 break;
             case 6:
@@ -258,7 +261,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
                     follower.followPath(scorePickup3, true);
-                    setPathState(7);
+                    if (!follower.isBusy()) {
+                        setPathState(7);
+                    }
                 }
                 break;
             case 7:
@@ -268,7 +273,9 @@ public class ExampleBucketAuto extends OpMode {
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are parked */
                     follower.followPath(park,true);
-                    setPathState(8);
+                    if (!follower.isBusy()) {
+                        setPathState(8);
+                    }
                 }
                 break;
             case 8:
