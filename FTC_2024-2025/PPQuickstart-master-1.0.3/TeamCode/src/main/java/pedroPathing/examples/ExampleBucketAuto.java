@@ -200,8 +200,8 @@ public class ExampleBucketAuto extends OpMode {
                     /* Score Preload */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup1,true);
                     if (!follower.isBusy()) {
+                        follower.followPath(grabPickup1,true);
                         setPathState(2);
                     }
                 }
@@ -212,8 +212,9 @@ public class ExampleBucketAuto extends OpMode {
                     /* Grab Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup1,true);
+
                     if (!follower.isBusy()) {
+                        follower.followPath(scorePickup1,true);
                         setPathState(3);
                     }
                 }
@@ -224,8 +225,9 @@ public class ExampleBucketAuto extends OpMode {
                     /* Score Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup2,true);
+
                      if (!follower.isBusy()) {
+                         follower.followPath(grabPickup2,true);
                          setPathState(4);
                      }
                 }
@@ -236,8 +238,9 @@ public class ExampleBucketAuto extends OpMode {
                     /* Grab Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup2,true);
+
                     if (!follower.isBusy()) {
+                        follower.followPath(scorePickup2,true);
                         setPathState(5);
                     }
                 }
@@ -248,8 +251,9 @@ public class ExampleBucketAuto extends OpMode {
                     /* Score Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup3,true);
+
                     if (!follower.isBusy()) {
+                        follower.followPath(grabPickup3,true);
                         setPathState(6);
                     }
                 }
@@ -260,8 +264,9 @@ public class ExampleBucketAuto extends OpMode {
                     /* Grab Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup3, true);
+
                     if (!follower.isBusy()) {
+                        follower.followPath(scorePickup3, true);
                         setPathState(7);
                     }
                 }
@@ -272,8 +277,9 @@ public class ExampleBucketAuto extends OpMode {
                     /* Score Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are parked */
-                    follower.followPath(park,true);
+
                     if (!follower.isBusy()) {
+                        follower.followPath(park,true);
                         setPathState(8);
                     }
                 }
