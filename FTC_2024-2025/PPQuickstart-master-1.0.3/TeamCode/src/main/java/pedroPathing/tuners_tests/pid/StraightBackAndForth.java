@@ -3,6 +3,7 @@ package pedroPathing.tuners_tests.pid;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.util.Constants;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -84,6 +85,8 @@ public class StraightBackAndForth extends OpMode {
         }
 
         telemetryA.addData("going forward", forward);
+        telemetryA.addData("timeout constraint", FollowerConstants.pathEndTimeoutConstraint);
+        telemetryA.addData("translational PID", FollowerConstants.translationalPIDFCoefficients);
         follower.telemetryDebug(telemetryA);
     }
 }
