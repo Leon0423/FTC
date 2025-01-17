@@ -14,7 +14,6 @@ public class TeleOpMode extends LinearOpMode {
     double fr, fl, br, bl, scale;
     private DcMotorEx SlideLeftFront, SlideLeftBack, SlideRightFront, SlideRightBack;
     private Servo OutputClaw, OutputCenter, OutputLeft, OutputRight;
-    private double slide_power = 0.4;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -38,6 +37,8 @@ public class TeleOpMode extends LinearOpMode {
             BL.setPower(bl/scale);
 
             // * Slide
+            double slide_power = 0.4;
+
             if(gamepad1.a) {
                 // * Slide up
                 SlideLeftFront.setPower(slide_power);
@@ -51,10 +52,10 @@ public class TeleOpMode extends LinearOpMode {
                 SlideRightFront.setPower(-slide_power);
                 SlideRightBack.setPower(-slide_power);
             } else {
-                SlideLeftFront.setPower(0);
-                SlideLeftBack.setPower(0);
-                SlideRightFront.setPower(0);
-                SlideRightBack.setPower(0);
+                SlideLeftFront.setPower(0.00001);
+                SlideLeftBack.setPower(0.00001);
+                SlideRightFront.setPower(0.00001);
+                SlideRightBack.setPower(0.00001);
             }
 
             // * Output
