@@ -6,7 +6,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 @TeleOp(name = "TeleOpMode_IntakeMode")
 public class TeleOpMode_IntakeMode extends LinearOpMode {
-    private Servo IntakeLeft, IntakeRight;
+    private Servo horizonSlideLeft, horizonSlideRight;
+    private Servo intakeLeft, intakeRight;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -16,27 +17,24 @@ public class TeleOpMode_IntakeMode extends LinearOpMode {
 
             // * intake
             if(gamepad1.y){
-                IntakeLeft.setPosition(IntakeLeft.getPosition() + 0.01);
-                IntakeRight.setPosition(IntakeRight.getPosition() + 0.01);
+                horizonSlideLeft.setPosition(horizonSlideLeft.getPosition() + 0.01);
+                horizonSlideRight.setPosition(horizonSlideRight.getPosition() + 0.01);
             } else if (gamepad1.a) {
-                IntakeLeft.setPosition(IntakeLeft.getPosition() - 0.01);
-                IntakeRight.setPosition(IntakeRight.getPosition() - 0.01);
+                horizonSlideLeft.setPosition(horizonSlideLeft.getPosition() - 0.01);
+                horizonSlideRight.setPosition(horizonSlideRight.getPosition() - 0.01);
             }
 
             if(gamepad1.b) {
-                IntakeLeft.setPosition(0.3);
-                IntakeRight.setPosition(0.3);
+                horizonSlideLeft.setPosition(0.3);
+                horizonSlideRight.setPosition(0.3);
             }
-            if(gamepad1.x){
-                IntakeLeft.setPosition(-0.3);
-                IntakeRight.setPosition(-0.3);
-            }
+
 
 
             // * intake
             telemetry.addLine("Y/A: Intake Forward / Backward");
-            telemetry.addData("IntakeRight", IntakeRight.getPosition());
-            telemetry.addData("IntakeLeft", IntakeLeft.getPosition());
+            telemetry.addData("IntakeRight", horizonSlideRight.getPosition());
+            telemetry.addData("IntakeLeft", horizonSlideLeft.getPosition());
             telemetry.update();
 
         }
@@ -44,11 +42,18 @@ public class TeleOpMode_IntakeMode extends LinearOpMode {
     public void init_hardware() {
 
         // * intake
-        IntakeLeft = hardwareMap.get(Servo.class, "HorizonLeft");
-        IntakeRight = hardwareMap.get(Servo.class, "HorizonRight");
-        IntakeRight.setDirection(Servo.Direction.REVERSE);
-        IntakeRight.setPosition(0);
-        IntakeLeft.setPosition(0);
+        horizonSlideLeft = hardwareMap.get(Servo.class, "HorizonLeft");
+        horizonSlideRight = hardwareMap.get(Servo.class, "HorizonRight");
+        horizonSlideRight.setDirection(Servo.Direction.REVERSE);
+        horizonSlideRight.setPosition(0);
+        horizonSlideLeft.setPosition(0);
+
+        intakeLeft = hardwareMap.get(Servo.class, "IntakeLeft");
+        intakeRight = hardwareMap.get(Servo.class, "IntakeRight");
+        intakeRight.setDirection(Servo.Direction.REVERSE);
+        intakeRight.setPosition(0);
+        intakeLeft.setPosition(0);
+
 
 
     }

@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
-import pedroPathing.config.subsystem.OutputSubsystem;
+import pedroPathing.CommandPackage.Subsystems.OutputSubsystem;
 
 @TeleOp(name = "TeleOpMode")
 public class TeleOpMode extends LinearOpMode {
