@@ -7,13 +7,18 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import pedroPathing.config.subsystem.OutputSubsystem;
+
 @TeleOp(name = "TeleOpMode")
 public class TeleOpMode extends LinearOpMode {
     private DcMotorEx FR, FL, BR, BL;
     double drive, turn, strafe;
     double fr, fl, br, bl, scale;
     private DcMotorEx SlideLeftFront, SlideLeftBack, SlideRightFront, SlideRightBack;
-    private Servo OutputClaw, OutputCenter, OutputLeft, OutputRight;
+    private Servo IntakeLeft, IntakeRight;
+    private
+    OutputSubsystem outputSubsystem;
+    double slide_power = 0.4;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -37,15 +42,14 @@ public class TeleOpMode extends LinearOpMode {
             BL.setPower(bl/scale);
 
             // * Slide
-            double slide_power = 0.4;
 
-            if(gamepad1.a) {
+            if(gamepad1.right_bumper) {
                 // * Slide up
                 SlideLeftFront.setPower(slide_power);
                 SlideLeftBack.setPower(slide_power);
                 SlideRightFront.setPower(slide_power);
                 SlideRightBack.setPower(slide_power);
-            } else if (gamepad1.b) {
+            } else if (gamepad1.left_bumper) {
                 // * Slide down
                 SlideLeftFront.setPower(-slide_power);
                 SlideLeftBack.setPower(-slide_power);
@@ -60,44 +64,61 @@ public class TeleOpMode extends LinearOpMode {
 
             // * Output
             if(gamepad1.dpad_up) {
-                OutputLeft.setPosition(OutputLeft.getPosition() + 0.01);
-                OutputRight.setPosition(OutputRight.getPosition() + 0.01);
+                outputSubsystem.outputLeft(outputSubsystem.getOutputLeftCurrentPosition() + 0.01);
+                outputSubsystem.outputRight(outputSubsystem.getOutputRightCurrentPosition() + 0.01);
             } else if(gamepad1.dpad_down) {
-                OutputLeft.setPosition(OutputLeft.getPosition() - 0.01);
-                OutputRight.setPosition(OutputRight.getPosition() - 0.01);
+                outputSubsystem.outputLeft(outputSubsystem.getOutputLeftCurrentPosition() - 0.01);
+                outputSubsystem.outputRight(outputSubsystem.getOutputRightCurrentPosition() - 0.01);
             }
 
             if(gamepad1.dpad_left) {
-                OutputCenter.setPosition(OutputCenter.getPosition() + 0.01);
+                outputSubsystem.outputCenter(outputSubsystem.getOutputCenterCurrentPosition() + 0.01);
             } else if(gamepad1.dpad_right) {
-                OutputCenter.setPosition(OutputCenter.getPosition() - 0.01);
+                outputSubsystem.outputCenter(outputSubsystem.getOutputCenterCurrentPosition() - 0.01);
             }
 
             if(gamepad1.x) {
-                OutputClaw.setPosition(OutputClaw.getPosition() + 0.01);
+                outputSubsystem.outputClaw(outputSubsystem.getOutputClawCurrentPosition() + 0.01);
             } else if(gamepad1.y) {
-                OutputClaw.setPosition(OutputClaw.getPosition() - 0.01);
+                outputSubsystem.outputClaw(outputSubsystem.getOutputClawCurrentPosition() - 0.01);
             }
+
+            // * intake
+            if(gamepad1.y){
+                IntakeLeft.setPosition(IntakeLeft.getPosition() + 0.01);
+                IntakeRight.setPosition(IntakeRight.getPosition() + 0.01);
+            } else if (gamepad1.a) {
+                IntakeLeft.setPosition(IntakeLeft.getPosition() - 0.01);
+                IntakeRight.setPosition(IntakeRight.getPosition() - 0.01);
+            }
+
+
             // * Chassis
             telemetry.addData("slide encoder", BR.getCurrentPosition());
             telemetry.addData("left", FL.getCurrentPosition());
             telemetry.addData("right", BL.getCurrentPosition());
 
             // * Slide
-            telemetry.addLine("A: Slide Up");
-            telemetry.addLine("B: Slide Down");
+            telemetry.addLine("Right Bumper: Slide Up");
+            telemetry.addLine("Left Bumper: Slide Down");
+
+            telemetry.addData("SlideCurrentPosition", SlideCurrentPosition());
 
             // * Output
-            telemetry.addLine("Dpad Up/Down: OutputLeft, OutputRight");
-            telemetry.addData("OutputLeft", OutputLeft.getPosition());
-            telemetry.addData("OutputRight", OutputRight.getPosition());
+            telemetry.addLine("Dpad Up / Down: OutputLeft, OutputRight");
+            telemetry.addData("OutputLeft", outputSubsystem.getOutputLeftCurrentPosition());
+            telemetry.addData("OutputRight", outputSubsystem.getOutputRightCurrentPosition());
 
-            telemetry.addLine("Dpad Left/Right: OutputCenter");
-            telemetry.addData("OutputCenter", OutputCenter.getPosition());
+            telemetry.addLine("Dpad Left / Right: OutputCenter");
+            telemetry.addData("OutputCenter", outputSubsystem.getOutputCenterCurrentPosition());
 
-            telemetry.addLine("X/Y: OutputClaw");
-            telemetry.addData("OutputClaw", OutputClaw.getPosition());
+            telemetry.addLine("X / Y: OutputClaw");
+            telemetry.addData("OutputClaw", outputSubsystem.getOutputClawCurrentPosition());
 
+            // * intake
+            telemetry.addLine("Y/A: Intake Forward / Backward");
+            telemetry.addData("IntakeRight", IntakeRight.getPosition());
+            telemetry.addData("IntakeLeft", IntakeLeft.getPosition());
             telemetry.update();
 
         }
@@ -133,21 +154,20 @@ public class TeleOpMode extends LinearOpMode {
 
         SlideRightBack = hardwareMap.get(DcMotorEx.class, "SlideRightBack");
         SlideRightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        SlideRightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        SlideRightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         // * Output
-        OutputClaw = hardwareMap.get(Servo.class, "OutputClaw");
-        OutputClaw.setPosition(0);
+        outputSubsystem = new OutputSubsystem(hardwareMap);
+        outputSubsystem.setDefaultPosition();
 
-        OutputCenter = hardwareMap.get(Servo.class, "OutputCenter");
-        OutputCenter.setPosition(0);
+        // * intake
+        IntakeLeft = hardwareMap.get(Servo.class, "HorizonLeft");
+        IntakeRight = hardwareMap.get(Servo.class, "HorizonRight");
+        IntakeRight.setDirection(Servo.Direction.REVERSE);
+        IntakeRight.setPosition(0);
+        IntakeLeft.setPosition(0);
 
-        OutputLeft = hardwareMap.get(Servo.class, "OutputLeft");
-        OutputLeft.setDirection(Servo.Direction.FORWARD);
-        OutputLeft.setPosition(0);
-
-        OutputRight = hardwareMap.get(Servo.class, "OutputRight");
-        OutputRight.setDirection(Servo.Direction.REVERSE);
-        OutputRight.setPosition(0);
 
     }
     public double scaling_power(double fr, double fl, double br, double bl) {
@@ -156,5 +176,9 @@ public class TeleOpMode extends LinearOpMode {
             max = 1;
         }
         return max;
+    }
+
+    public double SlideCurrentPosition() {
+        return SlideRightBack.getCurrentPosition();
     }
 }

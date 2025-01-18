@@ -2,6 +2,7 @@ package pedroPathing.config.subsystem;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -31,12 +32,16 @@ public class SlideSubsystem {
 
         SlideLeftBack = hardwareMap.get(DcMotorEx.class, "SlideLeftBack");
         SlideLeftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        SlideLeftBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
         SlideRightFront = hardwareMap.get(DcMotorEx.class, "SlideRightFront");
+        SlideRightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         SlideRightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         SlideRightBack = hardwareMap.get(DcMotorEx.class, "SlideRightBack");
         SlideRightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        SlideRightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        SlideRightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     }
 
     //------------------------------Slide------------------------------//
