@@ -7,16 +7,16 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
-@TeleOp(name = "Test_Slide", group = "Test")
+@TeleOp(name = "Test_SlideTargetPosition", group = "Test")
 public class Test_motor extends LinearOpMode{
     //變數設定
 
-    DcMotorEx Left, Right;
-    private int armUpPosition = 1000;
-    private int armDownPosition = 0;
-    private int armpos;
+    DcMotorEx SlideLeft, SlideRight;
+    private int SlideMaximumPosition = 1000;
+    private int SlideMinimumPosition = 0;
+    private int SlidePosition = 0;
+    private double SlidePower = 0.5;
 
 
     //創建物件
@@ -26,32 +26,24 @@ public class Test_motor extends LinearOpMode{
         waitForStart();
         while(opModeIsActive()) {
             // * 迴圈執行內容
-
-            Left.setTargetPosition(armpos);
-            Right.setTargetPosition(armpos);
-
-
-            if(gamepad1.a){
-                armpos += 1;
-                Left.setPower(0.6);
-                Right.setPower(0.6);
-            } else if (gamepad1.b) {
-                armpos -= 1;
-                Left.setPower(0.6);
-                Right.setPower(0.6);
+            // ! gamepad "2" is the second controller
+            if(gamepad2.a && SlidePosition < SlideMaximumPosition) {
+                SlidePosition += 1;
+            } else if (gamepad2.b && SlidePosition > SlideMinimumPosition) {
+                SlidePosition -= 1;
             }
 
+            SlideLeft.setTargetPosition(SlidePosition);
+            SlideRight.setTargetPosition(SlidePosition);
 
-            // Show the position of the armMotor on telemetry
-            telemetry.addData("Left Encoder Position", Left.getCurrentPosition());
-            telemetry.addData("Right Encoder Position", Right.getCurrentPosition());
-
-
-            telemetry.addData("armpos", armpos);
-
-            // Show the target position of the armMotor on telemetry
-            telemetry.addData("Left Target Position", Left.getTargetPosition());
-            telemetry.addData("Right Target Position", Right.getTargetPosition());
+            telemetry.addData("SlidePosition", SlidePosition);
+            telemetry.addData("SlidePower", SlidePower);
+            telemetry.addData("Left Encoder Position", SlideLeft.getCurrentPosition());
+            telemetry.addData("Right Encoder Position", SlideRight.getCurrentPosition());
+            telemetry.addData("Left Target Position", SlideLeft.getTargetPosition());
+            telemetry.addData("Right Target Position", SlideRight.getTargetPosition());
+            telemetry.addData("SlideMaximumPosition", SlideMaximumPosition);
+            telemetry.addData("SlideMinimumPosition", SlideMinimumPosition);
             telemetry.update();
             idle();
         }
@@ -60,24 +52,20 @@ public class Test_motor extends LinearOpMode{
     private void init_hardware() {
         //設定物件
         //初始狀態設定，例如Servo初始位置
-        Left = hardwareMap.get(DcMotorEx.class, "Left");
-        Right = hardwareMap.get(DcMotorEx.class, "Right");
-        Left.setDirection(DcMotorSimple.Direction.REVERSE);
-        Left.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        SlideLeft = hardwareMap.get(DcMotorEx.class, "Left");
+        SlideRight = hardwareMap.get(DcMotorEx.class, "Right");
+        SlideLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        SlideRight.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        Left.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        Left.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        Right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        Right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        SlideLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        SlideRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-
-        Left.setTargetPosition(armDownPosition);
-        Right.setTargetPosition(armDownPosition);
-        Left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        Right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        armpos = Math.min(Math.max(armpos, armUpPosition), armDownPosition);
+        SlideLeft.setTargetPosition(SlidePosition);
+        SlideRight.setTargetPosition(SlidePosition);
+        SlideLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideLeft.setPower(SlidePower);
+        SlideRight.setPower(SlidePower);
 
         idle();
     }

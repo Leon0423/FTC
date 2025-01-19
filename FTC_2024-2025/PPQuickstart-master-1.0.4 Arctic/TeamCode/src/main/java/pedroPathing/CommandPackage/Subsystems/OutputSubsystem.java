@@ -32,7 +32,18 @@ public class OutputSubsystem extends SubsystemBase {
         setOutputRight(0);
     }
 
-    // * 控制方法
+    // * 整組Output方法
+    public void setOutputPosition(double ArmPosition, double CenterPosition, boolean ClawPosition) {
+        setArmPosition(ArmPosition);
+        setOutputCenter(CenterPosition);
+        if (ClawPosition) {
+            OpenClaw();
+        } else {
+            CloseClaw();
+        }
+    }
+
+    // * 手臂控制方法
     public void setArmPosition(double RotatePosition) {
         setOutputLeft(RotatePosition);
         setOutputRight(RotatePosition);
@@ -40,6 +51,10 @@ public class OutputSubsystem extends SubsystemBase {
 
     public void OpenClaw() {
         setOutputClaw(RobotConstants.OpenOutputClawPosition);
+    }
+
+    public void CloseClaw() {
+        setOutputClaw(RobotConstants.CloseOutputClawPosition);
     }
 
     // * 控制方法

@@ -5,13 +5,19 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+import java.util.concurrent.TimeUnit;
 
 @TeleOp(name = "Test_Arm", group = "Test")
 public class Test_Arm extends LinearOpMode{
     //變數設定
 
-    CRServo ArmLeft, ArmRight;
-    Servo claw;
+    private CRServo ArmLeft, ArmRight;
+    private Servo OutputClaw;
+    private double ArmPower = 0.5;
+    ElapsedTime rotateTimer = new ElapsedTime();
+    private double ClawRotation_TimeLimit = 1.0;
 
     //創建物件
     @Override
@@ -20,12 +26,46 @@ public class Test_Arm extends LinearOpMode{
         waitForStart();
         while(opModeIsActive()) {
             // * 迴圈執行內容
+            if (gamepad2.a) {
+                ArmLeft.setPower(ArmPower);
+                ArmRight.setPower(ArmPower);
+            } else if (gamepad2.b) {
+                ArmLeft.setPower(-ArmPower);
+                ArmRight.setPower(-ArmPower);
+            }
+
+            if (gamepad2.dpad_up) {
+                rotateTimer.reset();
+                while(rotateTimer.time(TimeUnit.SECONDS) < ClawRotation_TimeLimit) {
+                    ArmLeft.setPower(ArmPower);
+                    ArmRight.setPower(-ArmPower);
+                }
+            } else if (gamepad2.dpad_down) {
+                rotateTimer.reset();
+                while(rotateTimer.time(TimeUnit.SECONDS) < ClawRotation_TimeLimit) {
+                    ArmLeft.setPower(-ArmPower);
+                    ArmRight.setPower(ArmPower);
+                }
+            }
+
+            ArmLeft.setPower(0.00001);
+            ArmRight.setPower(0.00001);
+
+            if(gamepad2.x) {
+                OutputClaw.setPosition(OutputClaw.getPosition() + 0.001);
+            }
+            if(gamepad2.y) {
+                OutputClaw.setPosition(OutputClaw.getPosition() - 0.001);
+            }
 
 
-            telemetry.addData("servoRight", .getPosition());
-            telemetry.addData("servoLeft", servoLeft.getPosition());
-            telemetry.addData("clawPosition", claw.getPosition());
-
+            telemetry.addData("ArmPower", ArmPower);
+            telemetry.addLine("Gamepad2 A / B : Arm Up / Down");
+            telemetry.addLine("Gamepad2 Dpad Up  /Down : Claw Rotation");
+            telemetry.addData("ArmLeftPower", ArmLeft.getPower());
+            telemetry.addData("ArmRightPower", ArmRight.getPower());
+            telemetry.addLine("Gamepad2 X / Y : Claw Open / Close");
+            telemetry.addData("OutputClawPosition", OutputClaw.getPosition());
             telemetry.update();
             idle();
         }
@@ -37,10 +77,8 @@ public class Test_Arm extends LinearOpMode{
         ArmLeft = hardwareMap.get(CRServo.class, "ArmLeft");
         ArmRight = hardwareMap.get(CRServo.class, "ArmRight");
         ArmRight.setDirection(CRServo.Direction.REVERSE);
-        ArmRight.setMode(CRServo.class, "RUN_WITHOUT_ENCODER");
 
-
-        claw = hardwareMap.get(Servo.class, "claw");
+        OutputClaw = hardwareMap.get(Servo.class, "OutputClaw");
 
 
         idle();

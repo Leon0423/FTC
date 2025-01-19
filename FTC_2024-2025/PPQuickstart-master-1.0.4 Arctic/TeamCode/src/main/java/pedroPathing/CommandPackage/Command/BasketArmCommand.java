@@ -9,20 +9,18 @@ public class BasketArmCommand extends CommandBase {
 
     @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
     private final OutputSubsystem outputSubsystem_command;
-    private final double BasketArmPosition;
-    private final double BasketCenterPosition;
 
     public BasketArmCommand(OutputSubsystem outputSubsystem) {
         outputSubsystem_command = outputSubsystem;
-        this.BasketArmPosition = RobotConstants.BasketArmPosition;
-        this.BasketCenterPosition = RobotConstants.BasketCenterPosition;
         addRequirements(outputSubsystem_command);
     }
 
     @Override
     public void initialize() {
-        outputSubsystem_command.setArmPosition(BasketArmPosition);
-        outputSubsystem_command.setOutputCenter(BasketCenterPosition);
+        outputSubsystem_command.setOutputPosition(
+                RobotConstants.BasketArmCommand_ArmPosition,
+                RobotConstants.BasketArmCommand_CenterPosition,
+                RobotConstants.BasketArmCommand_ClawPosition);
     }
 
     @Override

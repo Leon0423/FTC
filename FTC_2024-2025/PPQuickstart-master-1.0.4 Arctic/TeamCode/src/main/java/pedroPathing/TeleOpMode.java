@@ -42,7 +42,7 @@ public class TeleOpMode extends LinearOpMode {
             BL.setPower(bl/scale);
 
             // * Slide
-
+            // * Version I
             if(gamepad1.right_bumper) {
                 // * Slide up
                 SlideLeftFront.setPower(slide_power);
@@ -62,7 +62,8 @@ public class TeleOpMode extends LinearOpMode {
                 SlideRightBack.setPower(0.00001);
             }
 
-            // * Output
+            // * Outtake
+            /*
             if(gamepad1.dpad_up) {
                 outputSubsystem.outputLeft(outputSubsystem.getOutputLeftCurrentPosition() + 0.01);
                 outputSubsystem.outputRight(outputSubsystem.getOutputRightCurrentPosition() + 0.01);
@@ -82,6 +83,9 @@ public class TeleOpMode extends LinearOpMode {
             } else if(gamepad1.y) {
                 outputSubsystem.outputClaw(outputSubsystem.getOutputClawCurrentPosition() - 0.01);
             }
+
+             */
+
 
             // * intake
             if(gamepad1.y){

@@ -2,12 +2,15 @@ package pedroPathing;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
 
 @TeleOp(name = "TeleOpMode_IntakeMode")
 public class TeleOpMode_IntakeMode extends LinearOpMode {
-    private Servo horizonSlideLeft, horizonSlideRight;
-    private Servo intakeLeft, intakeRight;
+    private CRServo HSRight, HSLeft;
+    private Servo HSArmLeft, HSArmRight, IntakeClaw;
+    AnalogInput HSLeftEncoder, HSRightEncoder;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -15,46 +18,85 @@ public class TeleOpMode_IntakeMode extends LinearOpMode {
         waitForStart();
         while(opModeIsActive()) {
 
-            // * intake
-            if(gamepad1.y){
-                horizonSlideLeft.setPosition(horizonSlideLeft.getPosition() + 0.01);
-                horizonSlideRight.setPosition(horizonSlideRight.getPosition() + 0.01);
-            } else if (gamepad1.a) {
-                horizonSlideLeft.setPosition(horizonSlideLeft.getPosition() - 0.01);
-                horizonSlideRight.setPosition(horizonSlideRight.getPosition() - 0.01);
+            // * Horizon Slide
+            double speed = 0.5;
+            HSRight.setPower(-gamepad1.right_stick_y * speed); // ! speed need 緩衝(Check the Voltage)
+            HSLeft.setPower(-gamepad1.right_stick_y * speed);
+
+            // * Horizon Arm
+
+            HSArmRight.setPosition(HSArmRight.getPosition() + (-gamepad1.left_stick_y) * 0.01);
+            HSArmLeft.setPosition(HSArmLeft.getPosition() + (-gamepad1.left_stick_y) * 0.01);
+
+            if(gamepad1.a){
+                HSArmLeft.setPosition(HSArmLeft.getPosition() + 0.001);
+            } else if (gamepad1.b) {
+                HSArmLeft.setPosition(HSArmLeft.getPosition() - 0.001);
             }
 
-            if(gamepad1.b) {
-                horizonSlideLeft.setPosition(0.3);
-                horizonSlideRight.setPosition(0.3);
+            if(gamepad1.x){
+                HSArmRight.setPosition(HSArmRight.getPosition() + 0.001);
+            } else if (gamepad1.y) {
+                HSArmRight.setPosition(HSArmRight.getPosition() - 0.001);
+            }
+
+            if(gamepad1.dpad_up) {
+                transferSample1Position();
+            } else if (gamepad1.dpad_down) {
+                transferSample2Position();
             }
 
 
-
             // * intake
-            telemetry.addLine("Y/A: Intake Forward / Backward");
-            telemetry.addData("IntakeRight", horizonSlideRight.getPosition());
-            telemetry.addData("IntakeLeft", horizonSlideLeft.getPosition());
+
+            telemetry.addData("HSRRightEncoderVoltage", HSRightEncoder.getVoltage());
+
+            telemetry.addData("HSRightPower", HSRight.getPower());
+            telemetry.addData("HSLeftPower", HSLeft.getPower());
+
+            telemetry.addData("HSArmLeftPosition", HSArmLeft.getPosition());
+            telemetry.addData("HSArmRightPosition", HSArmRight.getPosition());
+
+            telemetry.addData("HSRightEncoderPosition", HSRightEncoder.getVoltage() / 3.3 * 360);
+
+
             telemetry.update();
+
+
 
         }
     }
     public void init_hardware() {
 
         // * intake
-        horizonSlideLeft = hardwareMap.get(Servo.class, "HorizonLeft");
-        horizonSlideRight = hardwareMap.get(Servo.class, "HorizonRight");
-        horizonSlideRight.setDirection(Servo.Direction.REVERSE);
-        horizonSlideRight.setPosition(0);
-        horizonSlideLeft.setPosition(0);
+        HSRight = hardwareMap.get(CRServo.class, "HSRight");
+        HSLeft = hardwareMap.get(CRServo.class, "HSLeft");
+        HSRight.setDirection(CRServo.Direction.REVERSE);
+        HSLeft.setDirection(CRServo.Direction.FORWARD);
+        HSRight.setPower(0);
+        HSLeft.setPower(0);
 
-        intakeLeft = hardwareMap.get(Servo.class, "IntakeLeft");
-        intakeRight = hardwareMap.get(Servo.class, "IntakeRight");
-        intakeRight.setDirection(Servo.Direction.REVERSE);
-        intakeRight.setPosition(0);
-        intakeLeft.setPosition(0);
+        HSArmLeft = hardwareMap.get(Servo.class, "HSArmLeft");
+        HSArmRight = hardwareMap.get(Servo.class, "HSArmRight");
+        HSArmRight.setDirection(Servo.Direction.REVERSE);
+        HSArmLeft.setPosition(0);
+        HSArmRight.setPosition(0);
 
+        // * analog input
+        HSLeftEncoder = hardwareMap.get(AnalogInput.class, "HSLeftEncoder");
+        HSRightEncoder = hardwareMap.get(AnalogInput.class, "HSRightEncoder");
 
+        // * Intake Claw
+        IntakeClaw = hardwareMap.get(Servo.class, "IntakeClaw");
+    }
 
+    public void transferSample1Position() {
+        HSArmLeft.setPosition(0.23);
+        HSArmRight.setPosition(0.23);
+    }
+
+    public void transferSample2Position() {
+        HSArmLeft.setPosition(0.55);
+        HSArmRight.setPosition(0.17);
     }
 }
