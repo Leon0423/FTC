@@ -4,13 +4,13 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Servo;
 
-@TeleOp(name = "Test_servo", group = "Test")
+@TeleOp(name = "Test_horizonSlide", group = "Test")
 public class Test_servo extends LinearOpMode{
     //變數設定
 
-    Servo Servo;
-    double ServoTargetPosition = 0;
+    Servo servoLeft, servoRight;
     int max_angle = 180;
+    double position = 0;
 
     //創建物件
     @Override
@@ -20,18 +20,16 @@ public class Test_servo extends LinearOpMode{
         //初始狀態設定，例如Servo初始位置
         while(opModeIsActive()) {
             //迴圈執行內容
+            position = Math.min(0.4, Math.max(0, position));
+            position += (-gamepad1.left_stick_y) * 0.001;
 
-            if(gamepad1.a) {
-                ServoTargetPosition += 0.01;
-            }
-            if(gamepad1.b) {
-                ServoTargetPosition -= 0.01;
-            }
-            Servo.setPosition(ServoTargetPosition);
+            //Maximum angle is 0.4
+            servoLeft.setPosition(position);
+            servoRight.setPosition(position);
 
-            telemetry.addData("ServoTargetPosition", ServoTargetPosition);
-            telemetry.addData("Servo.getPosition()", Servo.getPosition());
-            telemetry.addData("Servo angle", Servo.getPosition() * max_angle);
+            telemetry.addData("servoRight", servoRight.getPosition());
+            telemetry.addData("servoLeft", servoLeft.getPosition());
+            telemetry.addData("Servo angle", servoLeft.getPosition() * max_angle);
             telemetry.update();
             idle();
         }
@@ -40,7 +38,9 @@ public class Test_servo extends LinearOpMode{
     private void init_hardware() {
         //設定物件
 
-        Servo = hardwareMap.get(Servo.class, "Servo");
+        servoLeft = hardwareMap.get(Servo.class, "servoLeft");
+        servoRight = hardwareMap.get(Servo.class, "servoRight");
+        servoRight.setDirection(Servo.Direction.REVERSE);
 
         idle();
     }
