@@ -21,13 +21,13 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     // * 設定整體位置
-    public void setIntakePosition(double leftPosition, double rightPosition, boolean clawPosition) {
+    public void setIntakePosition(double leftPosition, double rightPosition, boolean OpenClaw) {
         HSArmLeft.setPosition(leftPosition);
         HSArmRight.setPosition(rightPosition);
-        if (clawPosition) {
+        if (OpenClaw) {
             OpenIntakeClaw();
         } else {
-            IntakeClaw.setPosition(RobotConstants.IntakeSubsystem_CloseClawPosition);
+            CloseIntakeClaw();
         }
     }
 

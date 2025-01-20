@@ -11,6 +11,8 @@ public class Test_intakeClaw extends LinearOpMode{
 
     Servo servoLeft, servoRight, claw;
     double servo_pos = 0;
+    double clawMaximum = 0.5;
+    double clawMinimum = 0.3;
 
     //創建物件
     @Override
@@ -19,17 +21,17 @@ public class Test_intakeClaw extends LinearOpMode{
         waitForStart();
         while(opModeIsActive()) {
             // * 迴圈執行內容
-            servo_pos = Math.min(0.4, Math.max(0, servo_pos));
+            servo_pos = Math.min(1, Math.max(0, servo_pos));
             servo_pos += -gamepad1.right_stick_y * 0.01;
 
             servoLeft.setPosition(servo_pos);
             servoRight.setPosition(servo_pos);
 
             if(gamepad1.x) {
-                claw.setPosition(claw.getPosition() + 0.001);
+                claw.setPosition(clawMaximum);
             }
             if(gamepad1.y) {
-                claw.setPosition(claw.getPosition() - 0.001);
+                claw.setPosition(clawMinimum);
             }
 
             telemetry.addData("servoRight", servoRight.getPosition());

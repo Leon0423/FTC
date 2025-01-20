@@ -13,10 +13,10 @@ public class Test_motor extends LinearOpMode{
     //變數設定
 
     DcMotorEx SlideLeft, SlideRight;
-    private int SlideMaximumPosition = 1000;
+    private int SlideMaximumPosition = 3800;
     private int SlideMinimumPosition = 0;
     private int SlidePosition = 0;
-    private double SlidePower = 0.5;
+    private double SlidePower = 0.3;
 
 
     //創建物件
@@ -60,10 +60,15 @@ public class Test_motor extends LinearOpMode{
         SlideLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         SlideRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        SlideLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        SlideRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         SlideLeft.setTargetPosition(SlidePosition);
         SlideRight.setTargetPosition(SlidePosition);
         SlideLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         SlideRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideLeft.setTargetPosition(SlidePosition);
+        SlideRight.setTargetPosition(SlidePosition);
         SlideLeft.setPower(SlidePower);
         SlideRight.setPower(SlidePower);
 

@@ -172,7 +172,6 @@ public class TeleOpMode extends LinearOpMode {
         IntakeRight.setPosition(0);
         IntakeLeft.setPosition(0);
 
-
     }
     public double scaling_power(double fr, double fl, double br, double bl) {
         double max = Math.max(Math.max(Math.abs(fr), Math.abs(fl)), Math.max(Math.abs(br), Math.abs(bl)));

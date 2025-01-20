@@ -26,6 +26,13 @@ public class TeleOpMode extends LinearOpMode {
     private double intake_minPosition = 0.0;
     private double intake_pos = 0.0;
 
+    // * Slide
+    DcMotorEx SlideLeft, SlideRight;
+    private int SlideMaximumPosition = 3800;
+    private int SlideMinimumPosition = 0;
+    private int SlidePosition = 0;
+    private double SlidePower = 0.8;
+
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -69,7 +76,18 @@ public class TeleOpMode extends LinearOpMode {
                 intake_claw.setPosition(intake_claw.getPosition() - 0.001);
             }
 
+            // * Slide
+            if(gamepad2.a && SlidePosition < SlideMaximumPosition) {
+                SlidePosition += 15;
+            } else if (gamepad2.b && SlidePosition > SlideMinimumPosition) {
+                SlidePosition -= 15;
+            }
+
+            SlideLeft.setTargetPosition(SlidePosition);
+            SlideRight.setTargetPosition(SlidePosition);
+
             // * telemetry
+
             // * chassis
             telemetry.addData("center", FR.getCurrentPosition());
             telemetry.addData("left", FL.getCurrentPosition());
@@ -130,6 +148,27 @@ public class TeleOpMode extends LinearOpMode {
         intakeRight.setDirection(Servo.Direction.REVERSE);
         intakeRight.setPosition(intake_pos);
         intakeLeft.setPosition(intake_pos);
+
+        // * Slide
+        SlideLeft = hardwareMap.get(DcMotorEx.class, "SlideLeft");
+        SlideRight = hardwareMap.get(DcMotorEx.class, "SlideRight");
+        SlideLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        SlideRight.setDirection(DcMotorSimple.Direction.FORWARD);
+
+        SlideLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        SlideRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        SlideLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        SlideRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        SlideLeft.setTargetPosition(SlidePosition);
+        SlideRight.setTargetPosition(SlidePosition);
+        SlideLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideLeft.setTargetPosition(SlidePosition);
+        SlideRight.setTargetPosition(SlidePosition);
+        SlideLeft.setPower(SlidePower);
+        SlideRight.setPower(SlidePower);
 
     }
     public double scaling_power(double fr, double fl, double br, double bl) {

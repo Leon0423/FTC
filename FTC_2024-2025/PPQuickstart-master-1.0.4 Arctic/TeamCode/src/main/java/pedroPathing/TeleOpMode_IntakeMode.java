@@ -83,7 +83,6 @@ public class TeleOpMode_IntakeMode extends LinearOpMode {
         HSArmRight.setPosition(0);
 
         // * analog input
-        HSLeftEncoder = hardwareMap.get(AnalogInput.class, "HSLeftEncoder");
         HSRightEncoder = hardwareMap.get(AnalogInput.class, "HSRightEncoder");
 
         // * Intake Claw
