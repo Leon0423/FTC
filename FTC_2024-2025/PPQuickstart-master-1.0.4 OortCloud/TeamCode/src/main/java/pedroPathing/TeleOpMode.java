@@ -57,6 +57,9 @@ public class TeleOpMode extends LinearOpMode {
             BL.setPower(bl/scale);
 
             // * Horizon Slide
+            // ? 測試看看Horizon Slide and intake能不能成功運轉（因為太常換班的）
+            // ! gamepad "2" is the second controller
+            // * 用順邊測測看極限值
             HorizonSlide_position = Math.min(HorizonSlide_maxPosition, Math.max(HorizonSlide_minPosition, HorizonSlide_position));
 
             HSR.setPosition(HorizonSlide_position += (-gamepad2.left_stick_y) * 0.001);
