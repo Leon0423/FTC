@@ -8,9 +8,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 public class Test_servo extends LinearOpMode{
     //變數設定
 
-    Servo servoLeft, servoRight;
-    int max_angle = 180;
-    double position = 0;
+    Servo Output;
 
     //創建物件
     @Override
@@ -20,16 +18,11 @@ public class Test_servo extends LinearOpMode{
         //初始狀態設定，例如Servo初始位置
         while(opModeIsActive()) {
             //迴圈執行內容
-            position = Math.min(0.4, Math.max(0, position));
-            position += (-gamepad1.left_stick_y) * 0.001;
 
-            //Maximum angle is 0.4
-            servoLeft.setPosition(position);
-            servoRight.setPosition(position);
+            if(gamepad1.a) {
+                Output.setPosition(1);
+            }
 
-            telemetry.addData("servoRight", servoRight.getPosition());
-            telemetry.addData("servoLeft", servoLeft.getPosition());
-            telemetry.addData("Servo angle", servoLeft.getPosition() * max_angle);
             telemetry.update();
             idle();
         }
@@ -38,9 +31,10 @@ public class Test_servo extends LinearOpMode{
     private void init_hardware() {
         //設定物件
 
-        servoLeft = hardwareMap.get(Servo.class, "servoLeft");
-        servoRight = hardwareMap.get(Servo.class, "servoRight");
-        servoRight.setDirection(Servo.Direction.REVERSE);
+        Output = hardwareMap.get(Servo.class, "OutputClaw");
+        //設定初始值
+        Output.setPosition(0);
+
 
         idle();
     }

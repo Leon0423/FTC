@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import pedroPathing.CommandPackage.Subsystems.OutputSubsystem;
 
-@TeleOp(name = "Slide_setPower")
+@TeleOp(name = "Slide_Power")
 public class Slide_TargetPosition extends LinearOpMode {
     private DcMotorEx SlideLeftFront, SlideLeftBack, SlideRightFront, SlideRightBack;
     private double slide_power = 0.4;
