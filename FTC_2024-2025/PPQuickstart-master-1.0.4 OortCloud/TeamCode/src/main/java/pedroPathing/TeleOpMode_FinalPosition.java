@@ -47,15 +47,12 @@ public class TeleOpMode_FinalPosition extends LinearOpMode {
     private double ArmTransferPosition = 0.15;
 
     // * OutputClaw
-    private double ClawOpenPosition = 0.87;
+    private double ClawOpenPosition = 0.7;
     private double ClawClosePosition = 0.5;
 
     // * transferPosition
     private int movementIndex = 0; // 用於追蹤當前的動作索引
     private boolean buttonPressed = false; // 防止按鈕重複觸發
-
-    //
-    ElapsedTime timer = new ElapsedTime();
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -74,10 +71,10 @@ public class TeleOpMode_FinalPosition extends LinearOpMode {
 
             scale = scaling_power(fr, fl, br, bl); // * 取得最大值
 
-            FR.setPower(fr / scale);
-            FL.setPower(fl / scale);
-            BR.setPower(br / scale);
-            BL.setPower(bl / scale);
+            FR.setPower((fr / scale) * 0.6);
+            FL.setPower((fl / scale) * 0.6);
+            BR.setPower((br / scale) * 0.6);
+            BL.setPower((bl / scale) * 0.6);
 
             // * -------------------------Horizon Slide-------------------------- //
             // * Horizon Slide Position: 0.0 ~ 0.43
@@ -94,7 +91,6 @@ public class TeleOpMode_FinalPosition extends LinearOpMode {
                 double intake_pos = 0.3 - (gamepad1.right_trigger * 0.3);
                 intakeRight.setPosition(intake_pos);
                 intakeLeft.setPosition(intake_pos);
-
             }
 
             // * -----------------------OutputClaw---------------------------- //
@@ -106,84 +102,71 @@ public class TeleOpMode_FinalPosition extends LinearOpMode {
                 intake_claw.setPosition(intake_ClawClosePosition);
             }
             if(gamepad1.dpad_right){
-                OutputClaw.setPosition(ClawClosePosition);
+                OutputClaw.setPosition(ClawOpenPosition);
             }
             if(gamepad1.dpad_left){
-                OutputClaw.setPosition(ClawOpenPosition);
+                OutputClaw.setPosition(ClawClosePosition);
             }
 
             // * -----------------------TransferPosition---------------------------- //
 
             // 檢查按鈕是否被按下
 
-                if (gamepad2.left_bumper && !buttonPressed) {
-                    movementIndex = (movementIndex + 1) % 4; // 循環切換 0 到 4 的動作
-                    buttonPressed = true; // 標記按鈕已被按下
-                } else if (!gamepad2.left_bumper) {
-                    buttonPressed = false; // 當按鈕釋放時，重置狀態
-                }
+            if (gamepad2.left_bumper && !buttonPressed) {
+                movementIndex = (movementIndex + 1) % 4; // 循環切換 0 到 4 的動作
+                buttonPressed = true; // 標記按鈕已被按下
+            } else if (!gamepad2.left_bumper) {
+                buttonPressed = false; // 當按鈕釋放時，重置狀態
+            }
 
-                // 根據當前的動作索引執行對應的操作
-                switch (movementIndex) {
-                    case 0:
-                        break;
-                    case 1:
-                        ArmRight.setPosition(0.2); // * Arm
-                        ArmLeft.setPosition(0.2);
-                        HSL.setPosition(0.05); // * Horizon Slide
-                        HSR.setPosition(0.05);
-                        intakeRight.setPosition(0.75); // * intake
-                        intakeLeft.setPosition(0.75);
-
-                        break;
-                    case 2:
-                        SlideLeft.setTargetPosition(3600);
-                        SlideRight.setTargetPosition(3600);
-                        if(SlideLeft.getCurrentPosition() > 3000 && SlideRight.getCurrentPosition() > 3000){
-                            ArmLeft.setPosition(0.7);
-                            ArmRight.setPosition(0.7);
-                        }
-                        break;
-                    case 3:
-                        SlideLeft.setTargetPosition(1);
-                        SlideRight.setTargetPosition(1);
-                        ArmRight.setPosition(0.3); // * Arm
-                        ArmLeft.setPosition(0.3);
-                        intake_claw.setPosition(intake_ClawClosePosition);
-
-                        break;
-                };
-
-
-
-
+            // 根據當前的動作索引執行對應的操作
+            switch (movementIndex) {
+                case 0:
+                    OutputClaw.setPosition(ClawClosePosition);
+                    break;
+                case 1:
+                    ArmRight.setPosition(0.23); // * Arm
+                    ArmLeft.setPosition(0.23);
+                    HSL.setPosition(0.03); // * Horizon Slide
+                    HSR.setPosition(0.03);
+                    intakeRight.setPosition(0.8); // * intake
+                    intakeLeft.setPosition(0.8);
+                    break;
+                case 2:
+                    SlideLeft.setTargetPosition(3600);
+                    SlideRight.setTargetPosition(3600);
+                    if(SlideLeft.getCurrentPosition() > 3000 && SlideRight.getCurrentPosition() > 3000){
+                        ArmLeft.setPosition(0.75);
+                        ArmRight.setPosition(0.75);
+                    }
+                    break;
+                case 3:
+                    HSL.setPosition(0.25);
+                    HSL.setPosition(0.25);
+                    SlideLeft.setTargetPosition(1);
+                    SlideRight.setTargetPosition(1);
+                    ArmRight.setPosition(0.23); // * Arm
+                    ArmLeft.setPosition(0.23);
+                    intake_claw.setPosition(intake_ClawClosePosition);
+                    break;
+            }
 
             // * -----------------------Telemetry---------------------------- //
 
-            // * chassis
-            telemetry.addData("center", BR.getCurrentPosition());
-            telemetry.addData("left", BL.getCurrentPosition());
-            telemetry.addData("right", FR.getCurrentPosition());
-            telemetry.addLine(" ");
-
             // * Horizon Slide
-            telemetry.addLine("HorizonSlide: left_stick_y");
             telemetry.addData("HSR", HSR.getPosition());
             telemetry.addData("HSL", HSL.getPosition());
             telemetry.addData("HorizonSlide_position", HSR.getPosition());
 
             // * intake
-            telemetry.addLine("intake: right_stick_y");
             telemetry.addData("intakeRight", intakeRight.getPosition());
             telemetry.addData("intakeLeft", intakeLeft.getPosition());
             telemetry.addLine(" ");
 
-            telemetry.addLine("intake_claw: dpad_right / dpad_left");
             telemetry.addData("intake_claw", intake_claw.getPosition());
             telemetry.addLine(" ");
 
             // * Slide
-            telemetry.addData("SlidePosition", SlidePosition);
             telemetry.addData("Left Encoder Position", SlideLeft.getCurrentPosition());
             telemetry.addData("Right Encoder Position", SlideRight.getCurrentPosition());
             telemetry.addLine(" ");
@@ -229,8 +212,8 @@ public class TeleOpMode_FinalPosition extends LinearOpMode {
             HSR = hardwareMap.get(Servo.class, "servoRight");
             HSR.setDirection(Servo.Direction.REVERSE);
 
-            HSL.setPosition(0.05);
-            HSR.setPosition(0.05);
+            HSL.setPosition(0.08);
+            HSR.setPosition(0.08);
 
             // * intake
             intakeLeft = hardwareMap.get(Servo.class, "intakeLeft");

@@ -22,12 +22,12 @@ public class TeleOpMode extends LinearOpMode {
 
     // * intake
     private Servo intakeLeft, intakeRight, intake_claw;
-    private double intake_maxPosition = 1.0;
+    private double intake_maxPosition = 0.75;
     private double intake_minPosition = 0.0;
     private double intake_pos = 0.0;
 
-    double intake_ClawOpenPosition = 0.3;
-    double intake_ClawClosePosition = 0.5;
+    double intake_ClawOpenPosition = 0.4;
+    double intake_ClawClosePosition = 0.6;
 
     // * Slide
     DcMotorEx SlideLeft, SlideRight;
@@ -43,8 +43,8 @@ public class TeleOpMode extends LinearOpMode {
     private double Arm_Position = 0;
 
     // * OutputClaw
-    private final double Output_ClawClosePosition = 0.87;
-    private final double Output_ClawOpenPosition = 0.5;
+    private final double Output_ClawClosePosition = 0.65;
+    private final double Output_ClawOpenPosition = 0.3;
 
 
     @Override
@@ -69,7 +69,6 @@ public class TeleOpMode extends LinearOpMode {
             FL.setPower(fl/scale);
             BR.setPower(br/scale);
             BL.setPower(bl/scale);
-
 
 
             // * Horizon Slide: gamepad2.left_stick_y
@@ -114,12 +113,12 @@ public class TeleOpMode extends LinearOpMode {
             SlideRight.setTargetPosition(SlidePosition);
 
             // * Arm: gamepad2.x / gamepad2.y
-            Arm_Position = Math.min(0.5, Math.max(0, Arm_Position));
+            Arm_Position = Math.min(0.8, Math.max(0, Arm_Position));
             if(gamepad2.x) {
-                Arm_Position += 0.05;
+                Arm_Position += 0.005;
             }
             if(gamepad2.y) {
-                Arm_Position -= 0.05;
+                Arm_Position -= 0.005;
             }
 
             ArmLeft.setPosition(Arm_Position);
@@ -127,10 +126,10 @@ public class TeleOpMode extends LinearOpMode {
 
             // * OutputClaw: gamepad2.dpad_up / gamepad2.dpad_down
             if(gamepad2.dpad_up) {
-                OutputClaw.setPosition(Output_ClawClosePosition);
+                OutputClaw.setPosition(Output_ClawOpenPosition);
             }
             if(gamepad2.dpad_down) {
-                OutputClaw.setPosition(Output_ClawOpenPosition);
+                OutputClaw.setPosition(Output_ClawClosePosition);
             }
 
             // * telemetry
