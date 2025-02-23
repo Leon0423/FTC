@@ -69,7 +69,8 @@ public class SampleDetectionDemoTeleop extends LinearOpMode {
         telemetry.update();
 
         waitForStart();
-
+        
+        //以下純手工
 
         while (opModeIsActive()) {
 
