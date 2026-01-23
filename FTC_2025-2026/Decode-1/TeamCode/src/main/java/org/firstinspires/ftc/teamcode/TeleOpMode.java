@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+
 @TeleOp(name = "TeleOpMode")
 public class TeleOpMode extends TeleOpMode_Base{
     //變數設定
@@ -27,7 +28,6 @@ public class TeleOpMode extends TeleOpMode_Base{
             BR.setPower((drive - turn + strafe)/scale);
             BL.setPower((drive + turn - strafe)/scale);
 
-
             idle();
         }
     }
@@ -39,6 +39,5 @@ public class TeleOpMode extends TeleOpMode_Base{
         }
         return max;
     }
-
 }
 // 外面不可以寫程式喔!!!
