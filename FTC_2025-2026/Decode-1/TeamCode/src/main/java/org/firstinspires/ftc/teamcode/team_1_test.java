@@ -23,19 +23,19 @@ public class team_1_test extends LinearOpMode {
     private static final double SHOOTER_TICKS_PER_REV = 28.0; // 每圈 28 個 ticks
 
     // ===== PIDF =====
-    /*private static final double SHOOTER_P = 10.0;   // 你的 P 值
+    private static final double SHOOTER_P = 230.0;   // 你的 P 值
     private static final double SHOOTER_I = 0.0;    // 你的 I 值
     private static final double SHOOTER_D = 0.0;    // 你的 D 值
-    private static final double SHOOTER_F = 12.5;   // 你的 F 值
-     */
+    private static final double SHOOTER_F = 11.5;   // 你的 F 值
+
 
     // 送球門檻
     private static final double LOW_VELOCITY = 1000;  // 近距離射球速度
-    private static final double HIGH_VELOCITY = 4000; // 遠距離射球速度
+    private static final double HIGH_VELOCITY = 2000; // 遠距離射球速度
 
     // ===== 速度容差 (用於判斷是否達標) =====
-    private static final double HIGH_VELOCITY_TOLERANCE = 800;  // 高速模式容差
-    private static final double LOW_VELOCITY_TOLERANCE = 500;   // 低速模式容差
+    private static final double HIGH_VELOCITY_TOLERANCE = 20;  // 高速模式容差
+    private static final double LOW_VELOCITY_TOLERANCE = 20;   // 低速模式容差
 
     // ===== Servo 功率設定 =====
     private static final double FEEDER_OUTTAKE_POWER = 1.0;  // 吐球功率
@@ -78,6 +78,7 @@ public class team_1_test extends LinearOpMode {
 
     private void initializeHardware() {
         // 底盤馬達
+
         frontLeft = hardwareMap.get(DcMotor.class, "FL");
         frontRight = hardwareMap.get(DcMotor.class, "FR");
         backLeft = hardwareMap.get(DcMotor.class, "BL");
@@ -111,7 +112,7 @@ public class team_1_test extends LinearOpMode {
         shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         // 設定 PIDF 參數
-        // shooterMotor.setVelocityPIDFCoefficients(SHOOTER_P, 0, 0, SHOOTER_F);
+        shooterMotor.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
 
         // Intake 設定
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -122,12 +123,12 @@ public class team_1_test extends LinearOpMode {
     }
 
     private void handleDriveControls() {
-        double y  = -gamepad1.left_stick_y;   // Y 軸反轉
-        double x  = gamepad1.right_stick_x;   // 橫移
-        double rx = gamepad1.left_stick_x;    // 旋轉
+        double y  = gamepad1.left_stick_y;
+        double rx  =  gamepad1.left_stick_x;
+        double x =  gamepad1.right_stick_x;
 
-        frontLeft.setPower(y + x + rx);
-        frontRight.setPower(y - x - rx);
+        frontLeft.setPower(-y + x + rx);
+        frontRight.setPower(-y - x - rx);
         backLeft.setPower(y - x + rx);
         backRight.setPower(y + x - rx);
     }

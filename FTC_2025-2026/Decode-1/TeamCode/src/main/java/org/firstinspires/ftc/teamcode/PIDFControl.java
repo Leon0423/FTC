@@ -11,8 +11,8 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 public class PIDFControl extends LinearOpMode {
     public DcMotorEx flywheelMotor;
 
-    public double highVelocity = 1500;
-    public double lowVelocity = 900;
+    public double highVelocity = 2000;
+    public double lowVelocity = highVelocity - 200;
 
     double curTargetVelocity = highVelocity;
 

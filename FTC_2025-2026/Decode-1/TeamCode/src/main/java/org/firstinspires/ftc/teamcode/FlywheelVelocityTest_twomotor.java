@@ -6,10 +6,10 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@TeleOp(name = "Flywheel Velocity Test", group = "Test")
-public class FlywheelVelocityTest extends LinearOpMode {
+@TeleOp(name = "Flywheel Velocity Test TwoMotor", group = "Test")
+public class FlywheelVelocityTest_twomotor extends LinearOpMode {
 
-    private DcMotorEx flywheelMotor;
+    private DcMotorEx flywheelMotorLeft, flywheelMotorRight;
 
     // 當前測試速度
     private double testVelocity = 0;
@@ -22,13 +22,19 @@ public class FlywheelVelocityTest extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        flywheelMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
+        flywheelMotorLeft = hardwareMap.get(DcMotorEx.class, "SL");
+        flywheelMotorRight = hardwareMap.get(DcMotorEx.class, "SB");
 
         // 重要：使用 RUN_USING_ENCODER 會自動用內建PIDF
-        flywheelMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        flywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        flywheelMotor.setDirection(DcMotor.Direction.REVERSE);
-        flywheelMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        flywheelMotorLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        flywheelMotorLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        flywheelMotorLeft.setDirection(DcMotor.Direction.FORWARD);
+        flywheelMotorLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        flywheelMotorRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        flywheelMotorRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        flywheelMotorRight.setDirection(DcMotor.Direction.REVERSE);
+        flywheelMotorRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         telemetry.addLine("控制說明:");
         telemetry.addLine("D-Pad 左/右: 微調速度 (±50)");
@@ -73,28 +79,35 @@ public class FlywheelVelocityTest extends LinearOpMode {
             }
 
             // === 設定馬達速度 ===
-            flywheelMotor.setVelocity(testVelocity);
+            flywheelMotorLeft.setVelocity(testVelocity);
+            flywheelMotorRight.setVelocity(testVelocity);
 
             // === 讀取實際速度 ===
-            double currentVelocity = flywheelMotor.getVelocity();
-            double currentRPM = (currentVelocity / COUNTS_PER_REV) * 60;
+            double currentVelocity_Left = flywheelMotorLeft.getVelocity();
+            double currentVelocity_Right = flywheelMotorRight.getVelocity();
+            double currentRPM_Left = (currentVelocity_Left / COUNTS_PER_REV) * 60;
+            double currentRPM_Right = (currentVelocity_Right / COUNTS_PER_REV) * 60;
             double targetRPM = (testVelocity / COUNTS_PER_REV) * 60;
 
             // === 顯示資訊 ===
-            telemetry.addData("設定速度", "%.0f ticks/s", testVelocity);
-            telemetry.addData("實際速度", "%.0f ticks/s", currentVelocity);
+            telemetry.addData("目標速度", "%.0f ticks/s", testVelocity);
+            telemetry.addLine("實際速度");
+            telemetry.addData("Velocity_Left", "%.0f ticks/s", currentVelocity_Left);
+            telemetry.addData("Velocity_Right", "%.0f ticks/s", currentVelocity_Right);
             telemetry.addLine("========================");
-            telemetry.addData("設定RPM", "%.0f RPM", targetRPM);
-            telemetry.addData("實際RPM", "%.0f RPM", currentRPM);
+            telemetry.addData("目標RPM", "%.0f RPM", targetRPM);
+            telemetry.addLine("實際RPM");
+            telemetry.addData("currentRPM_Left", "%.0f RPM", currentRPM_Left);
+            telemetry.addData("currentRPM_Right", "%.0f RPM", currentRPM_Right);
             telemetry.addLine();
             telemetry.addLine();
             telemetry.addLine("========================");
             telemetry.addData("✏ 記錄此速度&RPM", "%.0f ticks/s (%.0f RPM)", testVelocity, targetRPM);
-
             telemetry.update();
         }
 
         // 程式結束時停止馬達
-        flywheelMotor.setVelocity(0);
+        flywheelMotorLeft.setVelocity(0);
+        flywheelMotorRight.setVelocity(0);
     }
 }
