@@ -10,205 +10,266 @@ import com.qualcomm.robotcore.hardware.Servo;
 @TeleOp(name = "Zirnitra_TeleOpMode")
 public class Zirnitra extends LinearOpMode {
 
-    // ===== Drive Motors =====
-    DcMotor FR, BR, FL, BL;
+    // ═══════════════════════════════════════════════════════════════
+    // 硬體宣告 (Hardware Declarations)
+    // ═══════════════════════════════════════════════════════════════
 
-    // ===== Intake =====
-    DcMotor intake_1, intake_2;
+    // 底盤馬達 (Drive Motors)
+    private DcMotor FR, BR, FL, BL;
 
-    // ===== Shooter =====
-    DcMotorEx shooter_Right, shooter_Left;
+    // 進球機構 (Intake Motors)
+    private DcMotor intake_1, intake_2;
 
-    // ===== Servos =====
-    Servo shooterAngle_Right, shooterAngle_Left, Trigger = null;
+    // 發射器馬達 (Shooter Motors)
+    private DcMotorEx shooter_Right, shooter_Left;
 
-    double target_pos = 0;
+    // 伺服馬達 (Servos)
+    private Servo shooterAngle_Right, shooterAngle_Left, Trigger;
 
-    // ===== 參數 =====
+    // ═══════════════════════════════════════════════════════════════
+    // 常數設定 (Constants)
+    // ═══════════════════════════════════════════════════════════════
+
+    // Shooter 編碼器參數
     private static final double SHOOTER_TICKS_PER_REV = 28.0;
-    private static final double TRIGGER_INIT_POSITION = 0;
-    private static final double TRIGGER_TARGET_POSITION = 0.235;
+
+    // Trigger Servo 參數
+    private static final double TRIGGER_INIT_POSITION = 0.0;
+    private static final double TRIGGER_FIRE_POSITION = 0.235;
+
+    // ShooterAngle Servo 參數（固定角度模式）
     private static final double SHOOTERANGLE_INIT_POSITION = 0.16;
-    private static final double SHOOTERANGLE_MAX_LIMIT = 0;
-    private static final double SHOOTERANGLE_TARGET_POSITION = Math.min(SHOOTERANGLE_INIT_POSITION, SHOOTERANGLE_MAX_LIMIT);
-    private static final double SHOOTERANGLE_HIGH_POSITION = 0.05;
-    private static final double SHOOTERANGLE_LOW_POSITION = 0.11;
+    private static final double SHOOTERANGLE_HIGH_POSITION = 0.05;  // 遠距離角度
+    private static final double SHOOTERANGLE_LOW_POSITION = 0.11;   // 近距離角度
 
+    // 速度設定 (RPM)
+    private static final double LOW_VELOCITY_RPM = 2100.0;   // 約1000 ticks/s
+    private static final double HIGH_VELOCITY_RPM = 4300.0;  // 約2000 ticks/s
+    private static final double VELOCITY_TOLERANCE_RPM = 40.0;
 
-    // ===== PIDF =====
-    /*private static final double SHOOTER_P = 230.0;
-    private static final double SHOOTER_I = 0.0;
-    private static final double SHOOTER_D = 0.0;
-    private static final double SHOOTER_F = 11.5;
-     */
-
-    // ===== 速度設定 =====
-    private static final double LOW_VELOCITY = 1000;
-    private static final double HIGH_VELOCITY = 2000;
-
-    // ===== 速度容差 =====
-    private static final double HIGH_VELOCITY_TOLERANCE = 40;
-    private static final double LOW_VELOCITY_TOLERANCE = 40;
-
-    // ===== Servo/Motor 功率設定 =====
+    // 馬達功率設定
     private static final double INTAKE_POWER = 0.8;
+    private static final double TRIGGER_THRESHOLD = 0.2;
 
-    // ===== 機構狀態 =====
+    // ═══════════════════════════════════════════════════════════════
+    // 狀態變數 (State Variables)
+    // ═══════════════════════════════════════════════════════════════
+
     private boolean shooterOn = false;
     private boolean feedEnabled = false;
+    private boolean isHighVelocityMode = true;
 
-    // ===== 按鍵邊緣檢測 =====
+    // 按鍵邊緣檢測 (Button Edge Detection)
     private boolean prevX = false;
     private boolean prevBack = false;
     private boolean prevDpadLeft = false;
-    private boolean isHighVelocityMode = true;
+
+    // ═══════════════════════════════════════════════════════════════
+    // 主程式 (Main Program)
+    // ═══════════════════════════════════════════════════════════════
 
     @Override
     public void runOpMode() {
         initializeHardware();
 
-        telemetry.addData("Status", "Initialized");
+        telemetry.addData("Status", "Initialized - Ready to Start");
+        telemetry.addData("Controls", "X=High, DpadLeft=Low, RB=Stop");
         telemetry.update();
 
         waitForStart();
 
         while (opModeIsActive()) {
+            // 處理所有控制輸入
             handleDriveControls();
-            handleTriggerControls();
             handleShooterControls();
+            handleTriggerControls();
             handleIntakeControls();
+
+            // 更新遙測資料
             updateTelemetry();
-            idle();
         }
 
         stopAllMotors();
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 硬體初始化 (Hardware Initialization)
+    // ═══════════════════════════════════════════════════════════════
+
     private void initializeHardware() {
-        // 底盤馬達
+        initializeDriveMotors();
+        initializeIntakeMotors();
+        initializeShooterMotors();
+        initializeServos();
+        stopAllMotors();
+    }
+
+    private void initializeDriveMotors() {
         FR = hardwareMap.get(DcMotor.class, "FR");
         FL = hardwareMap.get(DcMotor.class, "FL");
         BR = hardwareMap.get(DcMotor.class, "BR");
         BL = hardwareMap.get(DcMotor.class, "BL");
 
-        FR.setDirection(DcMotorSimple.Direction.FORWARD);
+        // 設定方向（全部正向）
+        FR.setDirection(DcMotorSimple.Direction.REVERSE);
         FL.setDirection(DcMotorSimple.Direction.FORWARD);
-        BR.setDirection(DcMotorSimple.Direction.FORWARD);
+        BR.setDirection(DcMotorSimple.Direction.REVERSE);
         BL.setDirection(DcMotorSimple.Direction.FORWARD);
 
+        // 設定煞車模式
         FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         FL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         BR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         BL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+    }
 
-        // Intake
+    private void initializeIntakeMotors() {
         intake_1 = hardwareMap.get(DcMotor.class, "intake_1");
         intake_2 = hardwareMap.get(DcMotor.class, "intake_2");
+
         intake_1.setDirection(DcMotorSimple.Direction.FORWARD);
         intake_2.setDirection(DcMotorSimple.Direction.REVERSE);
+
         intake_1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         intake_2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+    }
 
-        // Shooter
+    private void initializeShooterMotors() {
         shooter_Right = hardwareMap.get(DcMotorEx.class, "shooter_Right");
         shooter_Left = hardwareMap.get(DcMotorEx.class, "shooter_Left");
+
         shooter_Right.setDirection(DcMotorSimple.Direction.FORWARD);
         shooter_Left.setDirection(DcMotorSimple.Direction.REVERSE);
+
         shooter_Right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         shooter_Left.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        // 重設編碼器並使用編碼器模式
         shooter_Right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         shooter_Left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         shooter_Right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooter_Left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
 
-        // 設定 PIDF 參數
-        /*shooter_Right.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
-        shooter_Left.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
-         */
-
+    private void initializeServos() {
         // Trigger Servo
         Trigger = hardwareMap.get(Servo.class, "Trigger");
         Trigger.setDirection(Servo.Direction.REVERSE);
         Trigger.setPosition(TRIGGER_INIT_POSITION);
 
-        // ShooterAngle Servo
+        // ShooterAngle Servos
         shooterAngle_Right = hardwareMap.get(Servo.class, "shooterAngle_Right");
         shooterAngle_Left = hardwareMap.get(Servo.class, "shooterAngle_Left");
         shooterAngle_Right.setDirection(Servo.Direction.FORWARD);
         shooterAngle_Left.setDirection(Servo.Direction.REVERSE);
         shooterAngle_Right.setPosition(SHOOTERANGLE_INIT_POSITION);
         shooterAngle_Left.setPosition(SHOOTERANGLE_INIT_POSITION);
-
-        stopAllMotors();
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 控制處理 (Control Handlers)
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 處理麥克納姆輪底盤控制
+     * 左搖桿Y軸：前後移動
+     * 左搖桿X軸：旋轉
+     * 右搖桿X軸：左右平移
+     */
     private void handleDriveControls() {
-        double y = gamepad1.left_stick_y;
-        double rx = gamepad1.left_stick_x;
-        double x = gamepad1.right_stick_x;
+        double forward = -gamepad1.left_stick_y;  // 前後
+        double strafe = gamepad1.right_stick_x;   // 平移
+        double rotate = gamepad1.left_stick_x;    // 旋轉
+        double fr, fl, br, bl, scale;
 
-        FL.setPower(-y + x + rx);
-        FR.setPower(-y - x - rx);
-        BL.setPower(y - x + rx);
-        BR.setPower(y + x - rx);
+        fr = forward - rotate - strafe;
+        fl = forward + rotate + strafe;
+        br = forward - rotate + strafe;
+        bl = forward + rotate - strafe;
+
+        scale = scaling_power(fr, fl, br, bl);
+
+        FR.setPower(fr / scale);
+        FL.setPower(fl / scale);
+        BR.setPower(br / scale);
+        BL.setPower(bl / scale);
     }
 
-    private void handleTriggerControls() {
-        // 只有當 shooter 達到目標轉速時，trigger 才會動作
-        if (feedEnabled && gamepad1.right_trigger > 0.2) {
-            target_pos = TRIGGER_TARGET_POSITION;
-        } else {
-            target_pos = TRIGGER_INIT_POSITION;
+    private double scaling_power(double fr, double fl, double br, double bl) {
+        double max = Math.max(Math.max(Math.abs(fr), Math.abs(fl)), Math.max(Math.abs(br), Math.abs(bl)));
+        if (max <= 1) {
+            max = 1;
         }
-        Trigger.setPosition(target_pos);
+        return max;
     }
 
+    /**
+     * 處理發射器控制
+     * X：啟動高速模式（遠距離）+ 設定高角度
+     * Dpad Left：啟動低速模式（近距離）+ 設定低角度
+     * Right Bumper：關閉發射器 + 重置角度
+     */
     private void handleShooterControls() {
-        boolean xNow = gamepad1.x;
-        boolean backNow = gamepad1.right_bumper;
-        boolean dpadLeftNow = gamepad1.dpad_left;
+        boolean xPressed = gamepad1.x && !prevX;
+        boolean dpadLeftPressed = gamepad1.dpad_left && !prevDpadLeft;
+        boolean backPressed = gamepad1.right_bumper && !prevBack;
 
-        if (xNow && !prevX) {
+        // 啟動高速模式 + 設定遠距離角度
+        if (xPressed) {
             shooterOn = true;
             isHighVelocityMode = true;
-            // 遠距離模式：設定高角度
             shooterAngle_Right.setPosition(SHOOTERANGLE_HIGH_POSITION);
             shooterAngle_Left.setPosition(SHOOTERANGLE_HIGH_POSITION);
         }
 
-        if (dpadLeftNow && !prevDpadLeft) {
+        // 啟動低速模式 + 設定近距離角度
+        if (dpadLeftPressed) {
             shooterOn = true;
             isHighVelocityMode = false;
-            // 近距離模式：設定低角度（初始位置）
             shooterAngle_Right.setPosition(SHOOTERANGLE_LOW_POSITION);
             shooterAngle_Left.setPosition(SHOOTERANGLE_LOW_POSITION);
         }
 
-        if (backNow && !prevBack) {
+        // 關閉發射器並重置角度
+        if (backPressed) {
             shooterOn = false;
             feedEnabled = false;
-            shooter_Left.setVelocity(0);
-            shooter_Right.setVelocity(0);
-            // 關閉時回到初始角度
             shooterAngle_Right.setPosition(SHOOTERANGLE_INIT_POSITION);
             shooterAngle_Left.setPosition(SHOOTERANGLE_INIT_POSITION);
         }
 
-        prevX = xNow;
-        prevBack = backNow;
-        prevDpadLeft = dpadLeftNow;
+        // 更新按鍵狀態
+        prevX = gamepad1.x;
+        prevBack = gamepad1.right_bumper;
+        prevDpadLeft = gamepad1.dpad_left;
 
+        // 設定發射器速度並檢查是否達標
+        updateShooterVelocity();
+    }
+
+    /**
+     * 將 RPM 轉換為 ticks/second
+     */
+    private double rpmToTicks(double rpm) {
+        return (rpm * SHOOTER_TICKS_PER_REV) / 60.0;
+    }
+
+    /**
+     * 更新發射器速度並檢查是否達到目標速度
+     */
+    private void updateShooterVelocity() {
         if (shooterOn) {
-            double velocity = isHighVelocityMode ? HIGH_VELOCITY : LOW_VELOCITY;
-            double tolerance = isHighVelocityMode ? HIGH_VELOCITY_TOLERANCE : LOW_VELOCITY_TOLERANCE;
-            shooter_Left.setVelocity(velocity);
-            shooter_Right.setVelocity(velocity);
+            double targetRPM = isHighVelocityMode ? HIGH_VELOCITY_RPM : LOW_VELOCITY_RPM;
+            double targetTicks = rpmToTicks(targetRPM);
 
-            // 檢查是否達到目標速度
-            double leftVelocity = shooter_Left.getVelocity();
-            double rightVelocity = shooter_Right.getVelocity();
-            feedEnabled = (Math.abs(leftVelocity - velocity) <= tolerance) &&
-                          (Math.abs(rightVelocity - velocity) <= tolerance);
+            shooter_Left.setVelocity(targetTicks);
+            shooter_Right.setVelocity(targetTicks);
+
+            // 檢查是否達到目標速度 (使用RPM比較)
+            double leftRPM = ticksToRPM(shooter_Left.getVelocity());
+            double rightRPM = ticksToRPM(shooter_Right.getVelocity());
+            feedEnabled = Math.abs(leftRPM - targetRPM) <= VELOCITY_TOLERANCE_RPM &&
+                    Math.abs(rightRPM - targetRPM) <= VELOCITY_TOLERANCE_RPM;
         } else {
             shooter_Left.setVelocity(0);
             shooter_Right.setVelocity(0);
@@ -216,6 +277,20 @@ public class Zirnitra extends LinearOpMode {
         }
     }
 
+    /**
+     * 處理觸發器控制
+     * 只有當發射器達到目標速度時才能發射
+     */
+    private void handleTriggerControls() {
+        boolean canFire = feedEnabled && gamepad1.right_trigger > TRIGGER_THRESHOLD;
+        Trigger.setPosition(canFire ? TRIGGER_FIRE_POSITION : TRIGGER_INIT_POSITION);
+    }
+
+    /**
+     * 處理進球機構控制
+     * A：啟動進球
+     * B：停止進球
+     */
     private void handleIntakeControls() {
         if (gamepad1.a) {
             intake_1.setPower(INTAKE_POWER);
@@ -226,29 +301,38 @@ public class Zirnitra extends LinearOpMode {
         }
     }
 
-    private double calculateRPM(double ticksPerSecond) {
-        // 移除 shooterOn 檢查，讓 RPM 能正確顯示減速過程
+    // ═══════════════════════════════════════════════════════════════
+    // 遙測與工具 (Telemetry & Utilities)
+    // ═══════════════════════════════════════════════════════════════
+
+    private double ticksToRPM(double ticksPerSecond) {
         return (ticksPerSecond / SHOOTER_TICKS_PER_REV) * 60.0;
     }
 
     private void updateTelemetry() {
-        double leftVelocity = shooter_Left.getVelocity();
-        double rightVelocity = shooter_Right.getVelocity();
-        double targetVelocity = isHighVelocityMode ? HIGH_VELOCITY : LOW_VELOCITY;
-        double rpm_left = calculateRPM(leftVelocity);
-        double rpm_right = calculateRPM(rightVelocity);
+        double leftRPM = ticksToRPM(shooter_Left.getVelocity());
+        double rightRPM = ticksToRPM(shooter_Right.getVelocity());
+        double targetRPM = shooterOn ? (isHighVelocityMode ? HIGH_VELOCITY_RPM : LOW_VELOCITY_RPM) : 0;
+        double currentAngle = isHighVelocityMode ? SHOOTERANGLE_HIGH_POSITION : SHOOTERANGLE_LOW_POSITION;
 
         telemetry.addLine("══════ 系統狀態 ══════");
-        telemetry.addData("Shooter", shooterOn ? "ON" : "OFF");
-        telemetry.addData("模式", isHighVelocityMode ? "遠距離" : "近距離");
+        telemetry.addData("Shooter", shooterOn ? "🟢 ON" : "🔴 OFF");
+        telemetry.addData("模式", isHighVelocityMode ? "遠距離 (HIGH)" : "近距離 (LOW)");
+        telemetry.addData("可發射", feedEnabled ? "✓ YES" : "✗ NO");
+
         telemetry.addLine("══════ 速度資訊 ══════");
-        telemetry.addData("目標速度", String.format("%.0f ticks/s", shooterOn ? targetVelocity : 0.0));
-        telemetry.addData("左馬達速度", String.format("%.1f ticks/s", leftVelocity));
-        telemetry.addData("右馬達速度", String.format("%.1f ticks/s", rightVelocity));
-        telemetry.addData("左邊 RPM", String.format("%.0f", rpm_left));
-        telemetry.addData("右邊 RPM", String.format("%.0f", rpm_right));
-        telemetry.addData("達到目標速度", feedEnabled ? "YES" : "NO");
-        telemetry.addData("Trigger Position", Trigger.getPosition());
+        telemetry.addData("目標RPM", "%.0f RPM", targetRPM);
+        telemetry.addData("左馬達", "%.0f RPM", leftRPM);
+        telemetry.addData("右馬達", "%.0f RPM", rightRPM);
+
+        telemetry.addLine("══════ Servo 狀態 ══════");
+        telemetry.addData("Trigger", "%.3f", Trigger.getPosition());
+        telemetry.addData("ShooterAngle", "%.3f", shooterOn ? currentAngle : SHOOTERANGLE_INIT_POSITION);
+
+        telemetry.addLine("══════ 操作說明 ══════");
+        telemetry.addData("發射", "X=遠, DpadLeft=近, RB=停");
+        telemetry.addData("Intake", "A=開, B=關");
+
         telemetry.update();
     }
 

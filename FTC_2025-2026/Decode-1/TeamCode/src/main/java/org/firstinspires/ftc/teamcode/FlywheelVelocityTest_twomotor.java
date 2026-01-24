@@ -11,12 +11,14 @@ public class FlywheelVelocityTest_twomotor extends LinearOpMode {
 
     private DcMotorEx flywheelMotorLeft, flywheelMotorRight;
 
-    // 當前測試速度
-    private double testVelocity = 0;
+    // 當前測試 RPM
+    private double testRPM = 0;
 
-    // 速度調整步長
-    private double velocityStep = 50;  // 每次增減50 ticks/s
+    // RPM 調整步長
+    private double rpmSmallStep = 100;  // 每次增減 100 RPM
+    private double rpmLargeStep = 500;  // 每次增減 500 RPM
 
+    // 計算
     private static final double COUNTS_PER_REV = 28;
 
     @Override
@@ -37,72 +39,80 @@ public class FlywheelVelocityTest_twomotor extends LinearOpMode {
         flywheelMotorRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         telemetry.addLine("控制說明:");
-        telemetry.addLine("D-Pad 左/右: 微調速度 (±50)");
-        telemetry.addLine("D-Pad 上/下: 大幅調整 (±200)");
+        telemetry.addLine("D-Pad 左/右: 微調RPM (±100)");
+        telemetry.addLine("D-Pad 上/下: 大幅調整 (±500)");
         telemetry.addLine();
-        telemetry.addLine("A: 停止飛輪 (0)");
-        telemetry.addLine("X: 低速測試 (1000)");
-        telemetry.addLine("Y: 高速測試 (2000)");
+        telemetry.addLine("Right_Bumper: 停止飛輪 (0)");
+        telemetry.addLine("X: 低速測試 (2000 RPM)");
+        telemetry.addLine("Y: 高速測試 (4000 RPM)");
         telemetry.addLine();
-        telemetry.addLine("按 START 開始測試");
+        telemetry.addLine("A: 正轉");
+        telemetry.addLine("B: 反轉");
         telemetry.update();
 
         waitForStart();
 
         while (opModeIsActive()) {
 
-            // 右搖桿：微調速度
+            // D-Pad 左右：微調 RPM
             if (gamepad1.dpadLeftWasPressed()){
-                testVelocity -= 50;
+                testRPM -= rpmSmallStep;
             }
             if (gamepad1.dpadRightWasPressed()){
-                testVelocity += 50;
+                testRPM += rpmSmallStep;
             }
 
-            // D-Pad：大幅調整
+            // D-Pad 上下：大幅調整
             if (gamepad1.dpadUpWasPressed()) {
-                testVelocity += 200;
+                testRPM += rpmLargeStep;
             }
             if (gamepad1.dpadDownWasPressed()) {
-                testVelocity -= 200;
+                testRPM -= rpmLargeStep;
             }
 
             // 快速設定按鈕
-            if (gamepad1.a) {
-                testVelocity = 0;
+            if (gamepad1.right_bumper) {
+                testRPM = 0;
             }
             if (gamepad1.x) {
-                testVelocity = 1000;
+                testRPM = 2000;
             }
             if (gamepad1.y) {
-                testVelocity = 2000;
+                testRPM = 4000;
             }
 
-            // === 設定馬達速度 ===
-            flywheelMotorLeft.setVelocity(testVelocity);
-            flywheelMotorRight.setVelocity(testVelocity);
+            if (gamepad1.aWasPressed()) {
+                flywheelMotorLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+                flywheelMotorRight.setDirection(DcMotorSimple.Direction.REVERSE);
+            }
+            if (gamepad1.bWasPressed()){
+                flywheelMotorLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+                flywheelMotorRight.setDirection(DcMotorSimple.Direction.FORWARD);
+            }
+
+            // === 將 RPM 轉換為 ticks/s 並設定馬達速度 ===
+            double targetVelocity = (testRPM / 60) * COUNTS_PER_REV;
+            flywheelMotorLeft.setVelocity(targetVelocity);
+            flywheelMotorRight.setVelocity(targetVelocity);
 
             // === 讀取實際速度 ===
             double currentVelocity_Left = flywheelMotorLeft.getVelocity();
             double currentVelocity_Right = flywheelMotorRight.getVelocity();
             double currentRPM_Left = (currentVelocity_Left / COUNTS_PER_REV) * 60;
             double currentRPM_Right = (currentVelocity_Right / COUNTS_PER_REV) * 60;
-            double targetRPM = (testVelocity / COUNTS_PER_REV) * 60;
 
             // === 顯示資訊 ===
-            telemetry.addData("目標速度", "%.0f ticks/s", testVelocity);
-            telemetry.addLine("實際速度");
-            telemetry.addData("Velocity_Left", "%.0f ticks/s", currentVelocity_Left);
-            telemetry.addData("Velocity_Right", "%.0f ticks/s", currentVelocity_Right);
+            telemetry.addData("目標RPM", "%.0f RPM", testRPM);
             telemetry.addLine("========================");
-            telemetry.addData("目標RPM", "%.0f RPM", targetRPM);
             telemetry.addLine("實際RPM");
             telemetry.addData("currentRPM_Left", "%.0f RPM", currentRPM_Left);
             telemetry.addData("currentRPM_Right", "%.0f RPM", currentRPM_Right);
             telemetry.addLine();
+            telemetry.addLine("實際速度");
+            telemetry.addData("目標Velocity", "%.0f ticks/s", targetVelocity);
+            telemetry.addData("Velocity_Left", "%.0f ticks/s", currentVelocity_Left);
+            telemetry.addData("Velocity_Right", "%.0f ticks/s", currentVelocity_Right);
             telemetry.addLine();
-            telemetry.addLine("========================");
-            telemetry.addData("✏ 記錄此速度&RPM", "%.0f ticks/s (%.0f RPM)", testVelocity, targetRPM);
             telemetry.update();
         }
 

@@ -34,11 +34,12 @@ public class FlywheelVelocityTest extends LinearOpMode {
         telemetry.addLine("D-Pad 左/右: 微調速度 (±50)");
         telemetry.addLine("D-Pad 上/下: 大幅調整 (±200)");
         telemetry.addLine();
-        telemetry.addLine("A: 停止飛輪 (0)");
+        telemetry.addLine("RB: 停止飛輪 (0)");
         telemetry.addLine("X: 低速測試 (1000)");
         telemetry.addLine("Y: 高速測試 (2000)");
         telemetry.addLine();
-        telemetry.addLine("按 START 開始測試");
+        telemetry.addLine("A: 正轉");
+        telemetry.addLine("B: 反轉");
         telemetry.update();
 
         waitForStart();
@@ -62,7 +63,7 @@ public class FlywheelVelocityTest extends LinearOpMode {
             }
 
             // 快速設定按鈕
-            if (gamepad1.a) {
+            if (gamepad1.right_bumper) {
                 testVelocity = 0;
             }
             if (gamepad1.x) {
@@ -70,6 +71,13 @@ public class FlywheelVelocityTest extends LinearOpMode {
             }
             if (gamepad1.y) {
                 testVelocity = 2000;
+            }
+
+            if (gamepad1.aWasPressed()) {
+                flywheelMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+            }
+            if (gamepad1.bWasPressed()){
+                flywheelMotor.setDirection(DcMotorSimple.Direction.REVERSE);
             }
 
             // === 設定馬達速度 ===
