@@ -1,10 +1,14 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.TEAM_1;
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.IMU;
+
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /**
  * 🎯 Team 1 最終版 TeleOp 程式
@@ -15,14 +19,15 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
  * - 自動送球系統 (速度檢測 + 防卡球)
  * - Intake 吸球機構
  */
-@TeleOp(name = "team_1_final", group = "TeleOp")
-public class team_1_test extends LinearOpMode {
+@TeleOp(name = "team_1_field_Test", group = "TeleOp")
+public class team_1_field extends LinearOpMode {
 
     // ===== 硬體宣告 =====
     private DcMotor frontLeft, frontRight, backLeft, backRight;  // 底盤馬達
     private DcMotorEx shooterMotor;      // Shooter 馬達 (goBILDA 5202)
     private CRServo feederServo;         // Feeder 連續伺服馬達
     private DcMotor intakeMotor;         // Intake 馬達 (312 RPM)
+    private IMU imu;                     // 慣性測量單元 (用於場地導向控制)
 
     // ===== Shooter 參數 =====
     private static final double SHOOTER_TICKS_PER_REV = 28.0;  // 編碼器解析度
@@ -102,6 +107,14 @@ public class team_1_test extends LinearOpMode {
         backLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+// --- IMU 配置 (場地導向控制) ---
+        imu = hardwareMap.get(IMU.class, "imu");
+        IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
+                RevHubOrientationOnRobot.LogoFacingDirection.FORWARD,
+                RevHubOrientationOnRobot.UsbFacingDirection.DOWN));
+        imu.initialize(parameters);
+
+
         // --- Shooter 與 Feeder 配置 ---
         shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
         feederServo = hardwareMap.get(CRServo.class, "feederServo");
@@ -124,21 +137,44 @@ public class team_1_test extends LinearOpMode {
     }
 
     /**
-     * 🎮 處理底盤移動控制
-     * - 左搖桿 Y：前後移動
-     * - 左搖桿 X：左右平移
+     * 🎮 處理場地導向底盤移動控制
+     * - 左搖桿：相對於場地的移動方向 (前後左右)
      * - 右搖桿 X：旋轉
+     * - Options 按鈕：重置 IMU 方向
      */
     private void handleDriveControls() {
-        double y = gamepad1.left_stick_y;   // 前後
-        double rx = gamepad1.left_stick_x;  // 平移
-        double x = gamepad1.right_stick_x;  // 旋轉
+        double y = -gamepad1.left_stick_y;  // 前後 (Y 軸反轉)
+        double x = gamepad1.left_stick_x;   // 左右
+        double rx = gamepad1.right_stick_x; // 旋轉
 
-        // 麥克納姆輪運動學公式
-        frontLeft.setPower(-y + x + rx);
-        frontRight.setPower(-y - x - rx);
-        backLeft.setPower(y - x + rx);
-        backRight.setPower(y + x - rx);
+        // Options 按鈕重置機器人方向 (將當前朝向設為場地正前方)
+        if (gamepad1.start) {
+            imu.resetYaw();
+        }
+
+        // 獲取機器人當前朝向 (相對於場地)
+        double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        // 座標轉換：將搖桿輸入轉換為場地座標系
+        double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
+        double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+
+        /*
+         * TODO 如果你的機器人：
+         * 橫移太慢 → 增加係數 (例如 1.15 或 1.2)
+         * 橫移太快 → 減少係數 (例如 1.05 或 1.0)
+         * 橫移完美 → 保持 1.1
+         */
+        rotX *= 1.1;  // 補償橫移精度
+
+        // 功率標準化 (確保所有輪子功率不超過 [-1, 1])
+        double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+
+        // 麥克納姆輪場地導向運動學
+        frontLeft.setPower((rotY + rotX + rx) / denominator);
+        backLeft.setPower((rotY - rotX + rx) / denominator);
+        frontRight.setPower((rotY - rotX - rx) / denominator);
+        backRight.setPower((rotY + rotX - rx) / denominator);
     }
 
     /**
@@ -211,11 +247,10 @@ public class team_1_test extends LinearOpMode {
 
     /**
      * ⚙️ 送球邏輯 (帶遲滯控制)
-     *
+
      * 遲滯控制 (Hysteresis)：
      * - 開啟送球：當前速度 >= 目標速度
      * - 停止送球：當前速度 <= 目標速度 - 容差
-     *
      * 目的：防止速度在臨界點震盪時 feeder 頻繁開關
      *
      * @param currentVelocity 當前實際速度 (ticks/s)
@@ -268,7 +303,7 @@ public class team_1_test extends LinearOpMode {
 
     /**
      * 🔢 將 RPM 轉換為馬達速度 (ticks/s)
-     *
+
      * 公式：velocity = (rpm / 60) × ticks_per_rev
      *
      * @param rpm 目標轉速 (每分鐘轉數)

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.ZIRNITRA;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -7,8 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
-@TeleOp(name = "Zirnitra_Test")
-public class Zirnitra_Test extends LinearOpMode {
+@TeleOp(name = "Zirnitra_TeleOpMode")
+public class Zirnitra extends LinearOpMode {
 
     // ═══════════════════════════════════════════════════════════════
     // 硬體宣告 (Hardware Declarations)
@@ -37,31 +37,24 @@ public class Zirnitra_Test extends LinearOpMode {
     private static final double TRIGGER_INIT_POSITION = 0.0;
     private static final double TRIGGER_FIRE_POSITION = 0.235;
 
-    // ShooterAngle Servo 參數
+    // ShooterAngle Servo 參數（固定角度模式）
     private static final double SHOOTERANGLE_INIT_POSITION = 0.16;
-    private static final double SHOOTERANGLE_MIN_LIMIT = 0.0;
-    private static final double SHOOTERANGLE_MAX_LIMIT = 0.16;
-    private static final double SHOOTERANGLE_STEP = 0.01;
+    private static final double SHOOTERANGLE_HIGH_POSITION = 0.05;  // 遠距離角度
+    private static final double SHOOTERANGLE_LOW_POSITION = 0.11;   // 近距離角度
 
-    // 速度設定 (ticks/second)
-    private static final double LOW_VELOCITY = 1000.0;
-    private static final double HIGH_VELOCITY = 2000.0;
-    private static final double VELOCITY_TOLERANCE = 40.0;
+    // 速度設定 (RPM)
+    private static final double LOW_VELOCITY_RPM = 2100.0;   // 約1000 ticks/s
+    private static final double HIGH_VELOCITY_RPM = 4300.0;  // 約2000 ticks/s
+    private static final double VELOCITY_TOLERANCE_RPM = 40.0;
 
     // 馬達功率設定
     private static final double INTAKE_POWER = 0.8;
     private static final double TRIGGER_THRESHOLD = 0.2;
 
-    // 速度設定 (RPM)
-    private static final double LOW_VELOCITY_RPM = 2142.0;   // 約1000 ticks/s
-    private static final double HIGH_VELOCITY_RPM = 4285.0;  // 約2000 ticks/s
-    private static final double VELOCITY_TOLERANCE_RPM = 85.0;
-
     // ═══════════════════════════════════════════════════════════════
     // 狀態變數 (State Variables)
     // ═══════════════════════════════════════════════════════════════
 
-    private double currentShooterAngle = SHOOTERANGLE_INIT_POSITION;
     private boolean shooterOn = false;
     private boolean feedEnabled = false;
     private boolean isHighVelocityMode = true;
@@ -70,15 +63,13 @@ public class Zirnitra_Test extends LinearOpMode {
     private boolean prevX = false;
     private boolean prevBack = false;
     private boolean prevDpadLeft = false;
-    private boolean prevDpadUp = false;
-    private boolean prevDpadDown = false;
 
     // ═══════════════════════════════════════════════════════════════
     // 主程式 (Main Program)
     // ═══════════════════════════════════════════════════════════════
 
     @Override
-    public void runOpMode() {
+    public void runOpMode() throws InterruptedException{
         initializeHardware();
 
         telemetry.addData("Status", "Initialized - Ready to Start");
@@ -91,7 +82,6 @@ public class Zirnitra_Test extends LinearOpMode {
             // 處理所有控制輸入
             handleDriveControls();
             handleShooterControls();
-            handleShooterAngleControls();
             handleTriggerControls();
             handleIntakeControls();
 
@@ -121,9 +111,9 @@ public class Zirnitra_Test extends LinearOpMode {
         BL = hardwareMap.get(DcMotor.class, "BL");
 
         // 設定方向（全部正向）
-        FR.setDirection(DcMotorSimple.Direction.FORWARD);
+        FR.setDirection(DcMotorSimple.Direction.REVERSE);
         FL.setDirection(DcMotorSimple.Direction.FORWARD);
-        BR.setDirection(DcMotorSimple.Direction.FORWARD);
+        BR.setDirection(DcMotorSimple.Direction.REVERSE);
         BL.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // 設定煞車模式
@@ -199,15 +189,15 @@ public class Zirnitra_Test extends LinearOpMode {
 
         scale = scaling_power(fr, fl, br, bl);
 
-        FR.setPower(fr/scale);
-        FL.setPower(fl/scale);
-        BR.setPower(br/scale);
-        BL.setPower(bl/scale);
+        FR.setPower(fr / scale);
+        FL.setPower(fl / scale);
+        BR.setPower(br / scale);
+        BL.setPower(bl / scale);
     }
 
-    public double scaling_power(double fr, double fl, double br, double bl) {
+    private double scaling_power(double fr, double fl, double br, double bl) {
         double max = Math.max(Math.max(Math.abs(fr), Math.abs(fl)), Math.max(Math.abs(br), Math.abs(bl)));
-        if(max <= 1) {
+        if (max <= 1) {
             max = 1;
         }
         return max;
@@ -215,32 +205,37 @@ public class Zirnitra_Test extends LinearOpMode {
 
     /**
      * 處理發射器控制
-     * X：啟動高速模式（遠距離）
-     * Dpad Left：啟動低速模式（近距離）
-     * Right Bumper：關閉發射器
+     * X：啟動高速模式（遠距離）+ 設定高角度
+     * Dpad Left：啟動低速模式（近距離）+ 設定低角度
+     * Right Bumper：關閉發射器 + 重置角度
      */
     private void handleShooterControls() {
         boolean xPressed = gamepad1.x && !prevX;
         boolean dpadLeftPressed = gamepad1.dpad_left && !prevDpadLeft;
         boolean backPressed = gamepad1.right_bumper && !prevBack;
 
-        // 啟動高速模式
+        // 啟動高速模式 + 設定遠距離角度
         if (xPressed) {
             shooterOn = true;
             isHighVelocityMode = true;
+            shooterAngle_Right.setPosition(SHOOTERANGLE_HIGH_POSITION);
+            shooterAngle_Left.setPosition(SHOOTERANGLE_HIGH_POSITION);
         }
 
-        // 啟動低速模式
+        // 啟動低速模式 + 設定近距離角度
         if (dpadLeftPressed) {
             shooterOn = true;
             isHighVelocityMode = false;
+            shooterAngle_Right.setPosition(SHOOTERANGLE_LOW_POSITION);
+            shooterAngle_Left.setPosition(SHOOTERANGLE_LOW_POSITION);
         }
 
         // 關閉發射器並重置角度
         if (backPressed) {
             shooterOn = false;
             feedEnabled = false;
-            resetShooterAngle();
+            shooterAngle_Right.setPosition(SHOOTERANGLE_INIT_POSITION);
+            shooterAngle_Left.setPosition(SHOOTERANGLE_INIT_POSITION);
         }
 
         // 更新按鍵狀態
@@ -282,53 +277,6 @@ public class Zirnitra_Test extends LinearOpMode {
         }
     }
 
-
-    /**
-     * 檢查速度是否在目標範圍內
-     */
-    private boolean isVelocityOnTarget(double current, double target) {
-        return Math.abs(current - target) <= VELOCITY_TOLERANCE;
-    }
-
-    /**
-     * 處理發射角度微調
-     * Dpad Up：降低角度值（射更遠）
-     * Dpad Down：提高角度值（射更近）
-     */
-    private void handleShooterAngleControls() {
-        boolean dpadUpPressed = gamepad1.dpad_up && !prevDpadUp;
-        boolean dpadDownPressed = gamepad1.dpad_down && !prevDpadDown;
-
-        if (dpadUpPressed) {
-            currentShooterAngle = Math.max(currentShooterAngle - SHOOTERANGLE_STEP, SHOOTERANGLE_MIN_LIMIT);
-            updateShooterAngleServos();
-        }
-
-        if (dpadDownPressed) {
-            currentShooterAngle = Math.min(currentShooterAngle + SHOOTERANGLE_STEP, SHOOTERANGLE_MAX_LIMIT);
-            updateShooterAngleServos();
-        }
-
-        prevDpadUp = gamepad1.dpad_up;
-        prevDpadDown = gamepad1.dpad_down;
-    }
-
-    /**
-     * 更新角度伺服馬達位置
-     */
-    private void updateShooterAngleServos() {
-        shooterAngle_Right.setPosition(currentShooterAngle);
-        shooterAngle_Left.setPosition(currentShooterAngle);
-    }
-
-    /**
-     * 重置發射角度到初始位置
-     */
-    private void resetShooterAngle() {
-        currentShooterAngle = SHOOTERANGLE_INIT_POSITION;
-        updateShooterAngleServos();
-    }
-
     /**
      * 處理觸發器控制
      * 只有當發射器達到目標速度時才能發射
@@ -365,6 +313,7 @@ public class Zirnitra_Test extends LinearOpMode {
         double leftRPM = ticksToRPM(shooter_Left.getVelocity());
         double rightRPM = ticksToRPM(shooter_Right.getVelocity());
         double targetRPM = shooterOn ? (isHighVelocityMode ? HIGH_VELOCITY_RPM : LOW_VELOCITY_RPM) : 0;
+        double currentAngle = isHighVelocityMode ? SHOOTERANGLE_HIGH_POSITION : SHOOTERANGLE_LOW_POSITION;
 
         telemetry.addLine("══════ 系統狀態 ══════");
         telemetry.addData("Shooter", shooterOn ? "🟢 ON" : "🔴 OFF");
@@ -372,19 +321,17 @@ public class Zirnitra_Test extends LinearOpMode {
         telemetry.addData("可發射", feedEnabled ? "✓ YES" : "✗ NO");
 
         telemetry.addLine("══════ 速度資訊 ══════");
-        telemetry.addData("目標速度", "%.0f RPM", targetRPM);
+        telemetry.addData("目標RPM", "%.0f RPM", targetRPM);
         telemetry.addData("左馬達", "%.0f RPM", leftRPM);
         telemetry.addData("右馬達", "%.0f RPM", rightRPM);
 
         telemetry.addLine("══════ Servo 狀態 ══════");
         telemetry.addData("Trigger", "%.3f", Trigger.getPosition());
-        telemetry.addData("ShooterAngle", "%.3f [%.2f ~ %.2f]",
-                currentShooterAngle, SHOOTERANGLE_MIN_LIMIT, SHOOTERANGLE_MAX_LIMIT);
+        telemetry.addData("ShooterAngle", "%.3f", shooterOn ? currentAngle : SHOOTERANGLE_INIT_POSITION);
 
         telemetry.addLine("══════ 操作說明 ══════");
         telemetry.addData("發射", "X=遠, DpadLeft=近, RB=停");
-        telemetry.addData("角度", "DpadUp/Down 微調");
-        telemetry.addData("intake", "A=開, B=關");
+        telemetry.addData("Intake", "A=開, B=關");
 
         telemetry.update();
     }
