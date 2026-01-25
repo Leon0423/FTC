@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
-@TeleOp(name = "team_1_linear", group = "TeleOp")
+@TeleOp(name = "team_1_final", group = "TeleOp")
 public class team_1_test extends LinearOpMode {
 
     // ===== Drive Motors =====

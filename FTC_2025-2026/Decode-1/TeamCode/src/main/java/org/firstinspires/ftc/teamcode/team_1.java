@@ -1,91 +1,133 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
-@TeleOp(name = "team_1", group = "TeleOp")
-public class team_1 extends OpMode {
+@TeleOp(name = "team_1_AdjustRPM", group = "TeleOp")
+public class team_1 extends LinearOpMode {
 
-    // ===== Drive =====
-    DcMotor frontLeft, frontRight, backLeft, backRight;
+    // ===== Drive Motors =====
+    private DcMotor frontLeft, frontRight, backLeft, backRight;
 
     // ===== Shooter / Feeder =====
-    DcMotor shooterMotor;      // goBILDA 5202-0002-0001 (28 CPR)
-    CRServo feederServo;       // 連續旋轉 servo (CRServo)
+    private DcMotorEx shooterMotor;      // goBILDA 5202-0002-0001 (28 CPR)
+    private CRServo feederServo;       // continue servo
 
     // ===== Intake =====
-    DcMotor intakeMotor;       // 312 RPM intake
-
-    // ===== RPM 計算 =====
-    ElapsedTime rpmTimer = new ElapsedTime();
-    int lastTicks = 0;
+    private DcMotor intakeMotor;       // 312 RPM intake
 
     // ===== 參數 =====
-    static final double SHOOTER_POWER = 0.9;
+    private static final double SHOOTER_TICKS_PER_REV = 28.0; // 每圈 28 個 ticks
 
-    // goBILDA encoder：28 CPR（馬達端）
-    static final double SHOOTER_TICKS_PER_REV = 7.0;
+    // ===== PIDF =====
+    private static final double SHOOTER_P = 230.0;   // 你的 P 值
+    private static final double SHOOTER_I = 0.0;    // 你的 I 值
+    private static final double SHOOTER_D = 0.0;    // 你的 D 值
+    private static final double SHOOTER_F = 11.5;   // 你的 F 值
 
-    // 送球門檻（可依實測調整）
-    static final double FEED_ON_RPM  = 9000;
-    static final double FEED_OFF_RPM = 10000;
+
+    // 送球門檻
+    private static final double LOW_RPM = 2000;  // 近距離射球速度
+    private static final double HIGH_RPM = 4500; // 遠距離射球速度
+
+    // ===== RPM 控制參數 =====
+    private double targetRPM = 0; // 預設目標 0 RPM
+    private static final double RPM_ADJUST_STEP = 50; // 微調步長
+
+    // ===== 速度容差 (用於判斷是否達標) =====
+    private static final double HIGH_VELOCITY_TOLERANCE = 20;  // 高速模式容差
+    private static final double LOW_VELOCITY_TOLERANCE = 20;   // 低速模式容差
 
     // ===== Servo 功率設定 =====
-    // OUTTAKE：平常一直往外吐球（把球往外推走 / 防卡球）
-    static final double FEEDER_OUTTAKE_POWER = 1.0; // 方向不對就改成 +0.35
-    // FEED：按下 Y 才送球（往 shooter 方向送）
-    static final double FEEDER_FEED_POWER    = -1.0;   // 方向不對就改成 -1.0
+    private static final double FEEDER_OUTTAKE_POWER = 1.0;  // 吐球功率
+    private static final double FEEDER_FEED_POWER = -1.0;  // 送球功率
+    private static final double INTAKE_POWER = 0.5;  // 吸球功率
 
-    static final double INTAKE_POWER = 0.5;
+    // ===== 機構狀態 =====
+    private boolean shooterOn = false;
+    private boolean feedEnabled = false;
 
-    // ===== 狀態 =====
-    boolean shooterOn = false;     // X：啟動 shooter（維持）
-    boolean feedEnabled = false;   // 內部 RPM 防抖狀態（只有按住 Y 才會用到）
-
-    // ===== 按鍵 edge detect =====
-    boolean prevX = false;
-    boolean prevBack = false;
+    // ===== 按鍵邊緣檢測 (防止單次按壓多次觸發) =====
+    private boolean prevX = false;           // X 按鈕前一幀狀態
+    private boolean prevBack = false;        // Back 按鈕前一幀狀態
+    private boolean prevDpadLeft = false;    // D-pad Left 前一幀狀態
+    private boolean isHighVelocityMode = true;  // 當前速度模式
 
     @Override
-    public void init() {
+    public void runOpMode() throws InterruptedException {
 
-        frontLeft  = hardwareMap.dcMotor.get("FL");
-        frontRight = hardwareMap.dcMotor.get("FR");
-        backLeft   = hardwareMap.dcMotor.get("BL");
-        backRight  = hardwareMap.dcMotor.get("BR");
+        // ===== 初始化硬體 =====
+        initializeHardware();
 
-        shooterMotor = hardwareMap.dcMotor.get("shooterMotor");
-        feederServo  = hardwareMap.crservo.get("feederServo");
-        intakeMotor  = hardwareMap.dcMotor.get("intakeMotor");
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
 
-        // 左邊反轉
+        waitForStart();
+
+        // ===== 主循環 =====
+        while (opModeIsActive()) {
+            handleDriveControls();
+            handleShooterControls();
+            handleFeederControls();
+            handleIntakeControls();
+            handleRPMAdjustment();
+            updateTelemetry();
+        }
+
+        // ===== 停止所有馬達 =====
+        stopAllMotors();
+    }
+
+    private void initializeHardware() {
+        // 底盤馬達
+
+        frontLeft = hardwareMap.get(DcMotor.class, "FL");
+        frontRight = hardwareMap.get(DcMotor.class, "FR");
+        backLeft = hardwareMap.get(DcMotor.class, "BL");
+        backRight = hardwareMap.get(DcMotor.class, "BR");
+
+        // 左邊馬達反轉
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
         backLeft.setDirection(DcMotor.Direction.REVERSE);
 
-        // ===== Shooter：開迴路，避免 RUN_USING_ENCODER 把轉速鎖住 =====
-        shooterMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        shooterMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        shooterMotor.setDirection(DcMotor.Direction.REVERSE);
+        //BRAKE
+        frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Intake 簡單控制
+        // 底盤馬達設定
+        frontLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        frontRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        backLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        backRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        // 射球與進球機構
+        shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
+        feederServo = hardwareMap.get(CRServo.class, "feederServo");
+        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
+
+        // Shooter 設定
+        shooterMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        shooterMotor.setDirection(DcMotorEx.Direction.REVERSE);
+        shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        // 設定 PIDF 參數
+        shooterMotor.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
+
+        // Intake 設定
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        lastTicks = shooterMotor.getCurrentPosition();
-        rpmTimer.reset();
-
-        // 全部先停（servo 在 loop 會進入「平常吐球」狀態）
-        shooterMotor.setPower(0);
-        feederServo.setPower(0);
-        intakeMotor.setPower(0);
+        // 全部停止
+        stopAllMotors();
     }
 
-    @Override
-    public void loop() {
-
-        /* ========= 麥克納姆（最簡） ========= */
+    private void handleDriveControls() {
         double y  = gamepad1.left_stick_y;
         double rx  =  gamepad1.left_stick_x;
         double x =  gamepad1.right_stick_x;
@@ -94,120 +136,155 @@ public class team_1 extends OpMode {
         frontRight.setPower(-y - x - rx);
         backLeft.setPower(y - x + rx);
         backRight.setPower(y + x - rx);
+    }
 
-        /* ========= 操作 =========
-           X（按一下）：Shooter 開始旋轉（維持）
-           Y（按住）：達 RPM 才送球；沒按住時 servo 一直吐球
-           Back（按一下）：全部停止並重置（Shooter/Feeder）
-        */
+    private void handleShooterControls() {
         boolean xNow = gamepad1.x;
         boolean backNow = gamepad1.right_bumper;
 
-        // X：開 shooter（並重置 RPM 量測基準）
+        // X 按鈕：啟動 shooter（遠距離）
         if (xNow && !prevX) {
             shooterOn = true;
-            lastTicks = shooterMotor.getCurrentPosition();
-            rpmTimer.reset();
+            targetRPM = HIGH_RPM; // 設定為高速 RPM
+            isHighVelocityMode = true;
         }
 
-        // Back：全停 + 重置
+        // D-pad Left：啟動 shooter（近距離）
+        boolean dpadLeftNow = gamepad1.dpad_left;
+        if (dpadLeftNow && !prevDpadLeft) {
+            shooterOn = true;
+            targetRPM = LOW_RPM; // 設定為低速 RPM
+            isHighVelocityMode = false;
+        }
+
+        // Right Bumper：緊急停止所有射球機構
         if (backNow && !prevBack) {
             shooterOn = false;
             feedEnabled = false;
-
-            shooterMotor.setPower(0);
-            feederServo.setPower(0); // 先停一下，下一圈 loop 會回到吐球模式
-
-            lastTicks = shooterMotor.getCurrentPosition();
-            rpmTimer.reset();
-        }
-
-        prevX = xNow;
-        prevBack = backNow;
-
-        if (gamepad1.dpadLeftWasPressed()) {
-            shooterMotor.setPower(0.4);
-        }
-
-        if (gamepad1.dpadUpWasPressed()) {
-            feederServo.setPower(FEEDER_FEED_POWER);
-        }
-        if (gamepad1.dpadDownWasPressed()) {
+            shooterMotor.setVelocity(0);
             feederServo.setPower(0);
         }
 
-        // Shooter 開關
+        // 更新按鈕狀態（用於下一幀的邊緣檢測）
+        prevX = xNow;
+        prevBack = backNow;
+        prevDpadLeft = dpadLeftNow;
+
+        // 設定 shooter 功率
         if (shooterOn) {
-            shooterMotor.setPower(SHOOTER_POWER);
+            shooterMotor.setVelocity(caculateTargetVelocity(targetRPM)); // 使用 caculateVelocity 轉換
         } else {
-            shooterMotor.setPower(0);
+            shooterMotor.setVelocity(0);
         }
+    }
 
-        /* ========= RPM 計算 ========= */
-        double rpm = 0.0;
-
-        if (shooterOn) {
-            double dt = rpmTimer.seconds();
-            if (dt < 0.01) dt = 0.01;
-
-            int currentTicks = shooterMotor.getCurrentPosition();
-            int delta = currentTicks - lastTicks;
-
-            rpm = (delta / SHOOTER_TICKS_PER_REV) / dt * 60.0; //
-            lastTicks = currentTicks;
-            rpmTimer.reset();
-        } else {
-            feedEnabled = false;
-        }
-
-        /* ========= Feeder Servo 邏輯（你要的版本） =========
-           - 平常：一直向外吐球（OUTTAKE）
-           - 按住 Y：只有在 shooterOn 且 RPM 達標才「送球」（FEED）
-        */
+    private void handleFeederControls() {
         boolean yHeld = gamepad1.y;
+        boolean dpadUpHeld = gamepad1.dpad_up;
 
-        if (!yHeld) {
-            // 沒按 Y：永遠吐球
+        // 取得當前實際速度
+        double currentVelocity = shooterMotor.getVelocity();
+
+        // 判斷是否有任何送球按鈕被按住
+        if (yHeld || dpadUpHeld) {
+            // 根據當前模式決定容差，而非按哪個按鈕
+            double tolerance = isHighVelocityMode ? HIGH_VELOCITY_TOLERANCE : LOW_VELOCITY_TOLERANCE;
+            handleFeedLogic(currentVelocity, caculateTargetVelocity(targetRPM), tolerance);
+        } else {
             feederServo.setPower(FEEDER_OUTTAKE_POWER);
             feedEnabled = false;
-        } else {
-            // 按住 Y：需要 shooterOn + 達 RPM 才送球
-            if (shooterOn) {
-                if (!feedEnabled && rpm >= FEED_ON_RPM) {
-                    feedEnabled = true;
-                } else if (feedEnabled && rpm <= FEED_OFF_RPM) {
-                    feedEnabled = false;
-                }
-                feederServo.setPower(feedEnabled ? FEEDER_FEED_POWER : 0.0);
-            } else {
-                feederServo.setPower(0.0);
-                feedEnabled = false;
-            }
+        }
+    }
+
+    /**
+     * 送球邏輯（帶有遲滯控制，防止速度在臨界點附近時頻繁切換）
+     * @param currentVelocity 當前實際速度
+     * @param targetVelocity  目標速度門檻
+     * @param tolerance       速度容差
+     */
+    private void handleFeedLogic(double currentVelocity, double targetVelocity, double tolerance) {
+        if (!shooterOn) {
+            // Shooter 沒開，不送球
+            feederServo.setPower(0.0);
+            feedEnabled = false;
+            return;
         }
 
-        /* ========= Intake（你指定的寫法） =========
-           A：開
-           B：關
-        */
+        // 遲滯控制：防止速度在臨界點震盪時頻繁開關
+        if (!feedEnabled && currentVelocity >= targetVelocity) {
+            // 速度達標，開始送球
+            feedEnabled = true;
+        } else if (feedEnabled && currentVelocity <= targetVelocity - tolerance) {
+            // 速度掉太多，停止送球
+            feedEnabled = false;
+        }
+
+        // 設定 feeder 功率
+        feederServo.setPower(feedEnabled ? FEEDER_FEED_POWER : 0.0);
+    }
+
+    private void handleIntakeControls() {
         if (gamepad1.a) {
             intakeMotor.setPower(INTAKE_POWER);
         } else if (gamepad1.b) {
             intakeMotor.setPower(0);
         }
+    }
 
-        /* ========= Telemetry ========= */
-        telemetry.addData("ShooterOn (X)", shooterOn);
-        telemetry.addData("Y Held (Feed)", yHeld);
-        telemetry.addData("Shooter RPM", "%.0f", rpm);
-        telemetry.addData("FeedEnabled (RPM OK)", feedEnabled);
-        telemetry.addData("Feeder Power", "%.2f",
-                (!yHeld) ? FEEDER_OUTTAKE_POWER : (feedEnabled ? FEEDER_FEED_POWER : 0.0));
-        telemetry.addData("Intake Power", intakeMotor.getPower());
+    private void handleRPMAdjustment() {
+        if (gamepad1.dpadRightWasPressed()) {
+            targetRPM += RPM_ADJUST_STEP; // 增加 RPM
+        } else if (gamepad1.dpadDownWasPressed()) {
+            targetRPM -= RPM_ADJUST_STEP; // 減少 RPM
+        }
 
-        // 除錯：確認 RC 設定檔 motor type
-        telemetry.addData("MotorType Ticks/Rev", shooterMotor.getMotorType().getTicksPerRev());
-        telemetry.addData("MotorType MaxRPM", shooterMotor.getMotorType().getMaxRPM());
+        // 限制 RPM 範圍
+        targetRPM = Math.max(0, Math.min(targetRPM, 5800)); // 限制在 0 到 5800 RPM
+    }
 
+    private double calculateRPM() {
+        if (!shooterOn) {
+            return 0.0;
+        }
+
+        // getVelocity() 回傳的是 ticks per second
+        double ticksPerSecond = shooterMotor.getVelocity();
+
+        // 轉換成 RPM: (ticks/sec) / (ticks/rev) * 60 sec/min
+        return (ticksPerSecond / SHOOTER_TICKS_PER_REV) * 60.0;
+    }
+
+    private double caculateTargetVelocity(double RPM) {
+        return RPM * (SHOOTER_TICKS_PER_REV / 60.0);
+    }
+
+    private void updateTelemetry() {
+        double rpm = calculateRPM();
+
+        // ===== 系統狀態 =====
+        telemetry.addLine("══════ 系統狀態 ══════");
+        telemetry.addData("Shooter", shooterOn ? "🟢 ON" : "🔴 OFF");
+        telemetry.addData("模式", isHighVelocityMode ? "遠距離" : "近距離");
+        // ===== 速度資訊 =====
+        telemetry.addLine("══════ 速度資訊 ══════");
+        telemetry.addData("目標 RPM", String.format("%.0f", targetRPM)); // 顯示動態目標 RPM
+        telemetry.addData("實際 RPM", String.format("%.0f", rpm));
+        telemetry.addData("Error", String.format("%.1f RPM", rpm - targetRPM));
+        telemetry.addData("達到目標速度", feedEnabled ? "✓ YES" : "✗ NO");
+        // ===== 控制輸入 =====
+        telemetry.addLine("══════ 控制輸入 ══════");
+        telemetry.addData("Dpad Right (增加 RPM)", gamepad1.dpad_right ? "按住" : "-");
+        telemetry.addData("Dpad Down (減少 RPM)", gamepad1.dpad_down ? "按住" : "-");
         telemetry.update();
+    }
+
+    private void stopAllMotors() {
+        frontLeft.setPower(0);
+        frontRight.setPower(0);
+        backLeft.setPower(0);
+        backRight.setPower(0);
+        shooterMotor.setVelocity(0);
+        feederServo.setPower(0);
+        intakeMotor.setPower(0);
     }
 }
