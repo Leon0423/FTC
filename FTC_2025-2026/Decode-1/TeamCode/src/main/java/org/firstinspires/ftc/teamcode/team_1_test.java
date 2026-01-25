@@ -30,8 +30,8 @@ public class team_1_test extends LinearOpMode {
 
 
     // 送球門檻
-    private static final double LOW_VELOCITY = 1000;  // 近距離射球速度
-    private static final double HIGH_VELOCITY = 2000; // 遠距離射球速度
+    private static final double LOW_RPM = 2000;  // 近距離射球速度
+    private static final double HIGH_RPM = 4500; // 遠距離射球速度
 
     // ===== 速度容差 (用於判斷是否達標) =====
     private static final double HIGH_VELOCITY_TOLERANCE = 20;  // 高速模式容差
@@ -166,9 +166,9 @@ public class team_1_test extends LinearOpMode {
         // 設定 shooter 功率
         if (shooterOn) {
             if (isHighVelocityMode) {
-                shooterMotor.setVelocity(HIGH_VELOCITY);
+                shooterMotor.setVelocity(CalculateTargetVelocity(HIGH_RPM));
             } else {
-                shooterMotor.setVelocity(LOW_VELOCITY);
+                shooterMotor.setVelocity(CalculateTargetVelocity(LOW_RPM));
             }
         } else {
             shooterMotor.setVelocity(0);
@@ -185,10 +185,10 @@ public class team_1_test extends LinearOpMode {
         // 判斷是否有任何送球按鈕被按住
         if (yHeld) {
             // Y 按住：遠距離模式
-            handleFeedLogic(currentVelocity, HIGH_VELOCITY, HIGH_VELOCITY_TOLERANCE);
+            handleFeedLogic(currentVelocity, CalculateTargetVelocity(HIGH_RPM), HIGH_VELOCITY_TOLERANCE);
         } else if (dpadUpHeld) {
             // D-pad Up 按住：近距離模式
-            handleFeedLogic(currentVelocity, LOW_VELOCITY, LOW_VELOCITY_TOLERANCE);
+            handleFeedLogic(currentVelocity, CalculateTargetVelocity(LOW_RPM), LOW_VELOCITY_TOLERANCE);
         } else {
             // 沒有按任何送球按鈕：持續吐球（防止卡球）
             feederServo.setPower(FEEDER_OUTTAKE_POWER);
@@ -231,7 +231,7 @@ public class team_1_test extends LinearOpMode {
         }
     }
 
-    private double calculateRPM() {
+    private double CalculateCurrentRPM() {
         if (!shooterOn) {
             return 0.0;
         }
@@ -243,10 +243,21 @@ public class team_1_test extends LinearOpMode {
         return (ticksPerSecond / SHOOTER_TICKS_PER_REV) * 60.0;
     }
 
+    /**
+     * 將 RPM 轉換為 Shooter Motor 需要的 Velocity (ticks per second)
+     * @param rpm 目標轉速 (每分鐘轉數)
+     * @return 對應的 velocity (ticks per second)
+     */
+    private double CalculateTargetVelocity(double rpm) {
+        // RPM -> ticks/sec 公式：
+        // (rpm / 60) * ticks_per_rev
+        return (rpm / 60.0) * SHOOTER_TICKS_PER_REV;
+    }
+
     private void updateTelemetry() {
         double currentVelocity = shooterMotor.getVelocity();
-        double targetVelocity = isHighVelocityMode ? HIGH_VELOCITY : LOW_VELOCITY;
-        double rpm = calculateRPM();
+        double targetVelocity = isHighVelocityMode ? HIGH_RPM : LOW_RPM;
+        double rpm = CalculateCurrentRPM();
         boolean yHeld = gamepad1.y;
         boolean dpadUpHeld = gamepad1.dpad_up;
 
@@ -256,10 +267,8 @@ public class team_1_test extends LinearOpMode {
         telemetry.addData("模式", isHighVelocityMode ? "遠距離" : "近距離");
         // ===== 速度資訊 =====
         telemetry.addLine("══════ 速度資訊 ══════");
-        telemetry.addData("目標速度", String.format("%.0f ticks/s", targetVelocity));
-        telemetry.addData("實際速度", String.format("%.1f ticks/s", currentVelocity));
         telemetry.addData("Error", String.format("%.1f ticks/s", currentVelocity - targetVelocity));
-        telemetry.addData("目標 RPM", isHighVelocityMode ? HIGH_VELOCITY : LOW_VELOCITY);
+        telemetry.addData("目標 RPM", isHighVelocityMode ? HIGH_RPM : LOW_RPM);
         telemetry.addData("實際 RPM", String.format("%.0f", rpm));
         telemetry.addData("達到目標速度", feedEnabled ? "✓ YES" : "✗ NO");
         // ===== 控制輸入 =====
