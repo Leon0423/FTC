@@ -14,15 +14,10 @@ public class Aurvandil extends LinearOpMode {
 
     // ===== 射球機構 =====
     private DcMotorEx shooterMotor;      // goBILDA 5202-0002-0001 (28 CPR)
-    private DcMotor intake1, intake2;    //
+    private DcMotor intake1, intake2;
+
     // ===== 編碼器參數 =====
     private static final double SHOOTER_TICKS_PER_REV = 28.0; // 每圈 28 個 ticks
-
-    // ===== PIDF 係數 =====
-    private static final double SHOOTER_P = 19;
-    private static final double SHOOTER_I = 0.0;
-    private static final double SHOOTER_D = 0.0;
-    private static final double SHOOTER_F = 12.0334;
 
     // ===== 預設速度設定 =====
     private static final double LOW_RPM = 3720;   // 近距離射球速度
@@ -30,15 +25,13 @@ public class Aurvandil extends LinearOpMode {
 
     // ===== RPM 微調參數 =====
     private double targetRPM = 0;                 // 當前目標 RPM（可動態調整）
-    private static final double RPM_ADJUST_STEP = 50; // 每次微調步長
 
     // ===== 速度容差（依模式自動切換）=====
-    private static final double HIGH_VELOCITY_TOLERANCE = 20;  // 高速模式容差
-    private static final double LOW_VELOCITY_TOLERANCE = 20;   // 低速模式容差
+    private static final double HIGH_VELOCITY_TOLERANCE = 40;  // 高速模式容差
+    private static final double LOW_VELOCITY_TOLERANCE = 40;   // 低速模式容差
 
     // ===== Servo 功率設定 =====
     private static final double FEEDER_OUTTAKE_POWER = 1.0;   // 吐球功率
-    private static final double FEEDER_FEED_POWER = -1.0;     // 送球功率
     private static final double INTAKE_POWER = 0.5;           // 吸球功率
 
     // ===== 機構狀態旗標 =====
@@ -56,7 +49,17 @@ public class Aurvandil extends LinearOpMode {
         initializeHardware();
 
         telemetry.addData("Status", "✓ 初始化完成");
-        telemetry.update();
+        telemetry.addLine("【Shooter 控制】");
+        telemetry.addLine("  X           : 遠距離射球 (HIGH)");
+        telemetry.addLine("  D-pad Left : 近距離射球 (LOW)");
+        telemetry.addLine("  Right Bumper: 緊急停止");
+        telemetry.addLine();
+        telemetry.addLine("【送球控制】");
+        telemetry.addLine("  Y (按住)   : 啟動送球 (轉速達標時)");
+        telemetry.addLine();
+        telemetry.addLine("【Intake 控制】");
+        telemetry.addLine("  A          : 啟動吸球");
+        telemetry.addLine("  B          : 停止吸球");
 
         waitForStart();
 
@@ -66,7 +69,6 @@ public class Aurvandil extends LinearOpMode {
             handleShooterControls();      // Shooter 啟動/停止
             handleFeederControls();       // Feeder 送球邏輯
             handleIntakeControls();       // Intake 吸球
-            handleRPMAdjustment();        // RPM 微調
             updateTelemetry();            // 更新遙測資訊
         }
 
@@ -101,18 +103,20 @@ public class Aurvandil extends LinearOpMode {
 
         // 射球與進球機構初始化
         shooterMotor = hardwareMap.get(DcMotorEx.class, "shooter");
-        intake2 = hardwareMap.get(DcMotor.class, "intake2");
-        intake1 = hardwareMap.get(DcMotor.class, "intake1");
 
         // Shooter 設定（速度控制 + PIDF）
         shooterMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         shooterMotor.setDirection(DcMotorEx.Direction.REVERSE);
         shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        shooterMotor.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
+
+
+        intake1 = hardwareMap.get(DcMotor.class, "intake1");
+        intake2 = hardwareMap.get(DcMotor.class, "intake2");
 
         intake1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         intake2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
         intake2.setDirection(DcMotor.Direction.REVERSE);
 
         intake1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -122,13 +126,11 @@ public class Aurvandil extends LinearOpMode {
         stopAllMotors();
     }
 
-    /**
-     * 處理底盤控制（麥克納姆輪全向移動）
-     */
+    // 處理底盤控制（麥克納姆輪全向移動）
     private void handleDriveControls() {
         double forward = -gamepad1.left_stick_y;  // 前後
-        double rotate = gamepad1.right_stick_x;   // 平移
-        double strafe = gamepad1.left_stick_x;    // 旋轉
+        double rotate = gamepad1.right_stick_x;   // 旋轉
+        double strafe = gamepad1.left_stick_x;    // 平移
         double fr, fl, br, bl, scale;
 
         fr = forward - rotate - strafe;
@@ -143,7 +145,6 @@ public class Aurvandil extends LinearOpMode {
         backRight.setPower(br / scale);
         backLeft.setPower(bl / scale);
     }
-
     private double scaling_power(double fr, double fl, double br, double bl) {
         double max = Math.max(Math.max(Math.abs(fr), Math.abs(fl)), Math.max(Math.abs(br), Math.abs(bl)));
         if (max <= 1) {
@@ -202,25 +203,21 @@ public class Aurvandil extends LinearOpMode {
 
     /**
      * 處理 Feeder 送球控制
-     * - Y 或 D-pad Up：啟動送球（前提是速度達標）
+     * - Y：啟動送球（前提是速度達標）
      * - 鬆開按鈕：停止送球（可選擇吐球或靜止）
      *
      * ⚠️ 重點：容差根據 isHighVelocityMode 決定，與 RPM 微調同步
      */
     private void handleFeederControls() {
         boolean yHeld = gamepad1.y;
-        boolean dpadUpHeld = gamepad1.dpad_up;
 
         double currentVelocity = shooterMotor.getVelocity();
 
-        if (yHeld || dpadUpHeld) {
+        if (yHeld) {
             // 根據當前模式決定容差（與微調後的 RPM 同步）
             double tolerance = isHighVelocityMode ? HIGH_VELOCITY_TOLERANCE : LOW_VELOCITY_TOLERANCE;
             handleFeedLogic(currentVelocity, caculateTargetVelocity(targetRPM), tolerance);
         } else {
-            // 鬆開按鈕時吐球（可改為 0.0 改成靜止）
-            intake1.setPower(FEEDER_OUTTAKE_POWER);
-            intake2.setPower(FEEDER_OUTTAKE_POWER);
             feedEnabled = false;
         }
     }
@@ -233,21 +230,23 @@ public class Aurvandil extends LinearOpMode {
      */
     private void handleFeedLogic(double currentVelocity, double targetVelocity, double tolerance) {
         if (!shooterOn) {
-            intake1.setPower(0.0);
-            intake2.setPower(1.0);
+            intake2.setPower(0);
             feedEnabled = false;
             return;
         }
 
-        // 遲滯控制：防止速度在臨界點震盪
-        if (!feedEnabled && currentVelocity >= targetVelocity) {
-            feedEnabled = true;  // 速度達標，開始送球
-        } else if (feedEnabled && currentVelocity <= targetVelocity - tolerance) {
-            feedEnabled = false; // 速度掉太多，停止送球
+        boolean inRange = Math.abs(currentVelocity - targetVelocity) <= tolerance;  // ✅ 雙向容差
+
+        // 遲滯控制
+        if (!feedEnabled && inRange) {
+            feedEnabled = true;  // 速度進入容差範圍，開始送球
+        } else if (feedEnabled && !inRange) {
+            feedEnabled = false; // 速度超出容差範圍，停止送球
         }
 
-        intake2.setPower(feedEnabled ? FEEDER_FEED_POWER : 0.0);
+        intake2.setPower(feedEnabled ? FEEDER_OUTTAKE_POWER : 0.0);
     }
+
 
     /**
      * 處理 Intake 吸球控制
@@ -260,23 +259,6 @@ public class Aurvandil extends LinearOpMode {
         } else if (gamepad1.b) {
             intake1.setPower(0);
         }
-    }
-
-    /**
-     * 處理 RPM 微調
-     * - D-pad Right：增加 50 RPM
-     * - D-pad Down：減少 50 RPM
-     * - 限制範圍：0 ~ 5800 RPM
-     */
-    private void handleRPMAdjustment() {
-        if (gamepad1.dpadRightWasPressed()) {
-            targetRPM += RPM_ADJUST_STEP;
-        } else if (gamepad1.dpadDownWasPressed()) {
-            targetRPM -= RPM_ADJUST_STEP;
-        }
-
-        // 限制 RPM 範圍
-        targetRPM = Math.max(0, Math.min(targetRPM, 5800));
     }
 
     /**
@@ -311,9 +293,6 @@ public class Aurvandil extends LinearOpMode {
         telemetry.addData("實際 RPM", String.format("%.0f", rpm));
         telemetry.addData("Error", String.format("%+.1f RPM", error));
         telemetry.addData("轉速達標", Math.abs(error) <= (isHighVelocityMode ? HIGH_VELOCITY_TOLERANCE : LOW_VELOCITY_TOLERANCE) ? "YES" : "NO");
-        telemetry.addLine();
-        telemetry.addData("➕ RPM 增加", gamepad1.dpad_right ? "按住" : "-");
-        telemetry.addData("➖ RPM 減少", gamepad1.dpad_down ? "按住" : "-");
 
         telemetry.update();
     }

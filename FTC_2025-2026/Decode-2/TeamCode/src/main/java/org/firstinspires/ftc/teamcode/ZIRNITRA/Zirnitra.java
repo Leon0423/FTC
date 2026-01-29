@@ -75,7 +75,19 @@ public class Zirnitra extends LinearOpMode {
         initializeHardware();
 
         telemetry.addData("Status", "Initialized - Ready to Start");
-        telemetry.addData("Controls", "X=High, DpadLeft=Low, RB=Stop");
+        telemetry.addLine();
+        telemetry.addLine("【發射器控制 - Gamepad1】");
+        telemetry.addData("X", "啟動高速模式 (遠距離)");
+        telemetry.addData("Dpad Left", "啟動低速模式 (近距離)");
+        telemetry.addData("Right Bumper", "關閉發射器");
+        telemetry.addData("Right Trigger", "發射 (需達目標速度)");
+
+        telemetry.addLine();
+        telemetry.addLine("【進球機構控制 - Gamepad1】");
+        telemetry.addData("A", "啟動 Intake_1");
+        telemetry.addData("B", "停止 Intake_1");
+        telemetry.addData("Dpad Up", "Intake_2 正轉");
+        telemetry.addData("Dpad Down", "Intake_2 反轉");
         telemetry.update();
 
         waitForStart();
