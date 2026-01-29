@@ -259,13 +259,4 @@ public abstract class Titan_Base extends LinearOpMode {
         middle.setTargetPosition(pos + feedAmount);
         middle.setPower(1.0);
     }
-
-    // 停止射擊
-    public void stopShooting() {
-        shooterL.setVelocity(0);
-        shooterR.setVelocity(0);
-        intake.setPower(0);
-        sonicR.setPosition(0);
-        shootingState = ShootingState.IDLE;
-    }
 }

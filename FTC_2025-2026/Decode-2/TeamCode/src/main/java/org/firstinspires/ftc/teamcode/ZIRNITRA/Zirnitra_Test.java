@@ -57,7 +57,7 @@ public class Zirnitra_Test extends LinearOpMode {
     private static final double TRIGGER_THRESHOLD = 0.2;
 
     // 進球機構參數
-    private static final double INTAKE_POWER = 0.8;
+    private static final double INTAKE_POWER = 0.5;
 
     // ═══════════════════════════════════════════════════════════════
     // 狀態變數 (State Variables)
@@ -324,7 +324,7 @@ public class Zirnitra_Test extends LinearOpMode {
             shooter_Right.setVelocity(targetTicks);
 
             double leftRPM = (shooter_Left.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0;
-            double rightRPM = (shooter_Right.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0;
+            double rightRPM = Math.abs((shooter_Right.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0);
 
             boolean inTolerance = Math.abs(leftRPM - targetRPM) <= RPM_TOLERANCE &&
                     Math.abs(rightRPM - targetRPM) <= RPM_TOLERANCE;
@@ -389,6 +389,7 @@ public class Zirnitra_Test extends LinearOpMode {
         telemetry.addData("左馬達", "%.2f RPM", leftRPM);
         telemetry.addData("右馬達", "%.2f RPM", rightRPM);
         telemetry.addData("Error", "%+.1f RPM", error);
+        telemetry.addData("轉速達標次數", rpmStableCounter);
 
         telemetry.addLine("══════ Servo 狀態 ══════");
         telemetry.addData("Trigger", "%.3f", Trigger.getPosition());
