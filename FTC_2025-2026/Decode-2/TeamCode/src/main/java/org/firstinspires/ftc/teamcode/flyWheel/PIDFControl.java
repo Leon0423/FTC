@@ -13,13 +13,14 @@ public class PIDFControl extends LinearOpMode {
     // RPM 設定
     public static final double TICKS_PER_REV = 28.0; // 根據你的馬達編碼器調整
 
-    public double highRPM = 4757.14;
+    public double highRPM = 4671;
     public double lowRPM = highRPM - 500;
 
     double curTargetRPM = highRPM;
 
     double F = 0;
     double P = 0;
+    double I = 0;
 
     double[] stepSizes = {10.0, 1.0, 0.1, 0.01, 0.001, 0.0001};
 
@@ -81,9 +82,16 @@ public class PIDFControl extends LinearOpMode {
                 P -= stepSizes[stepIndex];
             }
 
+            // 加入 I 調整按鈕
+            if (gamepad1.leftBumperWasPressed()) {
+                I += stepSizes[stepIndex];
+            }
+            if (gamepad1.rightBumperWasPressed()) {
+                I -= stepSizes[stepIndex];
+            }
 
             // set new PIDF coefficients
-            pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
+            pidfCoefficients = new PIDFCoefficients(P, I, 0, F);
             flywheelMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficients);
 
             // 將 RPM 轉換為 velocity 並設定
@@ -102,6 +110,7 @@ public class PIDFControl extends LinearOpMode {
             telemetry.addLine("========== PIDF 調整 ==========");
             telemetry.addData("Tuning P", "%.4f (D-Pad Up/Down)", P);
             telemetry.addData("Tuning F", "%.4f (D-Pad Left/Right)", F);
+            telemetry.addData("Tuning I", "%.4f (Bumpers)", I);
             telemetry.addData("調整大小", "%.4f (B Button)", stepSizes[stepIndex]);
             telemetry.addLine();
             telemetry.addData("目標 Velocity", "%.2f ticks/s", targetVelocity);

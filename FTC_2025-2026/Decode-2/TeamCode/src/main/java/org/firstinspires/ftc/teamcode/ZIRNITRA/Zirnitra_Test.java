@@ -35,17 +35,21 @@ public class Zirnitra_Test extends LinearOpMode {
 
     // 發射器參數
     private static final double SHOOTER_TICKS_PER_REV = 28.0;
-    private static final double LOW_RPM = 2000.0;
-    private static final double HIGH_RPM = 4200.0;
-    private static final double RPM_TOLERANCE = 50.0;
+    private static final double LOW_RPM = 3750;
+    private static final double HIGH_RPM = 4400.0;
+    private static final double RPM_TOLERANCE = 150.0;
     private static final double RPM_ADJUST_STEP = 50.0;
     private static final double RPM_MAX_LIMIT = 5800.0;
 
     // 發射角度參數
-    private static final double SHOOTERANGLE_INIT_POSITION = 0.16;
+    private static final double SHOOTERANGLE_INIT_POSITION = 0.68;
     private static final double SHOOTERANGLE_MIN_LIMIT = 0.0;
-    private static final double SHOOTERANGLE_MAX_LIMIT = 0.16;
+    private static final double SHOOTERANGLE_MAX_LIMIT = 0.68;
     private static final double SHOOTERANGLE_STEP = 0.01;
+
+    // 在狀態變數區域添加
+    private int rpmStableCounter = 0;
+    private static final int RPM_STABLE_THRESHOLD = 3;  // 需連續 3 次達標
 
     // Trigger 參數
     private static final double TRIGGER_INIT_POSITION = 0.0;
@@ -104,6 +108,10 @@ public class Zirnitra_Test extends LinearOpMode {
             // ===== 進球機構控制 =====
             handleIntakeControls();
 
+            if(gamepad1.left_bumper){
+                Trigger.setPosition(TRIGGER_FIRE_POSITION);
+            }
+
             // 更新遙測
             updateTelemetry();
         }
@@ -114,7 +122,7 @@ public class Zirnitra_Test extends LinearOpMode {
     // ═══════════════════════════════════════════════════════════════
     // 硬體初始化 (Hardware Initialization)
     // ═══════════════════════════════════════════════════════════════
-    
+
     private void initializeHardware() {
         initializeDriveMotors();
         initializeShooterMotors();
@@ -128,10 +136,10 @@ public class Zirnitra_Test extends LinearOpMode {
         BR = hardwareMap.get(DcMotor.class, "BR");
         BL = hardwareMap.get(DcMotor.class, "BL");
 
-        FR.setDirection(DcMotorSimple.Direction.REVERSE);
+        FR.setDirection(DcMotorSimple.Direction.FORWARD);
         FL.setDirection(DcMotorSimple.Direction.FORWARD);
         BR.setDirection(DcMotorSimple.Direction.FORWARD);
-        BL.setDirection(DcMotorSimple.Direction.REVERSE);
+        BL.setDirection(DcMotorSimple.Direction.FORWARD);
 
         FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         FL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -143,7 +151,7 @@ public class Zirnitra_Test extends LinearOpMode {
         shooter_Left = hardwareMap.get(DcMotorEx.class, "shooter_Left");
 
         shooter_Right.setDirection(DcMotorSimple.Direction.FORWARD);
-        shooter_Left.setDirection(DcMotorSimple.Direction.REVERSE);
+        shooter_Left.setDirection(DcMotorSimple.Direction.FORWARD);
 
         shooter_Right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         shooter_Left.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -223,12 +231,16 @@ public class Zirnitra_Test extends LinearOpMode {
         if (xPressed) {
             shooterOn = true;
             isHighVelocityMode = true;
+            intake_1.setPower(0);
+            intake_2.setPower(0);
             targetRPM = HIGH_RPM;
         }
 
         if (dpadLeftPressed) {
             shooterOn = true;
             isHighVelocityMode = false;
+            intake_1.setPower(0);
+            intake_2.setPower(0);
             targetRPM = LOW_RPM;
         }
 
@@ -313,12 +325,23 @@ public class Zirnitra_Test extends LinearOpMode {
 
             double leftRPM = (shooter_Left.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0;
             double rightRPM = (shooter_Right.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0;
-            feedEnabled = Math.abs(leftRPM - targetRPM) <= RPM_TOLERANCE &&
+
+            boolean inTolerance = Math.abs(leftRPM - targetRPM) <= RPM_TOLERANCE &&
                     Math.abs(rightRPM - targetRPM) <= RPM_TOLERANCE;
+
+            // 穩定檢測：需連續達標才啟用
+            if (inTolerance) {
+                rpmStableCounter++;
+            } else {
+                rpmStableCounter = 0;
+            }
+
+            feedEnabled = rpmStableCounter >= RPM_STABLE_THRESHOLD;
         } else {
             shooter_Left.setVelocity(0);
             shooter_Right.setVelocity(0);
             feedEnabled = false;
+            rpmStableCounter = 0;
         }
     }
 
@@ -352,8 +375,8 @@ public class Zirnitra_Test extends LinearOpMode {
     // ═══════════════════════════════════════════════════════════════
 
     private void updateTelemetry() {
-        double leftRPM = (shooter_Left.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0;
-        double rightRPM = (shooter_Right.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0;
+        double leftRPM = Math.abs((shooter_Left.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0);
+        double rightRPM = Math.abs((shooter_Right.getVelocity() / SHOOTER_TICKS_PER_REV) * 60.0);
         double avgRPM = (leftRPM + rightRPM) / 2.0;
         double error = avgRPM - targetRPM;
 

@@ -23,7 +23,7 @@ public class Zirnitra_Direction extends LinearOpMode {
     private Servo shooterAngle_Right, shooterAngle_Left, Trigger;
 
     // ShooterAngle Servo 參數
-    private static final double SHOOTERANGLE_INIT_POSITION = 0.16;
+    private static final double SHOOTERANGLE_INIT_POSITION = 0.0;
     private static final double SHOOTERANGLE_MIN_LIMIT = 0.0;
     private static final double SHOOTERANGLE_MAX_LIMIT = 0.16;
     private static final double SHOOTERANGLE_STEP = 0.01;
@@ -75,7 +75,7 @@ public class Zirnitra_Direction extends LinearOpMode {
             }
 
             if (gamepad1.right_bumper) {
-                intake_2.setPower(0.5);
+                intake_2.setPower(0.5); // reverse
                 telemetry.addLine("Testing intake_2 Motor");
             } else {
                 intake_2.setPower(0);
@@ -115,7 +115,7 @@ public class Zirnitra_Direction extends LinearOpMode {
                 telemetry.addLine("ShooterAngle Reset to Init");
             }
 
-            if(gamepad1.y){
+            if(gamepad1.b){
                 Trigger.setPosition(TRIGGER_FIRE_POSITION);
             } else {
                 Trigger.setPosition(TRIGGER_INIT_POSITION);

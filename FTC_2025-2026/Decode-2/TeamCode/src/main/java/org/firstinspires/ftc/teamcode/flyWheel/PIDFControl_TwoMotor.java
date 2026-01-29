@@ -15,7 +15,7 @@ public class PIDFControl_TwoMotor extends LinearOpMode {
     // RPM 設定
     public static final double TICKS_PER_REV = 28.0; // 根據你的馬達編碼器調整
     public double highRPM = 4000;
-    public double lowRPM = 3500;
+    public double lowRPM = highRPM - 500;
 
     double curTargetRPM = highRPM;
 
@@ -40,12 +40,12 @@ public class PIDFControl_TwoMotor extends LinearOpMode {
 
         flywheelMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor_Left");
         flywheelMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        flywheelMotor.setDirection(DcMotor.Direction.REVERSE);
+        flywheelMotor.setDirection(DcMotor.Direction.FORWARD);
         flywheelMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         flywheelMotor2 = hardwareMap.get(DcMotorEx.class, "shooterMotor_Right");
         flywheelMotor2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        flywheelMotor2.setDirection(DcMotor.Direction.FORWARD);
+        flywheelMotor2.setDirection(DcMotor.Direction.REVERSE);
         flywheelMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
@@ -57,16 +57,6 @@ public class PIDFControl_TwoMotor extends LinearOpMode {
 
         waitForStart();
         while (opModeIsActive()) {
-
-            if(gamepad2.aWasPressed()){
-                flywheelMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-                flywheelMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
-            }
-
-            if (gamepad2.bWasPressed()){
-                flywheelMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-                flywheelMotor2.setDirection(DcMotorSimple.Direction.FORWARD);
-            }
 
             if(gamepad1.yWasPressed()){
                 if(curTargetRPM == highRPM){
@@ -96,6 +86,13 @@ public class PIDFControl_TwoMotor extends LinearOpMode {
 
             if (gamepad1.dpadDownWasPressed()){
                 P -= stepSizes[stepIndex];
+            }
+
+            if(gamepad2.dpadUpWasPressed()){
+                highRPM += 50;
+            }
+            if (gamepad2.dpadDownWasPressed()){
+                highRPM -= 50;
             }
 
 
