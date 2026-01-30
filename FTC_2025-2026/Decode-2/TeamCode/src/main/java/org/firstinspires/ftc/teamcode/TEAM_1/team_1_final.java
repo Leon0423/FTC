@@ -58,8 +58,25 @@ public class team_1_final extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         initializeHardware();
 
-        telemetry.addData("🤖 狀態", "已初始化");
-        telemetry.addData("⚡", "等待開始...");
+        telemetry.addData("⚡ 狀態", "已初始化");
+        telemetry.addLine("【底盤控制】");
+        telemetry.addData("  左搖桿", "移動 / 平移");
+        telemetry.addData("  右搖桿", "旋轉");
+        telemetry.addLine();
+        telemetry.addLine("【Shooter 控制】");
+        telemetry.addData("  X", "🚀 遠距離模式");
+        telemetry.addData("  D-pad Left", "🎯 近距離模式");
+        telemetry.addData("  Right Bumper", "⛔ 緊急停止");
+        telemetry.addLine();
+        telemetry.addLine("【Feeder 控制】");
+        telemetry.addData("  Y (按住)", "遠距離送球");
+        telemetry.addData("  D-pad ↑ (按住)", "近距離送球");
+        telemetry.addLine();
+        telemetry.addLine("【Intake 控制】");
+        telemetry.addData("  A", "▶️ 啟動吸球");
+        telemetry.addData("  B", "⏹️ 停止吸球");
+        telemetry.addData("  Left Bumper", "⏪ 吐球");
+        telemetry.addLine();
         telemetry.update();
 
         waitForStart();
@@ -207,20 +224,14 @@ public class team_1_final extends LinearOpMode {
      * - 鬆開按鈕：自動吐球 (防止卡球)
      */
     private void handleFeederControls() {
-        boolean yHeld = gamepad1.y;
-        boolean dpadUpHeld = gamepad1.dpad_up;
+        boolean feedButtonHeld = gamepad1.y || gamepad1.dpad_up;
         double currentRPM = CalculateCurrentRPM();
 
-        if (yHeld) {
-            // 應該根據 isHighVelocityMode 決定目標值
+        if (feedButtonHeld) {
             double targetRPM = isHighVelocityMode ? HIGH_RPM : LOW_RPM;
             double tolerance = isHighVelocityMode ? HIGH_RPM_TOLERANCE : LOW_RPM_TOLERANCE;
             handleFeedLogic(currentRPM, targetRPM, tolerance);
-        } else if (dpadUpHeld) {
-            // 近距離模式：檢查是否達到 LOW_RPM
-            handleFeedLogic(currentRPM, LOW_RPM, LOW_RPM_TOLERANCE);
         } else {
-            // 沒有按送球按鈕：持續吐球 (防止球卡在 feeder)
             feederServo.setPower(FEEDER_OUTTAKE_POWER);
             feedEnabled = false;
         }
@@ -246,14 +257,18 @@ public class team_1_final extends LinearOpMode {
             return;
         }
 
-        // 遲滯控制狀態機
-        if (!feedEnabled && currentRPM >= targetRPM - tolerance) {
-            // 狀態轉換：速度達標 → 開始送球
+        // 正確的遲滯控制：兩個不同門檻
+        double upperThreshold = targetRPM - tolerance * 0.5;  // 開啟門檻 (較寬鬆)
+        double lowerThreshold = targetRPM - tolerance * 1.5;  // 關閉門檻 (較嚴格)
+
+        if (!feedEnabled && currentRPM >= upperThreshold) {
+            // 速度達到上門檻 → 開始送球
             feedEnabled = true;
-        } else if (feedEnabled && currentRPM <= targetRPM - tolerance) {
-            // 狀態轉換：速度下降太多 → 停止送球
+        } else if (feedEnabled && currentRPM < lowerThreshold) {
+            // 速度掉到下門檻 → 停止送球
             feedEnabled = false;
         }
+        // 在兩門檻之間：維持當前狀態 (遲滯效果)
 
         // 根據狀態設定 feeder 功率
         feederServo.setPower(feedEnabled ? FEEDER_FEED_POWER : 0.0);
@@ -263,12 +278,15 @@ public class team_1_final extends LinearOpMode {
      * 🔵 處理 Intake 控制
      * - A 按鈕：啟動吸球
      * - B 按鈕：停止吸球
+     * - Left Bumper：吐球（反向運轉）
      */
     private void handleIntakeControls() {
         if (gamepad1.a) {
             intakeMotor.setPower(INTAKE_POWER);
         } else if (gamepad1.b) {
             intakeMotor.setPower(0);
+        } else if (gamepad1.left_bumper) {
+            intakeMotor.setPower(-INTAKE_POWER);
         }
     }
 
