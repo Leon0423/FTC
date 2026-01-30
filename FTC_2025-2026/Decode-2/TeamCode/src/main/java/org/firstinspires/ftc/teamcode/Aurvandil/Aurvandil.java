@@ -5,8 +5,9 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@TeleOp(name = "Aurvandil", group = "TeleOp")
+@TeleOp(name = "Aurvandil", group = "Aurvandil")
 public class Aurvandil extends LinearOpMode {
 
     // ===== 底盤馬達 =====
@@ -27,12 +28,12 @@ public class Aurvandil extends LinearOpMode {
     private double targetRPM = 0;                 // 當前目標 RPM（可動態調整）
 
     // ===== 速度容差（依模式自動切換）=====
-    private static final double HIGH_VELOCITY_TOLERANCE = 40;  // 高速模式容差
-    private static final double LOW_VELOCITY_TOLERANCE = 40;   // 低速模式容差
+    private static final double HIGH_VELOCITY_TOLERANCE = 100;  // 高速模式容差
+    private static final double LOW_VELOCITY_TOLERANCE = 100;   // 低速模式容差
 
     // ===== Servo 功率設定 =====
     private static final double FEEDER_OUTTAKE_POWER = 1.0;   // 吐球功率
-    private static final double INTAKE_POWER = 0.5;           // 吸球功率
+    private static final double INTAKE_POWER = 1;           // 吸球功率
 
     // ===== 機構狀態旗標 =====
     private boolean shooterOn = false;           // Shooter 是否啟動
@@ -87,7 +88,7 @@ public class Aurvandil extends LinearOpMode {
 
         // 右側馬達反轉（統一前進方向）
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        backRight.setDirection(DcMotor.Direction.REVERSE);
+        backLeft.setDirection(DcMotor.Direction.REVERSE);
 
         // 設定煞車模式（停止時鎖定）
         frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -104,10 +105,10 @@ public class Aurvandil extends LinearOpMode {
         // 射球與進球機構初始化
         shooterMotor = hardwareMap.get(DcMotorEx.class, "shooter");
 
-        // Shooter 設定（速度控制 + PIDF）
+        // Shooter 設定（速度控制）
         shooterMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        shooterMotor.setDirection(DcMotorEx.Direction.REVERSE);
+        shooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
 
@@ -117,7 +118,8 @@ public class Aurvandil extends LinearOpMode {
         intake1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         intake2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        intake2.setDirection(DcMotor.Direction.REVERSE);
+        intake1.setDirection(DcMotorSimple.Direction.REVERSE);
+        intake2.setDirection(DcMotorSimple.Direction.FORWARD);
 
         intake1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         intake2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -254,9 +256,11 @@ public class Aurvandil extends LinearOpMode {
      * - B 按鈕：停止吸球
      */
     private void handleIntakeControls() {
-        if (gamepad1.a) {
+        if (gamepad1.a || gamepad1.left_bumper) {
             intake1.setPower(INTAKE_POWER);
-        } else if (gamepad1.b) {
+        } else if(gamepad1.b){
+            intake1.setPower(-INTAKE_POWER);
+        }else{
             intake1.setPower(0);
         }
     }
@@ -294,6 +298,8 @@ public class Aurvandil extends LinearOpMode {
         telemetry.addData("Error", String.format("%+.1f RPM", error));
         telemetry.addData("轉速達標", Math.abs(error) <= (isHighVelocityMode ? HIGH_VELOCITY_TOLERANCE : LOW_VELOCITY_TOLERANCE) ? "YES" : "NO");
 
+        telemetry.addData("intake1", intake1.getPower());
+        telemetry.addData("intake2", intake2.getPower());
         telemetry.update();
     }
 

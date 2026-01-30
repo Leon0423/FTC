@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
-@TeleOp(name = "TeleOpMode")
+@TeleOp(name = "Titan", group = "Titan")
 public class Titan_TeleOp extends Titan_Base {
 
     boolean lastB, lastX;

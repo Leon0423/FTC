@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@TeleOp(name = "Zirnitra_DoubleBall", group = "Zirnitra")
+@TeleOp(name = "Zirnitra_DoubleBall")
 public class Zirnitra_DoubleBall extends LinearOpMode {
 
     // ═══════════════════════════════════════════════════════════════
@@ -22,7 +22,7 @@ public class Zirnitra_DoubleBall extends LinearOpMode {
     private DcMotorEx shooter_Right, shooter_Left;
 
     // 發射器伺服馬達 (Shooter Servos)
-    private Servo shooterAngle_Right, shooterAngle_Left, Trigger;
+    private Servo Trigger;
 
     // 進球機構 (Intake Motors)
     private DcMotor intake_1, intake_2;
@@ -164,13 +164,6 @@ public class Zirnitra_DoubleBall extends LinearOpMode {
         Trigger = hardwareMap.get(Servo.class, "Trigger");
         Trigger.setDirection(Servo.Direction.REVERSE);
         Trigger.setPosition(TRIGGER_INIT_POSITION);
-
-        shooterAngle_Right = hardwareMap.get(Servo.class, "shooterAngle_Right");
-        shooterAngle_Left = hardwareMap.get(Servo.class, "shooterAngle_Left");
-        shooterAngle_Right.setDirection(Servo.Direction.FORWARD);
-        shooterAngle_Left.setDirection(Servo.Direction.REVERSE);
-        shooterAngle_Right.setPosition(SHOOTERANGLE_INIT_POSITION);
-        shooterAngle_Left.setPosition(SHOOTERANGLE_INIT_POSITION);
     }
 
     private void initializeIntakeMotors() {

@@ -24,8 +24,8 @@ public class FlywheelVelocityTest_TwoMotor extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        flywheelMotorLeft = hardwareMap.get(DcMotorEx.class, "shooterMotor_Left");
-        flywheelMotorRight = hardwareMap.get(DcMotorEx.class, "shooterMotor_Right");
+        flywheelMotorLeft = hardwareMap.get(DcMotorEx.class, "shooter_Left");
+        flywheelMotorRight = hardwareMap.get(DcMotorEx.class, "shooter_Right");
 
         // 重要：使用 RUN_USING_ENCODER 會自動用內建PIDF
         flywheelMotorLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -35,7 +35,7 @@ public class FlywheelVelocityTest_TwoMotor extends LinearOpMode {
 
         flywheelMotorRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         flywheelMotorRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        flywheelMotorRight.setDirection(DcMotor.Direction.REVERSE);
+        flywheelMotorRight.setDirection(DcMotor.Direction.FORWARD);
         flywheelMotorRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         telemetry.addLine("控制說明:");

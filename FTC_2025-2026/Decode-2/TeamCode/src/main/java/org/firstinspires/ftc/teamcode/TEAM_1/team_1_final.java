@@ -26,18 +26,18 @@ public class team_1_final extends LinearOpMode {
 
     // ===== Shooter 參數 =====
     private static final double SHOOTER_TICKS_PER_REV = 28.0;  // 編碼器解析度
-    private static final double SHOOTER_P = 19;
-    private static final double SHOOTER_I = 0.0;
-    private static final double SHOOTER_D = 0.0;
-    private static final double SHOOTER_F = 12.0334;
+    // private static final double SHOOTER_P = 19;
+    // private static final double SHOOTER_I = 0.0;
+    // private static final double SHOOTER_D = 0.0;
+    // private static final double SHOOTER_F = 12.0338;
 
     // ===== 射球速度設定 (RPM) =====
-    private static final double LOW_RPM = 3720;   // 近距離目標轉速
-    private static final double HIGH_RPM = 4757.14;  // 遠距離目標轉速
+    private static final double LOW_RPM = 3800;   // 近距離目標轉速
+    private static final double HIGH_RPM = 4727;  // 遠距離目標轉速
 
     // ===== 速度容差 (防止速度震盪) =====
-    private static final double HIGH_RPM_TOLERANCE = 40;  // 遠距離容差 (ticks/s)
-    private static final double LOW_RPM_TOLERANCE = 40;   // 近距離容差 (ticks/s)
+    private static final double HIGH_RPM_TOLERANCE = 100;  // 遠距離容差 RPM
+    private static final double LOW_RPM_TOLERANCE = 200;   // 近距離容差 RPM
 
     // ===== 功率設定 =====
     private static final double FEEDER_OUTTAKE_POWER = 1.0;   // 吐球功率 (防卡球)
@@ -114,7 +114,7 @@ public class team_1_final extends LinearOpMode {
         shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);  // 停止時自由滑行
 
         // 設定 PIDF 控制參數 (用於精確速度控制)
-        shooterMotor.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
+        // shooterMotor.setVelocityPIDFCoefficients(SHOOTER_P, SHOOTER_I, SHOOTER_D, SHOOTER_F);
 
         // Intake 設定
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -131,8 +131,8 @@ public class team_1_final extends LinearOpMode {
      */
     private void handleDriveControls() {
         double forward = -gamepad1.left_stick_y;  // 前後
-        double rotate = gamepad1.right_stick_x;   // 平移
-        double strafe = gamepad1.left_stick_x;    // 旋轉
+        double rotate = gamepad1.right_stick_x;   // 旋轉
+        double strafe = gamepad1.left_stick_x;    // 平移
         double fr, fl, br, bl, scale;
 
         fr = forward - rotate - strafe;
@@ -191,6 +191,7 @@ public class team_1_final extends LinearOpMode {
         prevDpadLeft = dpadLeftNow;
 
         // 根據狀態設定 Shooter 速度
+        // 在設定速度前根據模式調整 PIDF
         if (shooterOn) {
             double targetRPM = isHighVelocityMode ? HIGH_RPM : LOW_RPM;
             shooterMotor.setVelocity(CalculateTargetVelocity(targetRPM));
@@ -211,8 +212,10 @@ public class team_1_final extends LinearOpMode {
         double currentRPM = CalculateCurrentRPM();
 
         if (yHeld) {
-            // 遠距離模式：檢查是否達到 HIGH_RPM
-            handleFeedLogic(currentRPM, HIGH_RPM, HIGH_RPM_TOLERANCE);
+            // 應該根據 isHighVelocityMode 決定目標值
+            double targetRPM = isHighVelocityMode ? HIGH_RPM : LOW_RPM;
+            double tolerance = isHighVelocityMode ? HIGH_RPM_TOLERANCE : LOW_RPM_TOLERANCE;
+            handleFeedLogic(currentRPM, targetRPM, tolerance);
         } else if (dpadUpHeld) {
             // 近距離模式：檢查是否達到 LOW_RPM
             handleFeedLogic(currentRPM, LOW_RPM, LOW_RPM_TOLERANCE);
@@ -244,7 +247,7 @@ public class team_1_final extends LinearOpMode {
         }
 
         // 遲滯控制狀態機
-        if (!feedEnabled && currentRPM >= targetRPM) {
+        if (!feedEnabled && currentRPM >= targetRPM - tolerance) {
             // 狀態轉換：速度達標 → 開始送球
             feedEnabled = true;
         } else if (feedEnabled && currentRPM <= targetRPM - tolerance) {

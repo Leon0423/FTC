@@ -21,7 +21,7 @@ public class Zirnitra_Test extends LinearOpMode {
     private DcMotorEx shooter_Right, shooter_Left;
 
     // 發射器伺服馬達 (Shooter Servos)
-    private Servo shooterAngle_Right, shooterAngle_Left, Trigger;
+    private Servo Trigger;
 
     // 進球機構 (Intake Motors)
     private DcMotor intake_1, intake_2;
@@ -40,12 +40,6 @@ public class Zirnitra_Test extends LinearOpMode {
     private static final double RPM_TOLERANCE = 150.0;
     private static final double RPM_ADJUST_STEP = 50.0;
     private static final double RPM_MAX_LIMIT = 5800.0;
-
-    // 發射角度參數
-    private static final double SHOOTERANGLE_INIT_POSITION = 0.68;
-    private static final double SHOOTERANGLE_MIN_LIMIT = 0.0;
-    private static final double SHOOTERANGLE_MAX_LIMIT = 0.68;
-    private static final double SHOOTERANGLE_STEP = 0.01;
 
     // 在狀態變數區域添加
     private int rpmStableCounter = 0;
@@ -71,14 +65,11 @@ public class Zirnitra_Test extends LinearOpMode {
     private boolean feedEnabled = false;
     private boolean isHighVelocityMode = true;
     private double targetRPM = 0;
-    private double currentShooterAngle = SHOOTERANGLE_INIT_POSITION;
 
     // 按鍵邊緣檢測
     private boolean prevX = false;
     private boolean prevDpadLeft = false;
     private boolean prevBack = false;
-    private boolean prevDpadUp = false;
-    private boolean prevDpadDown = false;
     private boolean prevG2DpadUp = false;
     private boolean prevG2DpadDown = false;
 
@@ -101,7 +92,6 @@ public class Zirnitra_Test extends LinearOpMode {
 
             // ===== 發射系統控制 =====
             handleShooterControls();
-            handleShooterAngleControls();
             handleTriggerControls();
             handleRPMAdjustment();
 
@@ -165,13 +155,6 @@ public class Zirnitra_Test extends LinearOpMode {
         Trigger = hardwareMap.get(Servo.class, "Trigger");
         Trigger.setDirection(Servo.Direction.REVERSE);
         Trigger.setPosition(TRIGGER_INIT_POSITION);
-
-        shooterAngle_Right = hardwareMap.get(Servo.class, "shooterAngle_Right");
-        shooterAngle_Left = hardwareMap.get(Servo.class, "shooterAngle_Left");
-        shooterAngle_Right.setDirection(Servo.Direction.FORWARD);
-        shooterAngle_Left.setDirection(Servo.Direction.REVERSE);
-        shooterAngle_Right.setPosition(SHOOTERANGLE_INIT_POSITION);
-        shooterAngle_Left.setPosition(SHOOTERANGLE_INIT_POSITION);
     }
     private void initializeIntakeMotors() {
         intake_1 = hardwareMap.get(DcMotor.class, "intake_1");
@@ -248,7 +231,6 @@ public class Zirnitra_Test extends LinearOpMode {
             shooterOn = false;
             feedEnabled = false;
             targetRPM = 0;
-            resetShooterAngle();
         }
 
         prevX = gamepad1.x;
@@ -256,29 +238,6 @@ public class Zirnitra_Test extends LinearOpMode {
         prevBack = gamepad1.right_bumper;
 
         updateShooterVelocity();
-    }
-
-    /**
-     * 處理發射角度微調
-     * Dpad Up：降低角度值（射更遠）
-     * Dpad Down：提高角度值（射更近）
-     */
-    private void handleShooterAngleControls() {
-        boolean dpadUpPressed = gamepad1.dpad_up && !prevDpadUp;
-        boolean dpadDownPressed = gamepad1.dpad_down && !prevDpadDown;
-
-        if (dpadUpPressed) {
-            currentShooterAngle = Math.max(currentShooterAngle - SHOOTERANGLE_STEP, SHOOTERANGLE_MIN_LIMIT);
-            updateShooterAngleServos();
-        }
-
-        if (dpadDownPressed) {
-            currentShooterAngle = Math.min(currentShooterAngle + SHOOTERANGLE_STEP, SHOOTERANGLE_MAX_LIMIT);
-            updateShooterAngleServos();
-        }
-
-        prevDpadUp = gamepad1.dpad_up;
-        prevDpadDown = gamepad1.dpad_down;
     }
 
     /**
@@ -345,16 +304,6 @@ public class Zirnitra_Test extends LinearOpMode {
         }
     }
 
-    private void updateShooterAngleServos() {
-        shooterAngle_Right.setPosition(currentShooterAngle);
-        shooterAngle_Left.setPosition(currentShooterAngle);
-    }
-
-    private void resetShooterAngle() {
-        currentShooterAngle = SHOOTERANGLE_INIT_POSITION;
-        updateShooterAngleServos();
-    }
-
     /**
      * 處理進球機構控制
      * A：啟動進球機構
@@ -393,7 +342,6 @@ public class Zirnitra_Test extends LinearOpMode {
 
         telemetry.addLine("══════ Servo 狀態 ══════");
         telemetry.addData("Trigger", "%.3f", Trigger.getPosition());
-        telemetry.addData("ShooterAngle", "%.3f", currentShooterAngle);
 
         telemetry.addLine("══════ 操作說明 ══════");
         telemetry.addData("發射器", "X=遠, DpadLeft=近, RB=停");
