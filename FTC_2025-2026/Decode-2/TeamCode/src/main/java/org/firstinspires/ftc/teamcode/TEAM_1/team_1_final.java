@@ -32,7 +32,7 @@ public class team_1_final extends LinearOpMode {
     // private static final double SHOOTER_F = 12.0338;
 
     // ===== 射球速度設定 (RPM) =====
-    private static final double LOW_RPM = 3800;   // 近距離目標轉速
+    private static final double LOW_RPM = 3900;   // 近距離目標轉速
     private static final double HIGH_RPM = 4727;  // 遠距離目標轉速
 
     // ===== 速度容差 (防止速度震盪) =====
@@ -42,7 +42,7 @@ public class team_1_final extends LinearOpMode {
     // ===== 功率設定 =====
     private static final double FEEDER_OUTTAKE_POWER = 1.0;   // 吐球功率 (防卡球)
     private static final double FEEDER_FEED_POWER = -1.0;     // 送球功率
-    private static final double INTAKE_POWER = 0.8;           // 吸球功率
+    private static final double INTAKE_POWER = 1.0;           // 吸球功率
 
     // ===== 狀態變數 =====
     private boolean shooterOn = false;           // Shooter 是否啟動
@@ -148,7 +148,7 @@ public class team_1_final extends LinearOpMode {
      */
     private void handleDriveControls() {
         double forward = -gamepad1.left_stick_y;  // 前後
-        double rotate = gamepad1.right_stick_x;   // 旋轉
+        double rotate = gamepad1.right_stick_x + gamepad2.right_stick_x * 0.5;   // 旋轉
         double strafe = gamepad1.left_stick_x;    // 平移
         double fr, fl, br, bl, scale;
 
@@ -179,9 +179,9 @@ public class team_1_final extends LinearOpMode {
      * - Right Bumper：緊急停止
      */
     private void handleShooterControls() {
-        boolean xNow = gamepad1.x;
-        boolean backNow = gamepad1.right_bumper;
-        boolean dpadLeftNow = gamepad1.dpad_left;
+        boolean xNow = gamepad1.x || gamepad2.x;
+        boolean backNow = gamepad1.right_bumper || gamepad2.right_bumper;
+        boolean dpadLeftNow = gamepad1.dpad_left || gamepad2.dpad_left;
 
         // 邊緣檢測：只在按鈕從未按下變為按下時觸發
         if (xNow && !prevX) {
@@ -224,7 +224,7 @@ public class team_1_final extends LinearOpMode {
      * - 鬆開按鈕：自動吐球 (防止卡球)
      */
     private void handleFeederControls() {
-        boolean feedButtonHeld = gamepad1.y || gamepad1.dpad_up;
+        boolean feedButtonHeld = gamepad1.y || gamepad1.dpad_up || gamepad2.y || gamepad2.dpad_up;
         double currentRPM = CalculateCurrentRPM();
 
         if (feedButtonHeld) {
@@ -281,11 +281,11 @@ public class team_1_final extends LinearOpMode {
      * - Left Bumper：吐球（反向運轉）
      */
     private void handleIntakeControls() {
-        if (gamepad1.a) {
+        if (gamepad1.a || gamepad2.a) {
             intakeMotor.setPower(INTAKE_POWER);
-        } else if (gamepad1.b) {
+        } else if (gamepad1.b || gamepad2.b) {
             intakeMotor.setPower(0);
-        } else if (gamepad1.left_bumper) {
+        } else if (gamepad1.left_bumper || gamepad2.left_bumper) {
             intakeMotor.setPower(-INTAKE_POWER);
         }
     }

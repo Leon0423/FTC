@@ -32,7 +32,7 @@ public class Zirnitra_TeleOpMode extends LinearOpMode {
     private static final double VELOCITY_HYSTERESIS_FACTOR = 1.2;
 
     private static final double INTAKE_POWER = 1.0;
-    private static final double INTAKE_2_POWER = 0.25;
+    private static final double INTAKE_2_POWER = 0.3;
     private static final double TRIGGER_THRESHOLD = 0.2;
     private static final double DRIVE_SCALE = 0.8;
 
@@ -132,7 +132,7 @@ public class Zirnitra_TeleOpMode extends LinearOpMode {
     private void handleDriveControls() {
         double forward = -gamepad1.left_stick_y;
         double strafe = gamepad1.left_stick_x;
-        double rotate = gamepad1.right_stick_x;
+        double rotate = gamepad1.right_stick_x + gamepad2.right_stick_x * 0.8;
 
         double fr = forward - rotate - strafe;
         double fl = forward + rotate + strafe;
