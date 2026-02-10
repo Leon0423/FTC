@@ -1,4 +1,8 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Swerve;
+
+import com.arcrobotics.ftclib.geometry.Translation2d;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 
 public final class Constants {
     public static final class ModuleConstants{
@@ -10,6 +14,11 @@ public final class Constants {
         public static final double kDriveEncoderRPM2MeterPerSec = kDriveEncoderRot2Meter / 60;
         public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
         public static final double kPTurning = 0.5;
+
+        // PID係數常數
+        public static final double kPRotationController = 0.5;
+        public static final double kIRotationController = 0.0;
+        public static final double kDRotationController = 0.0;
     }
 
     public static final class DriveConstants {
@@ -67,5 +76,22 @@ public final class Constants {
                 kPhysicalMaxAngularSpeedRadiansPerSecond / 4;
         public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 3;
         public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 3;
+
+        // IMU 配置
+        public static final RevHubOrientationOnRobot.LogoFacingDirection kImuLogoFacingDirection =
+                RevHubOrientationOnRobot.LogoFacingDirection.UP;
+        public static final RevHubOrientationOnRobot.UsbFacingDirection kImuUsbFacingDirection =
+                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+    }
+
+    public static final class OIConstants {
+        public static final int kDriverControllerPort = 0;
+
+        public static final int kDriverYAxis = 1;
+        public static final int kDriverXAxis = 0;
+        public static final int kDriverRotAxis = 4;
+        public static final int kDriverFieldOrientedButtonIdx = 1;
+
+        public static final double kDeadband = 0.05;
     }
 }
