@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.Swerve.subsystems;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
 import com.arcrobotics.ftclib.controller.PIDController;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
@@ -10,6 +8,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.Swerve.Constants.ModuleConstants;
 import org.firstinspires.ftc.teamcode.Swerve.Constants.DriveConstants;
@@ -26,9 +25,16 @@ public class SwerveModule {
     private final boolean absoluteEncoderReversed;
     private final double absoluteEncoderOffsetRad;
 
-    public SwerveModule(int driveMotorId, int turningServoId,
-                        boolean driveMotorReversed, boolean turningMotorReversed,
-                        int absoluteEncoderId, double absoluteEncoderOffset,
+    private double previousAngle = 0;
+    private long previousTime = System.currentTimeMillis();
+
+    public SwerveModule(HardwareMap hardwareMap,
+                        int driveMotorId,
+                        int turningServoId,
+                        boolean driveMotorReversed,
+                        boolean turningMotorReversed,
+                        int absoluteEncoderId,
+                        double absoluteEncoderOffset,
                         boolean absoluteEncoderReversed){
 
         // absoluteEncoder 的參數設定
@@ -53,10 +59,10 @@ public class SwerveModule {
         turningMotor.setDirection(turningMotorReversed ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
 
         // 建立 PID Controller 用於旋轉控制
-        turningPidController = new PIDController(ModuleConstants.kPTurning, 0, 0);
-        // turningPidController.enableContinuousInput(-Math.PI, Math.PI);
-        // 注意：FTCLib 的 PIDController 沒有 enableContinuousInput 方法
-        // 角度的連續性處理將在 setDesiredState 方法中手動處理
+        turningPidController = new PIDController(
+                ModuleConstants.kPTurning,
+                ModuleConstants.kITurning,
+                ModuleConstants.kDTurning);
 
         configDriveMotor();
         configTurningMotor();
@@ -83,24 +89,40 @@ public class SwerveModule {
     }
 
     public double getTurningVelocity() {
-        // AnalogInput 沒有速度方法，需要自行計算或使用濾波器
-        // 等效於 turningEncoder.setVelocityConversionFactor(ModuleConstants.kTurningEncoderRPM2RadPerSec)
-        return 0; // 暫時回傳 0，或實作差分計算
+        // 使用差分計算角速度
+        long currentTime = System.currentTimeMillis();
+        double currentAngle = getTurningPosition();
+        double dt = (currentTime - previousTime) / 1000.0;  // 轉換為秒
+
+        if (dt < 0.001) return 0;
+
+        double velocity = (currentAngle - previousAngle) / dt;
+        previousAngle = currentAngle;
+        previousTime = currentTime;
+
+        return velocity;
     }
 
     public double getAbsoluteEncoderRad() {
         double angle = absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage();
         angle *= 2.0 * Math.PI;
         angle -= absoluteEncoderOffsetRad;
+
+        // 新增：標準化角度到 [-π, π] 範圍
+        while (angle > Math.PI) angle -= 2.0 * Math.PI;
+        while (angle < -Math.PI) angle += 2.0 * Math.PI;
+
         return angle * (absoluteEncoderReversed ? -1.0 : 1.0);
     }
 
     public void resetEncoders() {
+        // 重置驅動馬達編碼器
         driveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        absoluteEncoder.resetDeviceConfigurationForOpMode();
+        driveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        // 如果有裝Bore Encoder再刪註解
-        // turningMotor.set(getAbsoluteEncoderRad());
+        // 重置速度計算變數
+        previousAngle = getTurningPosition();
+        previousTime = System.currentTimeMillis();
     }
 
     public SwerveModuleState getState() {
@@ -108,28 +130,39 @@ public class SwerveModule {
     }
 
     public void setDesiredState(SwerveModuleState state) {
+        // 如果速度接近零，停止模組
         if (Math.abs(state.speedMetersPerSecond) < 0.001) {
             stop();
             return;
         }
 
+        // 優化模組狀態（避免超過90度旋轉）
         state = SwerveModuleState.optimize(state, getState().angle);
+
+        // 設定驅動馬達速度
         driveMotor.setPower(state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
 
-        // Calculate angle error with proper wrapping
+        // 計算角度誤差（已經有正確的環繞處理）
         double currentAngle = getTurningPosition();
         double targetAngle = state.angle.getRadians();
         double error = targetAngle - currentAngle;
 
-        // Wrap angle error to [-π, π]
+        // 將誤差環繞到 [-π, π]
         while (error > Math.PI) error -= 2 * Math.PI;
         while (error < -Math.PI) error += 2 * Math.PI;
 
-
-        // Use PID controller with proper setpoint and measurement
+        // 使用 PID 控制器計算輸出
         double output = turningPidController.calculate(currentAngle, targetAngle);
 
-        // Set the turning motor power directly
+        // 新增：限制輸出範圍到 [-1.0, 1.0]
+        output = Math.max(-1.0, Math.min(1.0, output));
+
+        // 新增：小誤差時降低輸出，避免抖動
+        if (Math.abs(error) < 0.05) {  // 約 3 度
+            output *= 0.5;  // 降低功率
+        }
+
+        // 設定轉向馬達功率
         turningMotor.setPower(output);
 
     }

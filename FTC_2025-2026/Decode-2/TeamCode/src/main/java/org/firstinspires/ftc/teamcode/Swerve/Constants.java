@@ -1,21 +1,28 @@
 package org.firstinspires.ftc.teamcode.Swerve;
 
+
 import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import static org.firstinspires.ftc.teamcode.Swerve.Units.inchesToMeters;
+
 
 public final class Constants {
     public static final class ModuleConstants{
-        public static final double kWheelDiameterMeters = Units.inchesToMeters(4);
+        public static final double kWheelDiameterMeters = inchesToMeters(4);
         public static final double kDriveMotorGearRatio = 1 / 5.8462;
         public static final double kTurningMotorGearRatio = 1 / 18.0;
         public static final double kDriveEncoderRot2Meter = kDriveMotorGearRatio * Math.PI * kWheelDiameterMeters;
         public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2 * Math.PI;
         public static final double kDriveEncoderRPM2MeterPerSec = kDriveEncoderRot2Meter / 60;
         public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
-        public static final double kPTurning = 0.5;
 
-        // PID係數常數
+        // PID 係數 - 建議調整
+        public static final double kPTurning = 0.5;  // 從 0.5 提高到 0.8（更快反應）
+        public static final double kITurning = 0.0;  // 積分項（可選）
+        public static final double kDTurning = 0.0; // (0.05)  新增：微分項（減少振盪）
+
+        // 旋轉控制器 PID
         public static final double kPRotationController = 0.5;
         public static final double kIRotationController = 0.0;
         public static final double kDRotationController = 0.0;
@@ -23,9 +30,9 @@ public final class Constants {
 
     public static final class DriveConstants {
 
-        public static final double kTrackWidth = Units.inchesToMeters(21);
+        public static final double kTrackWidth = inchesToMeters(21);
         // Distance between right and left wheels
-        public static final double kWheelBase = Units.inchesToMeters(25.5);
+        public static final double kWheelBase = inchesToMeters(25.5);
         // Distance between front and back wheels
         public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
                 new Translation2d(kWheelBase / 2, -kTrackWidth / 2),
