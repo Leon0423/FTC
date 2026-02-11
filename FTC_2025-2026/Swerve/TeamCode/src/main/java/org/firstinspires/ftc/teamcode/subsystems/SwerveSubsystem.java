@@ -12,6 +12,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.TuningConfig;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class SwerveSubsystem extends SubsystemBase {
 
@@ -114,6 +116,13 @@ public class SwerveSubsystem extends SubsystemBase {
         telemetry.addData("Robot Heading", getHeading());
         telemetry.addData("Robot Location", pose.getTranslation().toString());
 
+        telemetry.addData("Turning PID", "P:%.3f I:%.3f D:%.3f", TuningConfig.turningP, TuningConfig.turningI, TuningConfig.turningD);
+
+        addModuleTurningTelemetry("FL", frontLeft, telemetry);
+        addModuleTurningTelemetry("FR", frontRight, telemetry);
+        addModuleTurningTelemetry("BL", backLeft, telemetry);
+        addModuleTurningTelemetry("BR", backRight, telemetry);
+
         // Absolute Encoder readings
         telemetry.addData("", "=== Absolute Encoders ===");
         telemetry.addData("FL Abs Encoder (V)", "%.3f", frontLeft.getAbsoluteEncoderVoltage());
@@ -151,5 +160,13 @@ public class SwerveSubsystem extends SubsystemBase {
         frontRight.setDesiredState(desiredStates[1]);
         backLeft.setDesiredState(desiredStates[2]);
         backRight.setDesiredState(desiredStates[3]);
+    }
+
+    private void addModuleTurningTelemetry(String name, SwerveModule module, Telemetry telemetry) {
+        telemetry.addData(name + " Turning", "target:%.2f cur:%.2f err:%.2f out:%.2f",
+                module.getTargetAngleRad(),
+                module.getCurrentAngleRad(),
+                module.getTurningErrorRad(),
+                module.getTurningOutput());
     }
 }

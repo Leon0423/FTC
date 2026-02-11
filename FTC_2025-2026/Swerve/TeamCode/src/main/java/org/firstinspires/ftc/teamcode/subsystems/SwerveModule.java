@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.TuningConfig;
 
 public class SwerveModule {
 
@@ -161,8 +162,15 @@ public class SwerveModule {
         while (Error > Math.PI) Error -= 2 * Math.PI;
         while (Error < -Math.PI) Error += 2 * Math.PI;
 
-        // 使用 PID 控制器計算輸出
+        // Apply live-tuned PID gains before calculating output
+        turningPidController.setPID(
+                TuningConfig.turningP,
+                TuningConfig.turningI,
+                TuningConfig.turningD);
+
+        // Use PID controller to compute output and scale it
         this.Output = turningPidController.calculate(currentAngle, targetAngle);
+        Output *= TuningConfig.turningOutputScale;
 
         // 新增：限制輸出範圍到 [-1.0, 1.0]
         Output = Math.max(-1.0, Math.min(1.0, Output));
@@ -213,4 +221,9 @@ public class SwerveModule {
         // 轉向編碼器的轉換因子已在 getAbsoluteEncoderRad() 方法中處理
     }
 
+    // Telemetry helpers for dashboard/panels
+    public double getTargetAngleRad() { return targetAngle; }
+    public double getCurrentAngleRad() { return currentAngle; }
+    public double getTurningErrorRad() { return Error; }
+    public double getTurningOutput() { return Output; }
 }

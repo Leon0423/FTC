@@ -22,10 +22,6 @@ public final class Constants {
         public static final double kITurning = 0.0;  // 積分項（可選）
         public static final double kDTurning = 0.0; // (0.05)  新增：微分項（減少振盪）
 
-        // 旋轉控制器 PID
-        public static final double kPRotationController = 0.5;
-        public static final double kIRotationController = 0.0;
-        public static final double kDRotationController = 0.0;
     }
 
     public static final class DriveConstants {
@@ -62,8 +58,8 @@ public final class Constants {
         public static final boolean kBackRightDriveEncoderReversed = false;
 
         public static final int kFrontLeftDriveAbsoluteEncoderPort = 0;
-        public static final int kBackLeftDriveAbsoluteEncoderPort = 2;
         public static final int kFrontRightDriveAbsoluteEncoderPort = 1;
+        public static final int kBackLeftDriveAbsoluteEncoderPort = 2;
         public static final int kBackRightDriveAbsoluteEncoderPort = 3;
 
         public static final boolean kFrontLeftDriveAbsoluteEncoderReversed = false;

@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import org.firstinspires.ftc.teamcode.commands.SwerveJoystickCmd;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
@@ -24,6 +27,9 @@ public class Swerve_Control extends LinearOpMode {
         // 將標準 gamepad1 包裝成 GamepadEx
         driverGamepad = new GamepadEx(gamepad1);
 
+        // Dashboard + Driver Station telemetry together
+        Telemetry dashboardTelemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+
         // 創建指令一次即可
         SwerveJoystickCmd joystickCmd = new SwerveJoystickCmd(
                 swerveSubsystem,
@@ -35,8 +41,8 @@ public class Swerve_Control extends LinearOpMode {
 
         configureButtonBindings();
 
-        telemetry.addData("Status", "Initialized");
-        telemetry.update();
+        dashboardTelemetry.addData("Status", "Initialized");
+        dashboardTelemetry.update();
 
         waitForStart();
 
@@ -48,9 +54,9 @@ public class Swerve_Control extends LinearOpMode {
             // 更新 subsystem
             swerveSubsystem.periodic();
 
-            swerveSubsystem.updateTelemetry(telemetry);
-            telemetry.addData("Status", "Running");
-            telemetry.update();
+            swerveSubsystem.updateTelemetry(dashboardTelemetry);
+            dashboardTelemetry.addData("Status", "Running");
+            dashboardTelemetry.update();
         }
 
         swerveSubsystem.stopModules();
