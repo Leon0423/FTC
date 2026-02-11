@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Swerve.subsystems;
+package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
@@ -11,7 +11,7 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-import org.firstinspires.ftc.teamcode.Swerve.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 
 public class SwerveSubsystem extends SubsystemBase {
 

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Swerve.subsystems;
+package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.arcrobotics.ftclib.controller.PIDController;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
@@ -10,8 +10,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.teamcode.Swerve.Constants.ModuleConstants;
-import org.firstinspires.ftc.teamcode.Swerve.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
+import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 
 public class SwerveModule {
 
@@ -27,6 +27,12 @@ public class SwerveModule {
 
     private double previousAngle = 0;
     private long previousTime = System.currentTimeMillis();
+
+    // PID 監測變數
+    private double targetAngle = 0;
+    private double currentAngle = 0;
+    private double Error = 0;
+    private double Output = 0;
 
     public SwerveModule(HardwareMap hardwareMap,
                         String driveMotorName,
@@ -147,28 +153,27 @@ public class SwerveModule {
         driveMotor.setPower(state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
 
         // 計算角度誤差（已經有正確的環繞處理）
-        double currentAngle = getTurningPosition();
-        double targetAngle = state.angle.getRadians();
-        double error = targetAngle - currentAngle;
+        currentAngle = getTurningPosition();
+        targetAngle = state.angle.getRadians();
+        Error = targetAngle - currentAngle;
 
         // 將誤差環繞到 [-π, π]
-        while (error > Math.PI) error -= 2 * Math.PI;
-        while (error < -Math.PI) error += 2 * Math.PI;
+        while (Error > Math.PI) Error -= 2 * Math.PI;
+        while (Error < -Math.PI) Error += 2 * Math.PI;
 
         // 使用 PID 控制器計算輸出
-        double output = turningPidController.calculate(currentAngle, targetAngle);
+        this.Output = turningPidController.calculate(currentAngle, targetAngle);
 
         // 新增：限制輸出範圍到 [-1.0, 1.0]
-        output = Math.max(-1.0, Math.min(1.0, output));
+        Output = Math.max(-1.0, Math.min(1.0, Output));
 
         // 新增：小誤差時降低輸出，避免抖動
-        if (Math.abs(error) < 0.05) {  // 約 3 度
-            output *= 0.5;  // 降低功率
+        if (Math.abs(Error) < 0.05) {  // 約 3 度
+            Output *= 0.5;  // 降低功率
         }
 
         // 設定轉向馬達功率
-        turningMotor.setPower(output);
-
+        turningMotor.setPower(Output);
     }
 
     public void stop() {
