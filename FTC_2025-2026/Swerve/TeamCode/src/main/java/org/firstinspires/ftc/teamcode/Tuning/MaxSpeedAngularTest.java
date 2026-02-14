@@ -20,8 +20,11 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
  * 實測最大直線速度與角速度的 TeleOp。
  *
  * 使用方式：
- * 1. 在 Dashboard Config 調整 angularMode（true=角速度測試，false=直線測試）
- * 2. Init 後車輪會自動轉到對應測試的方向
+ * 1. Init 後使用手把按鍵選擇測試模式：
+ *    - A 鍵：直線速度測試
+ *    - B 鍵：角速度測試
+ *    - DPAD UP/DOWN：調整功率比例 (+/- 10%)
+ * 2. 車輪會自動轉到對應測試的方向
  * 3. 按 Start 開始測試，測試時間到自動停止
  * 4. 查看 telemetry 的 Max 值作為實測結果
  *
@@ -32,10 +35,10 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 @TeleOp(name = "MaxSpeedAngularTest", group = "Tuning")
 public class MaxSpeedAngularTest extends LinearOpMode {
 
-    // === Dashboard 可調參數（Init 前設定）===
-    public static boolean angularMode = false;          // false: 直線速度；true: 角速度
-    public static double targetPowerRatio = 1.0;        // 測試功率比例 0~1（1.0=全油門）
-    public static double testDurationSec = 3.0;         // 測試維持時間 (秒)
+    // === 測試參數 ===
+    private boolean angularMode = false;                // false: 直線速度；true: 角速度
+    private double targetPowerRatio = 1.0;              // 測試功率比例 0~1（1.0=全油門）
+    public static double testDurationSec = 3.0;         // 測試維持時間 (秒，Dashboard 可調）
 
     private SwerveSubsystem swerve;
     private IMU imu;
@@ -57,19 +60,44 @@ public class MaxSpeedAngularTest extends LinearOpMode {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
         // ===== INIT 階段：持續對齊車輪直到按下 Start =====
+        boolean lastDpadUp = false;
+        boolean lastDpadDown = false;
+
         while (!isStarted() && !isStopRequested()) {
+            // === 按鍵控制測試模式 ===
+            if (gamepad1.a) {
+                angularMode = false;  // A 鍵：直線速度測試
+            }
+            if (gamepad1.b) {
+                angularMode = true;   // B 鍵：角速度測試
+            }
+
+            // === 按鍵調整功率比例 (防止連續觸發) ===
+            if (gamepad1.dpad_up && !lastDpadUp) {
+                targetPowerRatio = Math.min(1.0, targetPowerRatio + 0.1);
+            }
+            if (gamepad1.dpad_down && !lastDpadDown) {
+                targetPowerRatio = Math.max(0.1, targetPowerRatio - 0.1);
+            }
+            lastDpadUp = gamepad1.dpad_up;
+            lastDpadDown = gamepad1.dpad_down;
+
             // 持續對齊車輪
             alignWheelsForTest();
 
             telemetry.addLine("=== 最大速度/角速度 測試 ===");
-            telemetry.addData("測試模式", angularMode ? "角速度 (旋轉)" : "直線速度");
-            telemetry.addData("功率比例", "%.0f%%", targetPowerRatio * 100);
-            telemetry.addData("測試時間", "%.1f 秒", testDurationSec);
+            telemetry.addLine("");
+            telemetry.addLine("【按鍵控制】");
+            telemetry.addLine("  A 鍵 = 直線速度測試");
+            telemetry.addLine("  B 鍵 = 角速度測試");
+            telemetry.addLine("  DPAD UP/DOWN = 調整功率");
+            telemetry.addLine("");
+            telemetry.addData("► 測試模式", angularMode ? "【角速度 (旋轉)】" : "【直線速度】");
+            telemetry.addData("► 功率比例", "%.0f%%", targetPowerRatio * 100);
+            telemetry.addData("► 測試時間", "%.1f 秒", testDurationSec);
             telemetry.addLine("");
             telemetry.addLine(">>> 車輪校正中，按 Start 開始測試 <<<");
             telemetry.update();
-
-            sleep(20);
         }
 
         if (!opModeIsActive()) return;

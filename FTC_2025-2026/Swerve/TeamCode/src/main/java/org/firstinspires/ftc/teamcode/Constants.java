@@ -33,16 +33,24 @@ public final class Constants {
         public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
 
         // === 轉向 PID 控制器參數 ===
-        public static final double kPTurning = 0.45;  // P 係數：反應速度，過大會震盪  // TODO: 調整
-        public static final double kITurning = 0.0;   // I 係數：消除穩態誤差         // TODO: 調整
-        public static final double kDTurning = 0.0;   // D 係數：抑制震盪            // TODO: 調整
+        public static final double kPTurning = 0.45;  // P 係數：反應速度，過大會震盪
+        public static final double kITurning = 0.0;   // I 係數：消除穩態誤差
+        public static final double kDTurning = 0.0;   // D 係數：抑制震盪
+        public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
 
+        // 轉向輸出與感測穩定化
+        public static final double kTurningDeadbandDeg = 3.0;     // 死區角度 (度)
+        public static final double kTurningMinOutput = 0.05;      // 轉向馬達最小輸出 (克服靜摩擦)
+        public static final double kTurningMaxJumpDeg = 45.0;     // 單次允許的角度跳變上限 (度)
+        public static final double kTurningMaxTransitionOutput = 0.7; // 過渡期間最大輸出
 
         // === 驅動 PID 控制器參數 ===
-        public static final double kPDrive = 0.1;   // P 係數：速度響應        // TODO: 調整
-        public static final double kIDrive = 0.0;   // I 係數：穩態誤差        // TODO: 調整
-        public static final double kDDrive = 0.0;   // D 係數：抑制震盪        // TODO: 調整
-        public static final double kFDrive = 0.0;   // F 係數：前饋補償        // TODO: 調整
+        public static final double kPDrive = 0.1;   // P 係數：速度響應
+        public static final double kIDrive = 0.0;   // I 係數：穩態誤差
+        public static final double kDDrive = 0.0;   // D 係數：抑制震盪
+        public static final double kFDrive = 0.0;   // F 係數：前饋補償
+        public static final double kDriveOutputScale = 1.0; // 驅動輸出縮放
+        public static final boolean kEnableDrivePID = false; // 是否啟用 Drive PID
 
     }
 
@@ -114,15 +122,15 @@ public final class Constants {
         public static final double kBackRightDriveAbsoluteEncoderOffsetRad = Math.toRadians(kBackRightDriveAbsoluteEncoderOffsetDeg);
 
         // === 機器人物理性能極限 ===
-        public static final double kPhysicalMaxSpeedMetersPerSecond = 5.44;                       // 機器人最大線速度 (公尺/秒)
+        public static final double kPhysicalMaxSpeedMetersPerSecond = 11.6;                       // 機器人最大線速度 (公尺/秒)
         public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 2 * 2 * Math.PI;    // 機器人最大角速度 (弧度/秒)
 
         // === 手動控制性能限制 ===
         // 建議調整後進行測試以確保良好的操控手感
-        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 4;                    // 手動控制最大線速度
+        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 2;                    // 手動控制最大線速度
         public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = kPhysicalMaxAngularSpeedRadiansPerSecond / 2;    // 手動控制最大角速度
-        public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 2;                                                 // 最大線性加速度
-        public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 2;                                          // 最大角加速度
+        public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 3;                                                 // 最大線性加速度
+        public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 3;                                          // 最大角加速度
 
         // === IMU 慣性測量單元配置 ===
         // 必須根據 Control Hub 的實際安裝方向進行設定

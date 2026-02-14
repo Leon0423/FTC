@@ -35,6 +35,9 @@ public class SwerveModule {
     private double currentAngle = 0;
     private double Error = 0;
     private double Output = 0;
+    private Double filteredAngleRad = null; // 轉向角度濾波緩存
+    private double smoothedTargetAngle = 0; // 平滑後的目標角度
+    private boolean targetIsTransitioning = false; // 目標正在過渡中
 
     // Drive PID 監測變數
     private double targetVelocity = 0;
@@ -109,7 +112,7 @@ public class SwerveModule {
 
     public double getTurningPosition() {
         // 等效於 turningEncoder.setPositionConversionFactor(ModuleConstants.kTurningEncoderRot2Rad)
-        return getAbsoluteEncoderRad();
+        return applyAngleFilters(getAbsoluteEncoderRad());
     }
 
     public double getDriveVelocity() {
@@ -117,6 +120,18 @@ public class SwerveModule {
         // 需要使用速度轉換因子將其轉換為 m/s
         // 等效於 driveEncoder.setVelocityConversionFactor(ModuleConstants.kDriveEncoderRPM2MeterPerSec)
         return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRPM2MeterPerSec;
+    }
+
+    /**
+     * 取得驅動馬達的 RPM
+     * @return 馬達轉速 (rotations per minute)
+     */
+    public double getDriveRPM() {
+        // getVelocity() 回傳 ticks per second
+        // goBILDA 馬達: 28 ticks/revolution
+        // RPM = (ticks/sec) / (ticks/rev) * 60
+        double ticksPerSec = driveMotor.getVelocity();
+        return (ticksPerSec / 28.0) * 60.0;
     }
 
     public double getTurningVelocity() {
@@ -219,12 +234,30 @@ public class SwerveModule {
         // ===== Turning Motor 控制 =====
         // 讀取當前角度（帶跳變過濾）
         currentAngle = getTurningPosition();
-        targetAngle = state.angle.getRadians();
-        Error = targetAngle - currentAngle;
+        double rawTargetAngle = state.angle.getRadians();
 
-        // 將誤差環繞到 [-π, π]
-        while (Error > Math.PI) Error -= 2 * Math.PI;
-        while (Error < -Math.PI) Error += 2 * Math.PI;
+        // 目標角度平滑化：
+        // 1. 微小變化（< 死區）：忽略，避免抖動
+        // 2. 大角度變化：逐漸過渡，避免突變造成震盪
+        double targetDelta = normalizeAngle(rawTargetAngle - smoothedTargetAngle);
+        double targetDeltaDeg = Math.abs(Math.toDegrees(targetDelta));
+
+        if (targetDeltaDeg < TuningConfig.deadbandDeg) {
+            // 微小變化：忽略，目標穩定
+            targetIsTransitioning = false;
+        } else if (targetDeltaDeg > TuningConfig.maxJumpDeg) {
+            // 大角度變化：每循環最多移動 maxJumpDeg 度
+            double maxStep = Math.toRadians(TuningConfig.maxJumpDeg);
+            smoothedTargetAngle = normalizeAngle(smoothedTargetAngle + Math.copySign(maxStep, targetDelta));
+            targetIsTransitioning = true; // 標記正在過渡
+        } else {
+            // 中等變化：直接更新
+            smoothedTargetAngle = rawTargetAngle;
+            targetIsTransitioning = false;
+        }
+        targetAngle = smoothedTargetAngle;
+
+        Error = normalizeAngle(targetAngle - currentAngle);
 
         double errorDeg = Math.abs(Math.toDegrees(Error));
 
@@ -236,13 +269,14 @@ public class SwerveModule {
 
         // 使用環繞處理後的誤差計算 PID 輸出
         this.Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
-        Output = Math.max(-1.0, Math.min(1.0, Output));
 
-        // 死區處理：誤差很小時停止輸出，避免震盪
-        if (errorDeg < TuningConfig.deadbandDeg) {
-            // 在死區內直接停止，不再給輸出
-            Output = 0;
+        // 當目標正在過渡時，限制最大輸出以避免過衝
+        if (targetIsTransitioning) {
+            double maxOut = TuningConfig.maxTransitionOutput;
+            Output = Math.max(-maxOut, Math.min(maxOut, Output));
         }
+
+        Output = applyTurningOutputConstraints(Output, errorDeg);
 
         // 設定轉向馬達功率
         turningMotor.setPower(Output);
@@ -259,11 +293,7 @@ public class SwerveModule {
     private void maintainTurningAngle() {
         // 讀取當前角度（帶跳變過濾）
         currentAngle = getTurningPosition();
-        Error = targetAngle - currentAngle;
-
-        // 將誤差環繞到 [-π, π]
-        while (Error > Math.PI) Error -= 2 * Math.PI;
-        while (Error < -Math.PI) Error += 2 * Math.PI;
+        Error = normalizeAngle(targetAngle - currentAngle);
 
         double errorDeg = Math.abs(Math.toDegrees(Error));
 
@@ -275,12 +305,7 @@ public class SwerveModule {
 
         // 使用環繞處理後的誤差計算 PID 輸出
         this.Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
-        Output = Math.max(-1.0, Math.min(1.0, Output));
-
-        // 死區處理：誤差很小時停止輸出，避免震盪
-        if (errorDeg < TuningConfig.deadbandDeg) {
-            Output = 0;
-        }
+        Output = applyTurningOutputConstraints(Output, errorDeg);
 
         // 設定轉向馬達功率
         turningMotor.setPower(Output);
@@ -344,5 +369,41 @@ public class SwerveModule {
         while (angle > Math.PI) angle -= 2 * Math.PI;
         while (angle < -Math.PI) angle += 2 * Math.PI;
         return angle;
+    }
+
+    private double applyAngleFilters(double rawAngle) {
+        double angle = normalizeAngle(rawAngle);
+        if (filteredAngleRad != null) {
+            double delta = normalizeAngle(angle - filteredAngleRad);
+            double deltaDeg = Math.abs(Math.toDegrees(delta));
+            double maxDeltaDeg = Math.max(0, TuningConfig.maxJumpDeg);
+            if (maxDeltaDeg > 0 && deltaDeg > maxDeltaDeg) {
+                double limitedDelta = Math.toRadians(maxDeltaDeg) * Math.signum(delta);
+                angle = normalizeAngle(filteredAngleRad + limitedDelta);
+            } else {
+                angle = normalizeAngle(filteredAngleRad + delta);
+            }
+        }
+        filteredAngleRad = angle;
+        return angle;
+    }
+
+    private double applyTurningOutputConstraints(double rawOutput, double errorDeg) {
+        // 死區：誤差很小直接停
+        if (errorDeg < TuningConfig.deadbandDeg) {
+            return 0;
+        }
+
+        double output = Math.max(-1.0, Math.min(1.0, rawOutput));
+
+        // 最小輸出：只在誤差較大時套用，避免接近目標時震盪
+        // 誤差大於 minOutputThresholdDeg 度時才強制最小輸出
+        double minOut = Math.abs(TuningConfig.minOutput);
+        double minOutputThreshold = TuningConfig.deadbandDeg * 3; // 誤差大於死區3倍時才套用
+        if (minOut > 0 && errorDeg > minOutputThreshold && Math.abs(output) < minOut) {
+            output = Math.copySign(minOut, output);
+        }
+
+        return output;
     }
 }
