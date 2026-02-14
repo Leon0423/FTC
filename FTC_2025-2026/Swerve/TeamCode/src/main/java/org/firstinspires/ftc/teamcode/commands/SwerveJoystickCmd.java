@@ -19,6 +19,8 @@ public class SwerveJoystickCmd extends CommandBase {
     private final Supplier<Double> xSpdFunction, ySpdFunction, turningSpdFunction;
     private final Supplier<Boolean> fieldOrientedFunction;
     private final SlewRateLimiter xLimiter, yLimiter, turningLimiter;
+    private static final double kStopTransSpeedMps = DriveConstants.kTeleDriveMaxSpeedMetersPerSecond * 0.02; // ~2% of max
+    private static final double kStopAngularSpeedRad = DriveConstants.kTeleDriveMaxAngularSpeedRadiansPerSecond * 0.02;
 
 
     public SwerveJoystickCmd(SwerveSubsystem swerveSubsystem,
@@ -52,6 +54,16 @@ public class SwerveJoystickCmd extends CommandBase {
         ySpeed = yLimiter.calculate(ySpeed) * DriveConstants.kTeleDriveMaxSpeedMetersPerSecond;
         turningSpeed = turningLimiter.calculate(turningSpeed)
                 * DriveConstants.kTeleDriveMaxAngularSpeedRadiansPerSecond;
+
+        // Snap tiny speeds to zero to prevent jitter when releasing sticks
+        double transMag = Math.hypot(xSpeed, ySpeed);
+        if (transMag < kStopTransSpeedMps) {
+            xSpeed = 0;
+            ySpeed = 0;
+        }
+        if (Math.abs(turningSpeed) < kStopAngularSpeedRad) {
+            turningSpeed = 0;
+        }
 
         // 4. Construct desired chassis speeds
         ChassisSpeeds chassisSpeeds;

@@ -17,10 +17,10 @@ To fix the "driveMotor8" error, you need to configure your robot's hardware with
 - **BRTurn** - Back Right Turning Servo
 
 ### Absolute Encoders (AnalogInput)
-- **absoluteEncoder0** - Front Left Absolute Encoder
-- **absoluteEncoder1** - Front Right Absolute Encoder
-- **absoluteEncoder2** - Back Left Absolute Encoder  
-- **absoluteEncoder3** - Back Right Absolute Encoder
+- **FLEncoder** - Front Left Absolute Encoder
+- **FREncoder** - Front Right Absolute Encoder
+- **BLEncoder** - Back Left Absolute Encoder  
+- **BREncoder** - Back Right Absolute Encoder
 
 ### IMU
 - **imu** - IMU sensor for robot heading
@@ -34,20 +34,28 @@ To fix the "driveMotor8" error, you need to configure your robot's hardware with
 5. Assign each device to the correct port on your Control Hub/Expansion Hub
 6. Save the configuration
 
-## Alternative: Modify Motor Names
+## Alternative: Modify Hardware Names
 
-If you prefer to use different motor names, you can edit the Constants.java file and change:
+If you prefer to use different hardware names, you can edit the Constants.java file and change:
 
 ```java
+// Drive Motors
 public static final String kFrontLeftDriveMotorName = "FL";
 public static final String kBackLeftDriveMotorName = "BL"; 
 public static final String kFrontRightDriveMotorName = "FR";
 public static final String kBackRightDriveMotorName = "BR";
 
+// Turning Servos
 public static final String kFrontLeftTurningMotorName = "FLTurn";
 public static final String kBackLeftTurningMotorName = "BLTurn";
 public static final String kFrontRightTurningMotorName = "FRTurn"; 
 public static final String kBackRightTurningMotorName = "BRTurn";
+
+// Absolute Encoders
+public static final String kFrontLeftAbsoluteEncoderName = "FLEncoder";
+public static final String kFrontRightAbsoluteEncoderName = "FREncoder";
+public static final String kBackLeftAbsoluteEncoderName = "BLEncoder";
+public static final String kBackRightAbsoluteEncoderName = "BREncoder";
 ```
 
 Change these to match your actual hardware configuration names.

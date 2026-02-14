@@ -22,6 +22,7 @@ public class SwerveModule {
     private final AnalogInput absoluteEncoder; // turningMotor的Encoder
 
     private final PIDController turningPidController;
+    private final PIDController drivePidController;  // 新增：Drive PID Controller
 
     private final boolean absoluteEncoderReversed;
     private final double absoluteEncoderOffsetRad;
@@ -29,25 +30,42 @@ public class SwerveModule {
     private double previousAngle = 0;
     private long previousTime = System.currentTimeMillis();
 
-    // PID 監測變數
+    // Turning PID 監測變數
     private double targetAngle = 0;
     private double currentAngle = 0;
     private double Error = 0;
     private double Output = 0;
 
+    // Drive PID 監測變數
+    private double targetVelocity = 0;
+    private double currentVelocity = 0;
+    private double driveError = 0;
+    private double driveOutput = 0;
+
+    /**
+     * SwerveModule 建構函式
+     * @param hardwareMap 硬體映射物件
+     * @param driveMotorName 驅動馬達名稱
+     * @param turningServoName 轉向伺服機名稱
+     * @param absoluteEncoderName 絕對編碼器名稱
+     * @param driveMotorReversed 驅動馬達是否反向
+     * @param turningMotorReversed 轉向馬達是否反向
+     * @param absoluteEncoderOffset 絕對編碼器偏移量(弧度)
+     * @param absoluteEncoderReversed 絕對編碼器是否反向
+     */
     public SwerveModule(HardwareMap hardwareMap,
                         String driveMotorName,
                         String turningServoName,
+                        String absoluteEncoderName,
                         boolean driveMotorReversed,
                         boolean turningMotorReversed,
-                        int absoluteEncoderId,
                         double absoluteEncoderOffset,
                         boolean absoluteEncoderReversed){
 
         // absoluteEncoder 的參數設定
         this.absoluteEncoderOffsetRad = absoluteEncoderOffset;
         this.absoluteEncoderReversed = absoluteEncoderReversed;
-        absoluteEncoder = hardwareMap.get(AnalogInput.class, "absoluteEncoder" + absoluteEncoderId);
+        absoluteEncoder = hardwareMap.get(AnalogInput.class, absoluteEncoderName);
 
         // driveMotor 的參數設定
         driveMotor = hardwareMap.get(DcMotorEx.class, driveMotorName);
@@ -70,6 +88,12 @@ public class SwerveModule {
                 ModuleConstants.kPTurning,
                 ModuleConstants.kITurning,
                 ModuleConstants.kDTurning);
+
+        // 建立 PID Controller 用於驅動速度控制
+        drivePidController = new PIDController(
+                ModuleConstants.kPDrive,
+                ModuleConstants.kIDrive,
+                ModuleConstants.kDDrive);
 
         configDriveMotor();
         configTurningMotor();
@@ -115,11 +139,16 @@ public class SwerveModule {
         angle *= 2.0 * Math.PI;
         angle -= absoluteEncoderOffsetRad;
 
-        // 新增：標準化角度到 [-π, π] 範圍
+        // 如果反向，先乘以 -1
+        if (absoluteEncoderReversed) {
+            angle = -angle;
+        }
+
+        // 標準化角度到 [-π, π] 範圍
         while (angle > Math.PI) angle -= 2.0 * Math.PI;
         while (angle < -Math.PI) angle += 2.0 * Math.PI;
 
-        return angle * (absoluteEncoderReversed ? -1.0 : 1.0);
+        return angle;
     }
 
     public double getAbsoluteEncoderVoltage() {
@@ -141,19 +170,54 @@ public class SwerveModule {
     }
 
     public void setDesiredState(SwerveModuleState state) {
-        // 如果速度接近零，停止模組
+        // 如果速度接近零，只停止驅動馬達，但繼續維持轉向角度
         if (Math.abs(state.speedMetersPerSecond) < 0.001) {
-            stop();
+            driveMotor.setPower(0);
+            // 不 return，繼續執行轉向 PID 來維持角度
+            // 但不更新 targetAngle，保持在上一個目標角度
+            maintainTurningAngle();
             return;
         }
 
         // 優化模組狀態（避免超過90度旋轉）
         state = SwerveModuleState.optimize(state, getState().angle);
 
-        // 設定驅動馬達速度
-        driveMotor.setPower(state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
+        // ===== Drive Motor 控制 =====
+        targetVelocity = state.speedMetersPerSecond;
+        currentVelocity = getDriveVelocity();
 
-        // 計算角度誤差（已經有正確的環繞處理）
+        if (TuningConfig.enableDrivePID) {
+            // 使用 PID 控制驅動馬達
+            drivePidController.setPID(
+                    TuningConfig.driveP,
+                    TuningConfig.driveI,
+                    TuningConfig.driveD);
+
+            // 計算 PID 輸出
+            double pidOutput = drivePidController.calculate(currentVelocity, targetVelocity);
+
+            // 前饋項：基於目標速度的基本功率
+            double feedforward = TuningConfig.driveF * (targetVelocity / DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
+
+            // 合併 PID 和前饋
+            driveOutput = (pidOutput + feedforward) * TuningConfig.driveOutputScale;
+
+            // 計算誤差供監測
+            driveError = targetVelocity - currentVelocity;
+
+            // 限制輸出範圍
+            driveOutput = Math.max(-1.0, Math.min(1.0, driveOutput));
+
+            driveMotor.setPower(driveOutput);
+        } else {
+            // 簡單的開環控制（原本的方式）
+            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+            driveError = 0;
+            driveMotor.setPower(driveOutput);
+        }
+
+        // ===== Turning Motor 控制 =====
+        // 讀取當前角度（帶跳變過濾）
         currentAngle = getTurningPosition();
         targetAngle = state.angle.getRadians();
         Error = targetAngle - currentAngle;
@@ -162,22 +226,22 @@ public class SwerveModule {
         while (Error > Math.PI) Error -= 2 * Math.PI;
         while (Error < -Math.PI) Error += 2 * Math.PI;
 
+        double errorDeg = Math.abs(Math.toDegrees(Error));
+
         // Apply live-tuned PID gains before calculating output
         turningPidController.setPID(
                 TuningConfig.turningP,
                 TuningConfig.turningI,
                 TuningConfig.turningD);
 
-        // Use PID controller to compute output and scale it
-        this.Output = turningPidController.calculate(currentAngle, targetAngle);
-        Output *= TuningConfig.turningOutputScale;
-
-        // 新增：限制輸出範圍到 [-1.0, 1.0]
+        // 使用環繞處理後的誤差計算 PID 輸出
+        this.Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
         Output = Math.max(-1.0, Math.min(1.0, Output));
 
-        // 新增：小誤差時降低輸出，避免抖動
-        if (Math.abs(Error) < 0.05) {  // 約 3 度
-            Output *= 0.5;  // 降低功率
+        // 死區處理：誤差很小時停止輸出，避免震盪
+        if (errorDeg < TuningConfig.deadbandDeg) {
+            // 在死區內直接停止，不再給輸出
+            Output = 0;
         }
 
         // 設定轉向馬達功率
@@ -187,6 +251,47 @@ public class SwerveModule {
     public void stop() {
         driveMotor.setPower(0);
         turningMotor.setPower(0);
+    }
+
+    /**
+     * 維持當前的目標轉向角度（用於速度為零時保持輪子方向）
+     */
+    private void maintainTurningAngle() {
+        // 讀取當前角度（帶跳變過濾）
+        currentAngle = getTurningPosition();
+        Error = targetAngle - currentAngle;
+
+        // 將誤差環繞到 [-π, π]
+        while (Error > Math.PI) Error -= 2 * Math.PI;
+        while (Error < -Math.PI) Error += 2 * Math.PI;
+
+        double errorDeg = Math.abs(Math.toDegrees(Error));
+
+        // Apply live-tuned PID gains
+        turningPidController.setPID(
+                TuningConfig.turningP,
+                TuningConfig.turningI,
+                TuningConfig.turningD);
+
+        // 使用環繞處理後的誤差計算 PID 輸出
+        this.Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
+        Output = Math.max(-1.0, Math.min(1.0, Output));
+
+        // 死區處理：誤差很小時停止輸出，避免震盪
+        if (errorDeg < TuningConfig.deadbandDeg) {
+            Output = 0;
+        }
+
+        // 設定轉向馬達功率
+        turningMotor.setPower(Output);
+    }
+
+    /**
+     * 直接設定轉向馬達功率 (用於 PID 調試)
+     * @param power 馬達功率 [-1.0, 1.0]
+     */
+    public void setTurningPower(double power) {
+        turningMotor.setPower(power);
     }
 
     /**
@@ -217,8 +322,6 @@ public class SwerveModule {
         // 可以在這裡設定其他參數，例如：
         // - PWM 範圍（如果需要）
         // - 速度限制
-
-        // 轉向編碼器的轉換因子已在 getAbsoluteEncoderRad() 方法中處理
     }
 
     // Telemetry helpers for dashboard/panels
@@ -226,4 +329,20 @@ public class SwerveModule {
     public double getCurrentAngleRad() { return currentAngle; }
     public double getTurningErrorRad() { return Error; }
     public double getTurningOutput() { return Output; }
+
+    // Drive PID telemetry helpers
+    public double getTargetVelocity() { return targetVelocity; }
+    public double getCurrentVelocityMps() { return currentVelocity; }
+    public double getDriveError() { return driveError; }
+    public double getDriveOutput() { return driveOutput; }
+
+
+    /**
+     * 將角度標準化到 [-π, π] 範圍
+     */
+    private double normalizeAngle(double angle) {
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        return angle;
+    }
 }
