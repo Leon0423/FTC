@@ -4,7 +4,7 @@ package org.firstinspires.ftc.teamcode;
 import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-// import static org.firstinspires.ftc.teamcode.Units.inchesToMeters;
+// import static org.firstinspires.ftc.teamcode.Tuning.Units.inchesToMeters;
 
 /**
  * 全域常數類別
@@ -127,7 +127,7 @@ public final class Constants {
 
         // === 手動控制性能限制 ===
         // 建議調整後進行測試以確保良好的操控手感
-        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 2;                    // 手動控制最大線速度
+        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 4;                    // 手動控制最大線速度
         public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = kPhysicalMaxAngularSpeedRadiansPerSecond / 2;    // 手動控制最大角速度
         public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 3;                                                 // 最大線性加速度
         public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 3;                                          // 最大角加速度

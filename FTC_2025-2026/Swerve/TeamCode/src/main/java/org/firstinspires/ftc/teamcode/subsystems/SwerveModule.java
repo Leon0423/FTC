@@ -12,7 +12,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
-import org.firstinspires.ftc.teamcode.TuningConfig;
+import org.firstinspires.ftc.teamcode.Tuning.TuningConfig;
 
 public class SwerveModule {
 
@@ -35,9 +35,6 @@ public class SwerveModule {
     private double currentAngle = 0;
     private double Error = 0;
     private double Output = 0;
-    private Double filteredAngleRad = null; // 轉向角度濾波緩存
-    private double smoothedTargetAngle = 0; // 平滑後的目標角度
-    private boolean targetIsTransitioning = false; // 目標正在過渡中
 
     // Drive PID 監測變數
     private double targetVelocity = 0;
@@ -111,8 +108,7 @@ public class SwerveModule {
     }
 
     public double getTurningPosition() {
-        // 等效於 turningEncoder.setPositionConversionFactor(ModuleConstants.kTurningEncoderRot2Rad)
-        return applyAngleFilters(getAbsoluteEncoderRad());
+        return getAbsoluteEncoderRad();
     }
 
     public double getDriveVelocity() {
@@ -231,54 +227,28 @@ public class SwerveModule {
             driveMotor.setPower(driveOutput);
         }
 
-        // ===== Turning Motor 控制 =====
-        // 讀取當前角度（帶跳變過濾）
-        currentAngle = getTurningPosition();
-        double rawTargetAngle = state.angle.getRadians();
-
-        // 目標角度平滑化：
-        // 1. 微小變化（< 死區）：忽略，避免抖動
-        // 2. 大角度變化：逐漸過渡，避免突變造成震盪
-        double targetDelta = normalizeAngle(rawTargetAngle - smoothedTargetAngle);
-        double targetDeltaDeg = Math.abs(Math.toDegrees(targetDelta));
-
-        if (targetDeltaDeg < TuningConfig.deadbandDeg) {
-            // 微小變化：忽略，目標穩定
-            targetIsTransitioning = false;
-        } else if (targetDeltaDeg > TuningConfig.maxJumpDeg) {
-            // 大角度變化：每循環最多移動 maxJumpDeg 度
-            double maxStep = Math.toRadians(TuningConfig.maxJumpDeg);
-            smoothedTargetAngle = normalizeAngle(smoothedTargetAngle + Math.copySign(maxStep, targetDelta));
-            targetIsTransitioning = true; // 標記正在過渡
-        } else {
-            // 中等變化：直接更新
-            smoothedTargetAngle = rawTargetAngle;
-            targetIsTransitioning = false;
-        }
-        targetAngle = smoothedTargetAngle;
+        // ===== Turning Motor 控制 (與 TurningPIDTuner 相同) =====
+        currentAngle = getAbsoluteEncoderRad();
+        targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-
         double errorDeg = Math.abs(Math.toDegrees(Error));
 
-        // Apply live-tuned PID gains before calculating output
+        // Apply live-tuned PID gains
         turningPidController.setPID(
                 TuningConfig.turningP,
                 TuningConfig.turningI,
                 TuningConfig.turningD);
 
-        // 使用環繞處理後的誤差計算 PID 輸出
-        this.Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
+        // 直接計算 PID 輸出
+        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
+        Output = Math.max(-1.0, Math.min(1.0, Output));
 
-        // 當目標正在過渡時，限制最大輸出以避免過衝
-        if (targetIsTransitioning) {
-            double maxOut = TuningConfig.maxTransitionOutput;
-            Output = Math.max(-maxOut, Math.min(maxOut, Output));
+        // 只有 deadband
+        if (errorDeg < TuningConfig.deadbandDeg) {
+            Output = 0;
         }
 
-        Output = applyTurningOutputConstraints(Output, errorDeg);
-
-        // 設定轉向馬達功率
         turningMotor.setPower(Output);
     }
 
@@ -291,23 +261,23 @@ public class SwerveModule {
      * 維持當前的目標轉向角度（用於速度為零時保持輪子方向）
      */
     private void maintainTurningAngle() {
-        // 讀取當前角度（帶跳變過濾）
-        currentAngle = getTurningPosition();
-        Error = normalizeAngle(targetAngle - currentAngle);
+        currentAngle = getAbsoluteEncoderRad();
 
+        Error = normalizeAngle(targetAngle - currentAngle);
         double errorDeg = Math.abs(Math.toDegrees(Error));
 
-        // Apply live-tuned PID gains
         turningPidController.setPID(
                 TuningConfig.turningP,
                 TuningConfig.turningI,
                 TuningConfig.turningD);
 
-        // 使用環繞處理後的誤差計算 PID 輸出
-        this.Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
-        Output = applyTurningOutputConstraints(Output, errorDeg);
+        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
+        Output = Math.max(-1.0, Math.min(1.0, Output));
 
-        // 設定轉向馬達功率
+        if (errorDeg < TuningConfig.deadbandDeg) {
+            Output = 0;
+        }
+
         turningMotor.setPower(Output);
     }
 
@@ -369,41 +339,5 @@ public class SwerveModule {
         while (angle > Math.PI) angle -= 2 * Math.PI;
         while (angle < -Math.PI) angle += 2 * Math.PI;
         return angle;
-    }
-
-    private double applyAngleFilters(double rawAngle) {
-        double angle = normalizeAngle(rawAngle);
-        if (filteredAngleRad != null) {
-            double delta = normalizeAngle(angle - filteredAngleRad);
-            double deltaDeg = Math.abs(Math.toDegrees(delta));
-            double maxDeltaDeg = Math.max(0, TuningConfig.maxJumpDeg);
-            if (maxDeltaDeg > 0 && deltaDeg > maxDeltaDeg) {
-                double limitedDelta = Math.toRadians(maxDeltaDeg) * Math.signum(delta);
-                angle = normalizeAngle(filteredAngleRad + limitedDelta);
-            } else {
-                angle = normalizeAngle(filteredAngleRad + delta);
-            }
-        }
-        filteredAngleRad = angle;
-        return angle;
-    }
-
-    private double applyTurningOutputConstraints(double rawOutput, double errorDeg) {
-        // 死區：誤差很小直接停
-        if (errorDeg < TuningConfig.deadbandDeg) {
-            return 0;
-        }
-
-        double output = Math.max(-1.0, Math.min(1.0, rawOutput));
-
-        // 最小輸出：只在誤差較大時套用，避免接近目標時震盪
-        // 誤差大於 minOutputThresholdDeg 度時才強制最小輸出
-        double minOut = Math.abs(TuningConfig.minOutput);
-        double minOutputThreshold = TuningConfig.deadbandDeg * 3; // 誤差大於死區3倍時才套用
-        if (minOut > 0 && errorDeg > minOutputThreshold && Math.abs(output) < minOut) {
-            output = Math.copySign(minOut, output);
-        }
-
-        return output;
     }
 }

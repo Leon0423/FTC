@@ -146,7 +146,6 @@ public class Swerve_Control extends LinearOpMode {
             dashboardTelemetry.addData("Position", "X:%.2f Y:%.2f", currentPose.getX(), currentPose.getY());
 
             dashboardTelemetry.addData("Target", "X:%.2f Y:%.2f H:%.1f°", targetX, targetY, targetHeadingDeg);
-
             // 顯示各顆 Drive Motor 的 RPM
             dashboardTelemetry.addData("Drive RPM", "FL:%.0f FR:%.0f BL:%.0f BR:%.0f",
                     swerveSubsystem.getFrontLeft().getDriveRPM(),

@@ -16,7 +16,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
-import org.firstinspires.ftc.teamcode.TuningConfig;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class SwerveSubsystem extends SubsystemBase {

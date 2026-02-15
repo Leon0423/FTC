@@ -10,6 +10,7 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 import java.util.function.Supplier;
 import org.firstinspires.ftc.teamcode.Constants.OIConstants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.Tuning.TuningConfig;
 
 
 
@@ -31,9 +32,9 @@ public class SwerveJoystickCmd extends CommandBase {
         this.ySpdFunction = ySpdFunction;
         this.turningSpdFunction = turningSpdFunction;
         this.fieldOrientedFunction = fieldOrientedFunction;
-        this.xLimiter = new SlewRateLimiter(DriveConstants.kTeleDriveMaxAccelerationUnitsPerSecond);
-        this.yLimiter = new SlewRateLimiter(DriveConstants.kTeleDriveMaxAccelerationUnitsPerSecond);
-        this.turningLimiter = new SlewRateLimiter(DriveConstants.kTeleDriveMaxAngularAccelerationUnitsPerSecond);
+        this.xLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel);
+        this.yLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel);
+        this.turningLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAngularAccel);
         addRequirements(swerveSubsystem);
     }
 

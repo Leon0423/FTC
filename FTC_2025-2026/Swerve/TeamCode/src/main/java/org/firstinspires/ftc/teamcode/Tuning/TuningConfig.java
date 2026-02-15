@@ -1,6 +1,8 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Tuning;
 
 import com.acmerobotics.dashboard.config.Config;
+
+import org.firstinspires.ftc.teamcode.Constants;
 
 /**
  * Live-tunable parameters exposed on FTC Dashboard.
@@ -15,9 +17,6 @@ public class TuningConfig {
 
     // === Turning 補助參數 ===
     public static double deadbandDeg = Constants.ModuleConstants.kTurningDeadbandDeg;
-    public static double minOutput = Constants.ModuleConstants.kTurningMinOutput;
-    public static double maxJumpDeg = Constants.ModuleConstants.kTurningMaxJumpDeg;
-    public static double maxTransitionOutput = Constants.ModuleConstants.kTurningMaxTransitionOutput;
 
     // === Drive PID 參數 ===
     public static double driveP = Constants.ModuleConstants.kPDrive;
@@ -28,4 +27,10 @@ public class TuningConfig {
 
     // === 功能開關 ===
     public static boolean enableDrivePID = Constants.ModuleConstants.kEnableDrivePID;
+
+    // ===== Teleop Acceleration Limits =====
+    public static double teleDriveMaxAccel = Constants.DriveConstants.kTeleDriveMaxAccelerationUnitsPerSecond;
+    public static double teleDriveMaxAngularAccel = Constants.DriveConstants.kTeleDriveMaxAngularAccelerationUnitsPerSecond;
+
+
 }
