@@ -36,8 +36,8 @@ import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
  * 3. 如果馬達方向錯誤，修改 Constants.java 的 kXXXDriveEncoderReversed
  */
 @Config
-@TeleOp(name = "2. Drive Motor Tester", group = "Tuning")
-public class SwerveModuleTuner extends LinearOpMode {
+@TeleOp(name = "2. Drive Motor Direction Tester", group = "Tuning")
+public class _2_DriveMotorDirectionTester extends LinearOpMode {
 
     // Dashboard 可調參數
     public static double driveTestPower = 0.3;

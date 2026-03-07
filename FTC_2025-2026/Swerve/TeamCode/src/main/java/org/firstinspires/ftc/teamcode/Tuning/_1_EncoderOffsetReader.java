@@ -29,7 +29,7 @@ import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
  */
 @Config
 @TeleOp(name = "1. Encoder Offset Reader", group = "Tuning")
-public class EncoderOffsetReader extends LinearOpMode {
+public class _1_EncoderOffsetReader extends LinearOpMode {
 
     // AXON Servo 的 CRServo（需要初始化才能讓編碼器通電）
     private CRServo flServo, frServo, blServo, brServo;

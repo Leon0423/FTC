@@ -197,21 +197,21 @@ public class SwerveModule {
         targetVelocity = state.speedMetersPerSecond;
         currentVelocity = getDriveVelocity();
 
-        if (TuningConfig.enableDrivePID) {
+        if (TuningConfig.enableDrivePID()) {
             // 使用 PID 控制驅動馬達
             drivePidController.setPID(
-                    TuningConfig.driveP,
-                    TuningConfig.driveI,
-                    TuningConfig.driveD);
+                    TuningConfig.driveP(),
+                    TuningConfig.driveI(),
+                    TuningConfig.driveD());
 
             // 計算 PID 輸出
             double pidOutput = drivePidController.calculate(currentVelocity, targetVelocity);
 
             // 前饋項：基於目標速度的基本功率
-            double feedforward = TuningConfig.driveF * (targetVelocity / DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
+            double feedforward = TuningConfig.driveF() * (targetVelocity / DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
 
             // 合併 PID 和前饋
-            driveOutput = (pidOutput + feedforward) * TuningConfig.driveOutputScale;
+            driveOutput = (pidOutput + feedforward) * TuningConfig.driveOutputScale();
 
             // 計算誤差供監測
             driveError = targetVelocity - currentVelocity;
@@ -236,16 +236,16 @@ public class SwerveModule {
 
         // Apply live-tuned PID gains
         turningPidController.setPID(
-                TuningConfig.turningP,
-                TuningConfig.turningI,
-                TuningConfig.turningD);
+                TuningConfig.turningP(),
+                TuningConfig.turningI(),
+                TuningConfig.turningD());
 
         // 直接計算 PID 輸出
-        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
+        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
         Output = Math.max(-1.0, Math.min(1.0, Output));
 
         // 只有 deadband
-        if (errorDeg < TuningConfig.deadbandDeg) {
+        if (errorDeg < TuningConfig.deadbandDeg()) {
             Output = 0;
         }
 
@@ -258,6 +258,48 @@ public class SwerveModule {
     }
 
     /**
+     * 設定模組目標狀態（無 Drive PID，直接功率控制）
+     * 轉向仍使用 PID，但驅動馬達直接用功率
+     * @param state 目標狀態
+     */
+    public void setDesiredStateNoPID(SwerveModuleState state) {
+        // 如果速度接近零，停止驅動但維持轉向
+        if (Math.abs(state.speedMetersPerSecond) < 0.001) {
+            driveMotor.setPower(0);
+            maintainTurningAngle();
+            return;
+        }
+
+        // 優化模組狀態（避免超過90度旋轉）
+        state = SwerveModuleState.optimize(state, getState().angle);
+
+        // ===== Drive Motor 控制（無 PID，直接功率）=====
+        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+        driveMotor.setPower(drivePower);
+
+        // ===== Turning Motor 控制（仍使用 PID）=====
+        currentAngle = getAbsoluteEncoderRad();
+        targetAngle = state.angle.getRadians();
+
+        Error = normalizeAngle(targetAngle - currentAngle);
+        double errorDeg = Math.abs(Math.toDegrees(Error));
+
+        turningPidController.setPID(
+                TuningConfig.turningP(),
+                TuningConfig.turningI(),
+                TuningConfig.turningD());
+
+        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
+        Output = Math.max(-1.0, Math.min(1.0, Output));
+
+        if (errorDeg < TuningConfig.deadbandDeg()) {
+            Output = 0;
+        }
+
+        turningMotor.setPower(Output);
+    }
+
+    /**
      * 維持當前的目標轉向角度（用於速度為零時保持輪子方向）
      */
     private void maintainTurningAngle() {
@@ -267,14 +309,14 @@ public class SwerveModule {
         double errorDeg = Math.abs(Math.toDegrees(Error));
 
         turningPidController.setPID(
-                TuningConfig.turningP,
-                TuningConfig.turningI,
-                TuningConfig.turningD);
+                TuningConfig.turningP(),
+                TuningConfig.turningI(),
+                TuningConfig.turningD());
 
-        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale;
+        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
         Output = Math.max(-1.0, Math.min(1.0, Output));
 
-        if (errorDeg < TuningConfig.deadbandDeg) {
+        if (errorDeg < TuningConfig.deadbandDeg()) {
             Output = 0;
         }
 
@@ -287,6 +329,14 @@ public class SwerveModule {
      */
     public void setTurningPower(double power) {
         turningMotor.setPower(power);
+    }
+
+    /**
+     * 直接設定驅動馬達功率（繞過 PID，用於手動控制）
+     * @param power 馬達功率 [-1.0, 1.0]
+     */
+    public void setDriveMotorPowerDirect(double power) {
+        driveMotor.setPower(power);
     }
 
     /**

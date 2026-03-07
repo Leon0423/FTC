@@ -12,8 +12,11 @@ import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -27,13 +30,17 @@ public class SwerveSubsystem extends SubsystemBase {
     private final IMU imu;
     private final SwerveDriveOdometry odometer;
 
+    // GoBILDA Pinpoint (可選)
+    private GoBildaPinpointDriver pinpoint;
+    private final boolean usingPinpoint;
+
     // Target position 追蹤
     private Pose2d targetPose = new Pose2d(0, 0, new Rotation2d(0));
 
     // Dashboard 實例
     private final FtcDashboard dashboard = FtcDashboard.getInstance();
 
-    private static final double kStopSpeedMps = DriveConstants.kPhysicalMaxSpeedMetersPerSecond * 0.02; // ~2% of max
+    private static final double kStopSpeedMps = DriveConstants.kPhysicalMaxSpeedMetersPerSecond * 0.005; // ~0.5% of max
 
     public SwerveSubsystem(HardwareMap hardwareMap) {
 
@@ -89,6 +96,18 @@ public class SwerveSubsystem extends SubsystemBase {
 
         odometer = new SwerveDriveOdometry(DriveConstants.kDriveKinematics, new Rotation2d(0));
 
+        // === Pinpoint 初始化 ===
+        usingPinpoint = DriveConstants.USING_PINPOINT;
+        if (usingPinpoint) {
+            try {
+                pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, DriveConstants.kPinpointName);
+                configurePinpoint();
+            } catch (Exception e) {
+                // 如果 Pinpoint 初始化失敗，記錄錯誤但不中斷
+                pinpoint = null;
+            }
+        }
+
         new Thread(() -> {
             try {
                 Thread.sleep(1000);
@@ -100,13 +119,51 @@ public class SwerveSubsystem extends SubsystemBase {
         }).start();
     }
 
+    /**
+     * 配置 GoBILDA Pinpoint
+     */
+    private void configurePinpoint() {
+        if (pinpoint == null) return;
+
+        // 設定 Odometry Pod 的偏移量
+        pinpoint.setOffsets(
+                DriveConstants.kPinpointXPodOffsetMM,
+                DriveConstants.kPinpointYPodOffsetMM,
+                DistanceUnit.MM
+        );
+
+        // 設定 Odometry Pod 類型 (使用 goBILDA 4-Bar Pod)
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+
+        // 設定編碼器方向
+        pinpoint.setEncoderDirections(
+                DriveConstants.kPinpointXEncoderReversed ?
+                        GoBildaPinpointDriver.EncoderDirection.REVERSED :
+                        GoBildaPinpointDriver.EncoderDirection.FORWARD,
+                DriveConstants.kPinpointYEncoderReversed ?
+                        GoBildaPinpointDriver.EncoderDirection.REVERSED :
+                        GoBildaPinpointDriver.EncoderDirection.FORWARD
+        );
+
+        // 重置位置和 IMU
+        pinpoint.resetPosAndIMU();
+    }
+
     public void zeroHeading() {
-        imu.resetYaw();
+        if (usingPinpoint && pinpoint != null) {
+            pinpoint.resetPosAndIMU();
+        } else {
+            imu.resetYaw();
+        }
     }
 
     public double getHeading() {
-        YawPitchRollAngles robotOrientation = imu.getRobotYawPitchRollAngles();
-        return Math.IEEEremainder(robotOrientation.getYaw(AngleUnit.DEGREES), 360);
+        if (usingPinpoint && pinpoint != null) {
+            return Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
+        } else {
+            YawPitchRollAngles robotOrientation = imu.getRobotYawPitchRollAngles();
+            return Math.IEEEremainder(robotOrientation.getYaw(AngleUnit.DEGREES), 360);
+        }
     }
 
     public Rotation2d getRotation2d() {
@@ -114,7 +171,30 @@ public class SwerveSubsystem extends SubsystemBase {
     }
 
     public Pose2d getPose() {
-        return odometer.getPoseMeters();
+        if (usingPinpoint && pinpoint != null) {
+            Pose2D pose = pinpoint.getPosition();
+            return new Pose2d(
+                    pose.getX(DistanceUnit.METER),
+                    pose.getY(DistanceUnit.METER),
+                    Rotation2d.fromDegrees(pose.getHeading(AngleUnit.DEGREES))
+            );
+        } else {
+            return odometer.getPoseMeters();
+        }
+    }
+
+    public void resetOdometry(Pose2d pose) {
+        if (usingPinpoint && pinpoint != null) {
+            pinpoint.setPosition(new Pose2D(
+                    DistanceUnit.METER,
+                    pose.getX(),
+                    pose.getY(),
+                    AngleUnit.DEGREES,
+                    pose.getRotation().getDegrees()
+            ));
+        } else {
+            odometer.resetPosition(pose, getRotation2d());
+        }
     }
 
     public Pose2d getTargetPose() {
@@ -127,10 +207,6 @@ public class SwerveSubsystem extends SubsystemBase {
 
     public void setTargetPose(double x, double y, double headingDegrees) {
         this.targetPose = new Pose2d(x, y, Rotation2d.fromDegrees(headingDegrees));
-    }
-
-    public void resetOdometry(Pose2d pose) {
-        odometer.resetPosition(pose, getRotation2d());
     }
 
     /**
@@ -146,9 +222,15 @@ public class SwerveSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        odometer.updateWithTime(System.currentTimeMillis() / 1000.0, getRotation2d(),
-                frontLeft.getState(), frontRight.getState(),
-                backLeft.getState(), backRight.getState());
+        if (usingPinpoint && pinpoint != null) {
+            // Pinpoint 需要每次迴圈呼叫 update() 來更新位置
+            pinpoint.update();
+        } else {
+            // 使用原本的 SwerveDriveOdometry 更新位置
+            odometer.updateWithTime(System.currentTimeMillis() / 1000.0, getRotation2d(),
+                    frontLeft.getState(), frontRight.getState(),
+                    backLeft.getState(), backRight.getState());
+        }
     }
 
     public void updateTelemetry(org.firstinspires.ftc.robotcore.external.Telemetry telemetry) {
@@ -227,6 +309,35 @@ public class SwerveSubsystem extends SubsystemBase {
         frontRight.stop();
         backLeft.stop();
         backRight.stop();
+    }
+
+    /**
+     * Swerve 驅動（無 Drive PID，直接功率控制）
+     * 用於調試或手動控制時繞過 PID
+     * @param xSpeed 前進速度 (-1 到 1)
+     * @param ySpeed 平移速度 (-1 到 1)
+     * @param rot 旋轉速度 (-1 到 1)
+     */
+    public void driveNoPID(double xSpeed, double ySpeed, double rot) {
+        // 將輸入轉換為速度（用於運動學計算）
+        double vx = xSpeed * DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+        double vy = ySpeed * DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+        double omega = rot * DriveConstants.kPhysicalMaxAngularSpeedRadiansPerSecond;
+
+        // 使用運動學計算每個模組的狀態
+        com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds chassisSpeeds =
+                new com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds(vx, vy, omega);
+
+        SwerveModuleState[] moduleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(chassisSpeeds);
+
+        // 歸一化輪速
+        SwerveDriveKinematics.normalizeWheelSpeeds(moduleStates, DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
+
+        // 設定每個模組（使用無 PID 模式）
+        frontLeft.setDesiredStateNoPID(moduleStates[0]);
+        frontRight.setDesiredStateNoPID(moduleStates[1]);
+        backLeft.setDesiredStateNoPID(moduleStates[2]);
+        backRight.setDesiredStateNoPID(moduleStates[3]);
     }
 
     public void setModuleStates(SwerveModuleState[] desiredStates) {

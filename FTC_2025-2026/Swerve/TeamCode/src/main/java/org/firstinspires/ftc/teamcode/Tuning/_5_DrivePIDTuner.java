@@ -40,8 +40,8 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
  * 5. 如果有震盪，嘗試增加 D 或降低 P
  */
 @Config
-@TeleOp(name = "Drive PID Tuner", group = "Tuning")
-public class DrivePIDTuner extends LinearOpMode {
+@TeleOp(name = "5. Drive PID Tuner", group = "Tuning")
+public class _5_DrivePIDTuner extends LinearOpMode {
 
     // 可在 Dashboard 調整的測試目標速度 (m/s)
     public static double testTargetVelocity = 0.5;
@@ -53,9 +53,6 @@ public class DrivePIDTuner extends LinearOpMode {
     public static boolean autoTestMode = true;
     public static double autoTestPeriodSeconds = 4.0;
     public static double autoTestMaxVelocity = 1.0;  // m/s
-
-    // 輪子是否在地面上（false = 架高測試）
-    public static boolean wheelsOnGround = false;
 
     private SwerveSubsystem swerveSubsystem;
     private FtcDashboard dashboard;
@@ -75,8 +72,12 @@ public class DrivePIDTuner extends LinearOpMode {
         telemetry.addLine("在 Graph 頁籤觀察:");
         telemetry.addLine("  targetVel, currentVel, driveError, driveOutput");
         telemetry.addLine("");
-        telemetry.addLine("警告：請先將機器人架高或");
-        telemetry.addLine("      確保有足夠空間！");
+        telemetry.addLine("控制按鍵:");
+        telemetry.addLine("  X = 暫停測試，啟動手動控制");
+        telemetry.addLine("  Y = 繼續自動測試");
+        telemetry.addLine("");
+        telemetry.addLine("注意：Drive PID 需要在地板上測試");
+        telemetry.addLine("      請確保有足夠空間讓機器人移動！");
         telemetry.addLine("");
         telemetry.addLine("按 Start 開始");
         telemetry.update();
@@ -84,8 +85,35 @@ public class DrivePIDTuner extends LinearOpMode {
         waitForStart();
 
         double startTime = getRuntime();
+        boolean isPaused = false;  // 暫停模式標記
+        boolean lastX = false;     // 用於邊緣檢測
+        boolean lastY = false;
 
         while (opModeIsActive()) {
+            // 按鍵邊緣檢測
+            boolean currentX = gamepad1.x;
+            boolean currentY = gamepad1.y;
+
+            // X 按下：暫停測試，進入手動控制
+            if (currentX && !lastX) {
+                isPaused = true;
+                swerveSubsystem.stopModules();
+            }
+            // Y 按下：繼續測試
+            if (currentY && !lastY) {
+                isPaused = false;
+                startTime = getRuntime();  // 重置計時器
+            }
+
+            lastX = currentX;
+            lastY = currentY;
+
+            // 暫停模式：手動底盤控制（無 PID）
+            if (isPaused) {
+                runManualControl();
+                continue;
+            }
+
             // 計算目標速度
             double targetVelocity;
             if (autoTestMode) {
@@ -146,14 +174,14 @@ public class DrivePIDTuner extends LinearOpMode {
             // 文字 telemetry
             telemetry.addData("模組", moduleName);
             telemetry.addData("模式", autoTestMode ? "自動測試" : "手動");
-            telemetry.addData("Drive PID", TuningConfig.enableDrivePID ? "啟用" : "關閉");
+            telemetry.addData("Drive PID", TuningConfig.enableDrivePID() ? "啟用" : "關閉");
             telemetry.addLine("");
             telemetry.addData("=== Drive PID 參數 ===", "");
-            telemetry.addData("P", "%.4f", TuningConfig.driveP);
-            telemetry.addData("I", "%.4f", TuningConfig.driveI);
-            telemetry.addData("D", "%.4f", TuningConfig.driveD);
-            telemetry.addData("F (前饋)", "%.4f", TuningConfig.driveF);
-            telemetry.addData("Output Scale", "%.2f", TuningConfig.driveOutputScale);
+            telemetry.addData("P", "%.4f", TuningConfig.driveP());
+            telemetry.addData("I", "%.4f", TuningConfig.driveI());
+            telemetry.addData("D", "%.4f", TuningConfig.driveD());
+            telemetry.addData("F (前饋)", "%.4f", TuningConfig.driveF());
+            telemetry.addData("Output Scale", "%.2f", TuningConfig.driveOutputScale());
             telemetry.addLine("");
             telemetry.addData("=== 當前數據 ===", "");
             telemetry.addData("目標速度", "%.3f m/s", testModule.getTargetVelocity());
@@ -175,6 +203,52 @@ public class DrivePIDTuner extends LinearOpMode {
         if (activeIndex != 1) swerveSubsystem.getFrontRight().stop();
         if (activeIndex != 2) swerveSubsystem.getBackLeft().stop();
         if (activeIndex != 3) swerveSubsystem.getBackRight().stop();
+    }
+
+    /**
+     * 手動 Swerve 底盤控制模式（無 Drive PID，直接功率輸出）
+     * 用於暫停測試時手動移動機器人
+     */
+    private void runManualControl() {
+        // 讀取搖桿輸入
+        double forward = -gamepad1.left_stick_y;  // 前進/後退
+        double strafe = gamepad1.left_stick_x;    // 左右平移
+        double rotate = gamepad1.right_stick_x;   // 旋轉
+
+        // 簡單的死區處理
+        double deadzone = 0.1;
+        if (Math.abs(forward) < deadzone) forward = 0;
+        if (Math.abs(strafe) < deadzone) strafe = 0;
+        if (Math.abs(rotate) < deadzone) rotate = 0;
+
+        // 降低速度以便精確控制
+        double speedMultiplier = 0.5;
+        forward *= speedMultiplier;
+        strafe *= speedMultiplier;
+        rotate *= speedMultiplier;
+
+        // 使用 SwerveSubsystem 的無 PID 驅動方法
+        swerveSubsystem.driveNoPID(forward, strafe, rotate);
+
+        // 顯示手動控制狀態
+        TelemetryPacket packet = new TelemetryPacket();
+        packet.put("mode", "MANUAL");
+        packet.put("targetVel", 0);
+        packet.put("currentVel", 0);
+        dashboard.sendTelemetryPacket(packet);
+
+        telemetry.addLine("=== 手動 Swerve 控制模式 ===");
+        telemetry.addLine("（測試暫停中，Drive PID 關閉）");
+        telemetry.addLine("");
+        telemetry.addLine("左搖桿: 平移移動");
+        telemetry.addLine("右搖桿: 旋轉");
+        telemetry.addLine("");
+        telemetry.addLine("按 Y 繼續自動測試");
+        telemetry.addLine("");
+        telemetry.addData("前進/後退", "%.2f", forward);
+        telemetry.addData("左右平移", "%.2f", strafe);
+        telemetry.addData("旋轉", "%.2f", rotate);
+        telemetry.update();
     }
 }
 

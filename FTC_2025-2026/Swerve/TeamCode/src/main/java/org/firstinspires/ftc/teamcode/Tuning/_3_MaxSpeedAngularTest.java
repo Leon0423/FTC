@@ -32,12 +32,12 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
  * 角速度模式：輪子呈 X 型，測 IMU 角速度
  */
 @Config
-@TeleOp(name = "MaxSpeedAngularTest", group = "Tuning")
-public class MaxSpeedAngularTest extends LinearOpMode {
+@TeleOp(name = "3. MaxSpeedAngularTest", group = "Tuning")
+public class _3_MaxSpeedAngularTest extends LinearOpMode {
 
     // === 測試參數 ===
     private boolean angularMode = false;                // false: 直線速度；true: 角速度
-    private double targetPowerRatio = 1.0;              // 測試功率比例 0~1（1.0=全油門）
+    private double targetPowerRatio = 0.2;              // 測試功率比例 0~1（1.0=全油門）
     public static double testDurationSec = 3.0;         // 測試維持時間 (秒，Dashboard 可調）
 
     private SwerveSubsystem swerve;

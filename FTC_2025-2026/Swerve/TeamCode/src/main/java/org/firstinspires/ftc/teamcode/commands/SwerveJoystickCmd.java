@@ -4,7 +4,7 @@ import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 
-import org.firstinspires.ftc.teamcode.SlewRateLimiter;
+import org.firstinspires.ftc.teamcode.Tuning.SlewRateLimiter;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 import java.util.function.Supplier;
@@ -32,9 +32,9 @@ public class SwerveJoystickCmd extends CommandBase {
         this.ySpdFunction = ySpdFunction;
         this.turningSpdFunction = turningSpdFunction;
         this.fieldOrientedFunction = fieldOrientedFunction;
-        this.xLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel);
-        this.yLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel);
-        this.turningLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAngularAccel);
+        this.xLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel());
+        this.yLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel());
+        this.turningLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAngularAccel());
         addRequirements(swerveSubsystem);
     }
 

@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 // 引入必要的函式庫
 import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
+import com.arcrobotics.ftclib.trajectory.TrapezoidProfile;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 // import static org.firstinspires.ftc.teamcode.Tuning.Units.inchesToMeters;
 
@@ -18,9 +19,9 @@ public final class Constants {
      */
     public static final class ModuleConstants{
         // === 機械參數 ===
-        public static final double kWheelDiameterMeters = 0.08; // 輪子直徑(公尺) - 調整輪子直徑(單位: m)
-        public static final double kDriveMotorGearRatio = 1;    // 驅動馬達齒輪比 - 調整驅動馬達轉速比
-        public static final double kTurningMotorGearRatio = 1 ; // 轉向馬達齒輪比 - 調整轉向馬達轉速比
+        public static final double kWheelDiameterMeters = 0.58; // 輪子直徑(公尺) - 調整輪子直徑(單位: m)
+        public static final double kDriveMotorGearRatio = 0.1666;    // 驅動馬達齒輪比 - 調整驅動馬達轉速比
+        public static final double kTurningMotorGearRatio = 2.5 ; // 轉向馬達齒輪比 - 調整轉向馬達轉速比
 
         // === 編碼器換算係數 ===
         // 將馬達旋轉數轉換為線性距離的係數
@@ -33,13 +34,14 @@ public final class Constants {
         public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
 
         // === 轉向 PID 控制器參數 ===
-        public static final double kPTurning = 0.45;  // P 係數：反應速度，過大會震盪
+        public static final double kPTurning = 0.43;  // P 係數：反應速度，過大會震盪
         public static final double kITurning = 0.0;   // I 係數：消除穩態誤差
         public static final double kDTurning = 0.0;   // D 係數：抑制震盪
         public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
 
         // 轉向輸出與感測穩定化
         public static final double kTurningDeadbandDeg = 3.0;     // 死區角度 (度)
+        public static final double kTurningPeriodSec = 2;
         public static final double kTurningMinOutput = 0.05;      // 轉向馬達最小輸出 (克服靜摩擦)
         public static final double kTurningMaxJumpDeg = 45.0;     // 單次允許的角度跳變上限 (度)
         public static final double kTurningMaxTransitionOutput = 0.7; // 過渡期間最大輸出
@@ -138,6 +140,54 @@ public final class Constants {
                 RevHubOrientationOnRobot.LogoFacingDirection.UP;        // REV 標誌朝向
         public static final RevHubOrientationOnRobot.UsbFacingDirection kImuUsbFacingDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;    // USB 端口朝向
+
+        // === GoBILDA Pinpoint 配置 ===
+        // 設定為 true 使用 Pinpoint 進行定位，false 使用原本的 SwerveDriveOdometry + IMU
+        public static final boolean USING_PINPOINT = false;
+        public static final String kPinpointName = "pinpoint";  // Pinpoint 在 hardwareMap 中的名稱
+
+        // Pinpoint Odometry Pod 偏移量 (相對於機器人中心，單位：公釐)
+        // X Pod 偏移：向左為正，向右為負
+        // Y Pod 偏移：向前為正，向後為負
+        public static final double kPinpointXPodOffsetMM = 0.0;   // TODO: 調整為實際值
+        public static final double kPinpointYPodOffsetMM = 0.0;   // TODO: 調整為實際值
+
+        // Pinpoint 編碼器方向
+        public static final boolean kPinpointXEncoderReversed = false;
+        public static final boolean kPinpointYEncoderReversed = false;
+    }
+
+    public static final class AutoConstants {
+        // === 軌跡速度限制 ===
+        public static final double kMaxSpeedMetersPerSecond = DriveConstants.kPhysicalMaxSpeedMetersPerSecond / 4;
+        public static final double kMaxAngularSpeedRadiansPerSecond = //
+                DriveConstants.kPhysicalMaxAngularSpeedRadiansPerSecond / 10;
+        public static final double kMaxAccelerationMetersPerSecondSquared = 3;
+        public static final double kMaxAngularAccelerationRadiansPerSecondSquared = Math.PI / 4;
+
+        // === X 軸 PID 控制器參數 (前後移動) ===
+        public static final double kPXController = 0.0;   // P: 位置誤差增益
+        public static final double kIXController = 0.0;   // I: 積分增益 (消除穩態誤差)
+        public static final double kDXController = 0.0;   // D: 微分增益 (抑制震盪)
+
+        // === Y 軸 PID 控制器參數 (左右移動) ===
+        public static final double kPYController = 0.0;   // P: 位置誤差增益
+        public static final double kIYController = 0.0;   // I: 積分增益
+        public static final double kDYController = 0.0;   // D: 微分增益
+
+        // === Theta 旋轉 PID 控制器參數 ===
+        public static final double kPThetaController = 0.0;  // P: 角度誤差增益
+        public static final double kIThetaController = 0.0;  // I: 積分增益
+        public static final double kDThetaController = 0.0;  // D: 微分增益
+
+        // === 容許誤差 ===
+        public static final double kPositionToleranceMeters = 0.02;  // 位置容許誤差 (公尺)
+        public static final double kAngleToleranceDegrees = 2.0;     // 角度容許誤差 (度)
+
+        public static final TrapezoidProfile.Constraints kThetaControllerConstraints = //
+                new TrapezoidProfile.Constraints(
+                        kMaxAngularSpeedRadiansPerSecond,
+                        kMaxAngularAccelerationRadiansPerSecondSquared);
     }
 
     /**
