@@ -19,9 +19,9 @@ public final class Constants {
      */
     public static final class ModuleConstants{
         // === 機械參數 ===
-        public static final double kWheelDiameterMeters = 0.58; // 輪子直徑(公尺) - 調整輪子直徑(單位: m)
+        public static final double kWheelDiameterMeters = 0.058; // 輪子直徑(公尺) - 調整輪子直徑(單位: m)
         public static final double kDriveMotorGearRatio = 0.1666;    // 驅動馬達齒輪比 - 調整驅動馬達轉速比
-        public static final double kTurningMotorGearRatio = 2.5 ; // 轉向馬達齒輪比 - 調整轉向馬達轉速比
+        public static final double kTurningMotorGearRatio = 1 ; // 轉向馬達齒輪比 - 調整轉向馬達轉速比
 
         // === 編碼器換算係數 ===
         // 將馬達旋轉數轉換為線性距離的係數
@@ -112,10 +112,10 @@ public final class Constants {
 
         // === 絕對編碼器偏移角度 (度數) ===
         // 用於校正輪子的初始方向，使用 SwerveModuleTuner 測量正確的偏移值
-        public static final double kFrontLeftDriveAbsoluteEncoderOffsetDeg = 116.6;  // 前左輪偏移角度
-        public static final double kFrontRightDriveAbsoluteEncoderOffsetDeg = 186.4; // 前右輪偏移角度
-        public static final double kBackLeftDriveAbsoluteEncoderOffsetDeg = 188.7;   // 後左輪偏移角度
-        public static final double kBackRightDriveAbsoluteEncoderOffsetDeg = 4.7;    // 後右輪偏移角度
+        public static final double kFrontLeftDriveAbsoluteEncoderOffsetDeg = 3.5;  // 前左輪偏移角度
+        public static final double kFrontRightDriveAbsoluteEncoderOffsetDeg = -5.7; // 前右輪偏移角度
+        public static final double kBackLeftDriveAbsoluteEncoderOffsetDeg = -5.3;   // 後左輪偏移角度
+        public static final double kBackRightDriveAbsoluteEncoderOffsetDeg = 8.7;    // 後右輪偏移角度
 
         // === 絕對編碼器偏移角度 (弧度) - 自動計算 ===
         public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = Math.toRadians(kFrontLeftDriveAbsoluteEncoderOffsetDeg);
