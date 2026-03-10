@@ -21,7 +21,7 @@ public final class Constants {
         // === 機械參數 ===
         public static final double kWheelDiameterMeters = 0.058; // 輪子直徑(公尺) - 調整輪子直徑(單位: m)
         public static final double kDriveMotorGearRatio = 0.1666;    // 驅動馬達齒輪比 - 調整驅動馬達轉速比
-        public static final double kTurningMotorGearRatio = 1 ; // 轉向馬達齒輪比 - 調整轉向馬達轉速比
+        public static final double kTurningMotorGearRatio = 2.5; // 轉向馬達齒輪比 - 調整轉向馬達轉速比
 
         // === 編碼器換算係數 ===
         // 將馬達旋轉數轉換為線性距離的係數
@@ -51,7 +51,7 @@ public final class Constants {
         public static final double kIDrive = 0.0;   // I 係數：穩態誤差
         public static final double kDDrive = 0.0;   // D 係數：抑制震盪
         public static final double kFDrive = 0.0;   // F 係數：前饋補償
-        public static final double kDriveOutputScale = 1.0; // 驅動輸出縮放
+        public static final double kDriveOutputScale = 0.2; // 驅動輸出縮放
         public static final boolean kEnableDrivePID = false; // 是否啟用 Drive PID
 
     }
