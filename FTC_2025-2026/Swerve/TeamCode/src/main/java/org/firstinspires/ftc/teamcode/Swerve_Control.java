@@ -153,6 +153,13 @@ public class Swerve_Control extends LinearOpMode {
                     swerveSubsystem.getBackLeft().getDriveRPM(),
                     swerveSubsystem.getBackRight().getDriveRPM());
 
+            // 顯示各顆 Turning Motor 的角度 (度數)
+            dashboardTelemetry.addData("Turning Angle (deg)", "FL:%.1f° FR:%.1f° BL:%.1f° BR:%.1f°",
+                    Math.toDegrees(swerveSubsystem.getFrontLeft().getTurningPosition()),
+                    Math.toDegrees(swerveSubsystem.getFrontRight().getTurningPosition()),
+                    Math.toDegrees(swerveSubsystem.getBackLeft().getTurningPosition()),
+                    Math.toDegrees(swerveSubsystem.getBackRight().getTurningPosition()));
+
             dashboardTelemetry.addData("Status", "Running");
             dashboardTelemetry.update();
         }

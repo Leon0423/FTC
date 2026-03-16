@@ -18,13 +18,15 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 /**
  * 自動 PID 調整程式 - 定點校正模式
  * 機器人會持續維持在原點位置，被推開後會自動校正回去
- *
+ * <p>
  * 使用方式：
- * 1. 連接 FTC Dashboard (http://192.168.43.1:8080/dash)
- * 2. 在 Config > AutoPIDTuner 選擇測試模式 (0=X, 1=Y, 2=Theta, 3=ALL)
- * 3. 啟動程式後，用手推機器人離開原點
- * 4. 觀察機器人是否能校正回原點
- * 5. 在 Dashboard 即時調整 PID 參數直到滿意
+ * <ol>
+ * <li>連接 FTC Dashboard: <a href="http://192.168.43.1:8080/dash">http://192.168.43.1:8080/dash</a></li>
+ * <li>在 Config &gt; AutoPIDTuner 選擇測試模式 (0=X, 1=Y, 2=Theta, 3=ALL)</li>
+ * <li>啟動程式後，用手推機器人離開原點</li>
+ * <li>觀察機器人是否能校正回原點</li>
+ * <li>在 Dashboard 即時調整 PID 參數直到滿意</li>
+ * </ol>
  */
 @Config
 @TeleOp(name = "Auto PID Tuner", group = "Tuning")
