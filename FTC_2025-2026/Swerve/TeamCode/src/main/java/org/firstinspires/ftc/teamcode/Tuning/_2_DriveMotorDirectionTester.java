@@ -5,6 +5,8 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.arcrobotics.ftclib.controller.PIDController;
+import com.arcrobotics.ftclib.geometry.Rotation2d;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -18,6 +20,7 @@ import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import org.firstinspires.ftc.teamcode.Constants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 /**
  * ════════════════════════════════════════
@@ -52,16 +55,9 @@ import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 public class _2_DriveMotorDirectionTester extends LinearOpMode {
 
     public static double driveTestPower = 0.3;
-
-    // 硬體
-    private DcMotorEx flDrive, frDrive, blDrive, brDrive;
-    private CRServo   flTurn,  frTurn,  blTurn,  brTurn;
-    private AnalogInput flEncoder, frEncoder, blEncoder, brEncoder;
-
-    // 轉向 PID
-    private PIDController flPid, frPid, blPid, brPid;
-
     private FtcDashboard dashboard;
+
+    private SwerveSubsystem swerve;
 
     // 按鍵防抖
     private boolean lastLb = false;
@@ -78,15 +74,16 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
         //  Init 階段：對齊輪子到 0°
         // ══════════════════════════════
         while (!isStarted() && !isStopRequested()) {
-            double flDeg = getWheelDeg(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
-            double frDeg = getWheelDeg(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
-            double blDeg = getWheelDeg(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
-            double brDeg = getWheelDeg(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
+            SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
+            swerve.getFrontLeft().alignTurningOnly(0);
+            swerve.getFrontRight().alignTurningOnly(0);
+            swerve.getBackLeft().alignTurningOnly(0);
+            swerve.getBackRight().alignTurningOnly(0);
 
-            flTurn.setPower(turningPID(flPid, flDeg));
-            frTurn.setPower(turningPID(frPid, frDeg));
-            blTurn.setPower(turningPID(blPid, blDeg));
-            brTurn.setPower(turningPID(brPid, brDeg));
+            double flDeg = Math.toDegrees(swerve.getFrontLeft().getTurningPosition());
+            double frDeg = Math.toDegrees(swerve.getFrontRight().getTurningPosition());
+            double blDeg = Math.toDegrees(swerve.getBackLeft().getTurningPosition());
+            double brDeg = Math.toDegrees(swerve.getBackRight().getTurningPosition());
 
             boolean flOk = Math.abs(flDeg) < 5;
             boolean frOk = Math.abs(frDeg) < 5;
@@ -99,10 +96,11 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             telemetry.addLine("對齊完成後按 Start 開始測試");
             telemetry.addLine("");
             telemetry.addLine("── 輪子角度（目標：0°）──");
-            telemetry.addData("FL", "%.1f°  %s", flDeg, flOk ? "✅" : "⏳");
-            telemetry.addData("FR", "%.1f°  %s", frDeg, frOk ? "✅" : "⏳");
-            telemetry.addData("BL", "%.1f°  %s", blDeg, blOk ? "✅" : "⏳");
-            telemetry.addData("BR", "%.1f°  %s", brDeg, brOk ? "✅" : "⏳");
+            telemetry.addData("FL/FR/BL/BR", "%.1f° / %.1f° / %.1f° / %.1f°",
+                    Math.toDegrees(swerve.getFrontLeft().getTurningPosition()),
+                    Math.toDegrees(swerve.getFrontRight().getTurningPosition()),
+                    Math.toDegrees(swerve.getBackLeft().getTurningPosition()),
+                    Math.toDegrees(swerve.getBackRight().getTurningPosition()));
             telemetry.addLine("");
             telemetry.addLine(allOk ? "✅ 全部對齊，可以按 Start！" : "⏳ 等待對齊中...");
 
@@ -111,7 +109,6 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             idle();
         }
 
-        resetDriveEncoders();
         if (!opModeIsActive()) return;
 
         // ══════════════════════════════
@@ -127,14 +124,11 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             lastRb = rb; lastLb = lb;
 
             // 持續維持轉向對齊
-            double flDeg = getWheelDeg(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
-            double frDeg = getWheelDeg(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
-            double blDeg = getWheelDeg(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
-            double brDeg = getWheelDeg(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
-            flTurn.setPower(turningPID(flPid, flDeg));
-            frTurn.setPower(turningPID(frPid, frDeg));
-            blTurn.setPower(turningPID(blPid, blDeg));
-            brTurn.setPower(turningPID(brPid, brDeg));
+            SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
+            swerve.getFrontLeft().alignTurningOnly(0);
+            swerve.getFrontRight().alignTurningOnly(0);
+            swerve.getBackLeft().alignTurningOnly(0);
+            swerve.getBackRight().alignTurningOnly(0);
 
             // 驅動馬達控制
             String action = "無（放開所有按鈕）";
@@ -149,25 +143,10 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             else if (gamepad1.dpad_left)  { bl=    driveTestPower;       action = "← → BL 單獨前進"; }
             else if (gamepad1.dpad_down)  { br=    driveTestPower;       action = "↓ → BR 單獨前進"; }
 
-            flDrive.setPower(fl);
-            frDrive.setPower(fr);
-            blDrive.setPower(bl);
-            brDrive.setPower(br);
-
-            // Encoder 數值
-            int flPos = flDrive.getCurrentPosition();
-            int frPos = frDrive.getCurrentPosition();
-            int blPos = blDrive.getCurrentPosition();
-            int brPos = brDrive.getCurrentPosition();
-
-            // 判斷方向結論
-            String flResult = dirResult(fl, flPos);
-            String frResult = dirResult(fr, frPos);
-            String blResult = dirResult(bl, blPos);
-            String brResult = dirResult(br, brPos);
-
-            boolean anyReverse = flResult.contains("⚠️") || frResult.contains("⚠️")
-                    || blResult.contains("⚠️") || brResult.contains("⚠️");
+            swerve.getFrontLeft().setDriveMotorPowerDirect(fl);
+            swerve.getFrontRight().setDriveMotorPowerDirect(fr);
+            swerve.getBackLeft().setDriveMotorPowerDirect(bl);
+            swerve.getBackRight().setDriveMotorPowerDirect(br);
 
             // Telemetry
             telemetry.addLine("════ Drive Motor Direction Tester ════");
@@ -176,30 +155,20 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             telemetry.addLine("");
 
             telemetry.addLine("── Encoder 數值（前進應增加↑）──");
-            telemetry.addData("FL", "%6d  %s", flPos, flResult);
-            telemetry.addData("FR", "%6d  %s", frPos, frResult);
-            telemetry.addData("BL", "%6d  %s", blPos, blResult);
-            telemetry.addData("BR", "%6d  %s", brPos, brResult);
             telemetry.addLine("");
 
             telemetry.addLine("── 輪子角度（應維持 0°）──");
             telemetry.addData("FL/FR/BL/BR", "%.1f° / %.1f° / %.1f° / %.1f°",
-                    flDeg, frDeg, blDeg, brDeg);
+                    Math.toDegrees(swerve.getFrontLeft().getTurningPosition()),
+                    Math.toDegrees(swerve.getFrontRight().getTurningPosition()),
+                    Math.toDegrees(swerve.getBackLeft().getTurningPosition()),
+                    Math.toDegrees(swerve.getBackRight().getTurningPosition()));
             telemetry.addLine("");
 
-            if (anyReverse) {
-                telemetry.addLine("⚠️ 需要 Reverse 的輪子請改 Constants.java：");
-                telemetry.addLine("   kXXXDriveEncoderReversed = true");
-            } else if (!action.equals("無（放開所有按鈕）")) {
-                telemetry.addLine("✅ 全部方向正確！");
-            } else {
-                telemetry.addLine("── 按鍵說明 ──");
-                telemetry.addLine("A=全部前進  B=全部後退");
-                telemetry.addLine("X=左側  Y=右側");
-                telemetry.addLine("↑=FL  →=FR  ←=BL  ↓=BR");
-            }
-
-            sendDashboardEncoders(flPos, frPos, blPos, brPos);
+            telemetry.addLine("── 按鍵說明 ──");
+            telemetry.addLine("A=全部前進  B=全部後退");
+            telemetry.addLine("X=左側  Y=右側");
+            telemetry.addLine("↑=FL  →=FR  ←=BL  ↓=BR");
             telemetry.update();
         }
 
@@ -218,71 +187,11 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
     }
 
     private void initHardware() {
-        flDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kFrontLeftDriveMotorName);
-        frDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kFrontRightDriveMotorName);
-        blDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kBackLeftDriveMotorName);
-        brDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kBackRightDriveMotorName);
-
-        flDrive.setDirection(DriveConstants.kFrontLeftDriveEncoderReversed  ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        frDrive.setDirection(DriveConstants.kFrontRightDriveEncoderReversed ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        blDrive.setDirection(DriveConstants.kBackLeftDriveEncoderReversed   ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        brDrive.setDirection(DriveConstants.kBackRightDriveEncoderReversed  ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-
-        flDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        frDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        blDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        brDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        resetDriveEncoders();
-
-        flTurn = hardwareMap.get(CRServo.class, DriveConstants.kFrontLeftTurningMotorName);
-        frTurn = hardwareMap.get(CRServo.class, DriveConstants.kFrontRightTurningMotorName);
-        blTurn = hardwareMap.get(CRServo.class, DriveConstants.kBackLeftTurningMotorName);
-        brTurn = hardwareMap.get(CRServo.class, DriveConstants.kBackRightTurningMotorName);
-
-        flTurn.setDirection(DriveConstants.kFrontLeftTurningEncoderReversed  ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-        frTurn.setDirection(DriveConstants.kFrontRightTurningEncoderReversed ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-        blTurn.setDirection(DriveConstants.kBackLeftTurningEncoderReversed   ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-        brTurn.setDirection(DriveConstants.kBackRightTurningEncoderReversed  ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-
-        flEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kFrontLeftAbsoluteEncoderName);
-        frEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kFrontRightAbsoluteEncoderName);
-        blEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kBackLeftAbsoluteEncoderName);
-        brEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kBackRightAbsoluteEncoderName);
-
-        double p = Constants.ModuleConstants.kPTurning;
-        double i = Constants.ModuleConstants.kITurning;
-        double d = Constants.ModuleConstants.kDTurning;
-        flPid = new PIDController(p, i, d);
-        frPid = new PIDController(p, i, d);
-        blPid = new PIDController(p, i, d);
-        brPid = new PIDController(p, i, d);
-    }
-
-    private void resetDriveEncoders() {
-        for (DcMotorEx m : new DcMotorEx[]{flDrive, frDrive, blDrive, brDrive}) {
-            m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        }
-    }
-
-    /** 讀取車輪角度（扣 offset，normalize 到 -90~90°）*/
-    private double getWheelDeg(AnalogInput enc, double offsetDeg) {
-        double angle = (enc.getVoltage() / enc.getMaxVoltage()) * 360.0 - offsetDeg;
-        while (angle >  90) angle -= 180;
-        while (angle < -90) angle += 180;
-        return angle;
-    }
-
-    /** 轉向 PID 輸出 */
-    private double turningPID(PIDController pid, double currentDeg) {
-        double error = -currentDeg;
-        while (error >  90) error -= 180;
-        while (error < -90) error += 180;
-        double out = pid.calculate(0, Math.toRadians(error));
-        out = Math.max(-0.8, Math.min(0.8, out));
-        if (Math.abs(error) < 3) out *= 0.5;
-        return out;
+        swerve = new SwerveSubsystem(hardwareMap);
+        swerve.getFrontLeft().disableSaving();
+        swerve.getFrontRight().disableSaving();
+        swerve.getBackLeft().disableSaving();
+        swerve.getBackRight().disableSaving();
     }
 
     private void sendDashboardAngles(double fl, double fr, double bl, double br) {
@@ -301,23 +210,12 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
     }
 
     private void stopAll() {
-        flDrive.setPower(0); frDrive.setPower(0);
-        blDrive.setPower(0); brDrive.setPower(0);
-        flTurn.setPower(0);  frTurn.setPower(0);
-        blTurn.setPower(0);  brTurn.setPower(0);
+        // ★ 重新開啟儲存，讓 stop() 把目前 0° 的角度存進去
+        swerve.getFrontLeft().enableSaving();
+        swerve.getFrontRight().enableSaving();
+        swerve.getBackLeft().enableSaving();
+        swerve.getBackRight().enableSaving();
 
-        // ★ 清除累積角度，讓 Swerve_Control 下次啟動用絕對編碼器重新計算
-        SharedPreferences anglePrefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = anglePrefs.edit();
-        for (String name : new String[]{
-                DriveConstants.kFrontLeftTurningMotorName,
-                DriveConstants.kFrontRightTurningMotorName,
-                DriveConstants.kBackLeftTurningMotorName,
-                DriveConstants.kBackRightTurningMotorName}) {
-            editor.remove("swerve_angle_" + name);
-            editor.remove("swerve_angle_" + name + "_raw");
-        }
-        editor.apply();
+        swerve.stopModules();  // 內部呼叫 saveAccumulatedAngle()
     }
 }

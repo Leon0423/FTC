@@ -44,6 +44,23 @@ public class _1c_AutoSetOffset extends LinearOpMode {
         anglePrefs = AppUtil.getInstance().getRootActivity()
                 .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
 
+        // ★ 啟動時立刻清除所有累積角度記憶
+        for (String name : new String[]{
+                DriveConstants.kFrontLeftTurningMotorName,
+                DriveConstants.kFrontRightTurningMotorName,
+                DriveConstants.kBackLeftTurningMotorName,
+                DriveConstants.kBackRightTurningMotorName}) {
+            anglePrefs.edit()
+                    .remove("swerve_angle_" + name)
+                    .remove("swerve_angle_" + name + "_raw")
+                    .apply();
+        }
+
+        offsetPrefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveOffsetPrefs", Context.MODE_PRIVATE);
+        anglePrefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
+
         // ===== 初始化硬體 =====
         boolean ok = true;
         StringBuilder err = new StringBuilder();

@@ -96,10 +96,10 @@ public final class Constants {
 
         // === 驅動編碼器方向設定 ===
         public static final boolean kFrontLeftDriveEncoderReversed = true;   // TODO 前左驅動編碼器反向
-        public static final boolean kFrontRightDriveEncoderReversed = true;  // TODO 前右驅動編碼器反向
+        public static final boolean kFrontRightDriveEncoderReversed = false;  // TODO 前右驅動編碼器反向
 
         public static final boolean kBackLeftDriveEncoderReversed = false;    // TODO 後左驅動編碼器反向
-        public static final boolean kBackRightDriveEncoderReversed = false;   // TODO 後右驅動編碼器反向
+        public static final boolean kBackRightDriveEncoderReversed = true;   // TODO 後右驅動編碼器反向
 
         // === 絕對編碼器硬體名稱 ===
         // 使用與 servo 相同的命名方式，便於硬體配置管理

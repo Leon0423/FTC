@@ -1,10 +1,14 @@
 package org.firstinspires.ftc.teamcode.Tuning;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -12,263 +16,281 @@ import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Constants;
+import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveModule;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 /**
- * 實測最大直線速度與角速度的 TeleOp。
+ * ════════════════════════════════════════
+ *  3. 最大速度 / 角速度 測試
+ * ════════════════════════════════════════
  *
- * 使用方式：
- * 1. Init 後使用手把按鍵選擇測試模式：
- *    - A 鍵：直線速度測試
- *    - B 鍵：角速度測試
- *    - DPAD UP/DOWN：調整功率比例 (+/- 10%)
- * 2. 車輪會自動轉到對應測試的方向
- * 3. 按 Start 開始測試，測試時間到自動停止
- * 4. 查看 telemetry 的 Max 值作為實測結果
+ * 目的：實測機器人的最大直線速度與最大角速度
+ *       將結果填入 Constants.java 供控制程式使用
  *
- * 直線模式：全部輪子朝前，測平均輪速
- * 角速度模式：輪子呈 X 型，測 IMU 角速度
+ * 使用步驟：
+ *   Init  │ A 鍵 = 直線速度測試
+ *          │ B 鍵 = 角速度測試
+ *          │ DPAD UP / DOWN = 調整功率 ±10%
+ *   Start  │ 自動跑 testDurationSec 秒後停止
+ *   結束   │ telemetry 顯示建議填入 Constants 的數值
+ *
+ * 注意：此程式不會污染 SharedPreferences
+ *       結束時自動清除累積角度記憶
  */
 @Config
 @TeleOp(name = "3. MaxSpeedAngularTest", group = "Tuning")
 public class _3_MaxSpeedAngularTest extends LinearOpMode {
 
-    // === 測試參數 ===
-    private boolean angularMode = false;                // false: 直線速度；true: 角速度
-    private double targetPowerRatio = 0.2;              // 測試功率比例 0~1（1.0=全油門）
-    public static double testDurationSec = 3.0;         // 測試維持時間 (秒，Dashboard 可調）
+    public static double testDurationSec = 3.0;
+
+    private boolean angularMode = false;
+    private double  targetPowerRatio = 0.5;
 
     private SwerveSubsystem swerve;
     private IMU imu;
 
-    // 記錄最大值
-    private double maxVelMps = 0;
-    private double maxOmegaDegPerSec = 0;
+    private double maxVelMps        = 0;
     private double maxOmegaRadPerSec = 0;
 
-    // 差分用（備用）
-    private double lastHeadingDeg = 0;
-    private double lastTime = 0;
-
-    // 指令下達後不再重複調整角度，避免輪子在測試期間持續微調
-    private boolean commandApplied = false;
+    boolean lastLb = false, lastRb = false;
 
     @Override
     public void runOpMode() {
-        // 初始化
         swerve = new SwerveSubsystem(hardwareMap);
-        imu = hardwareMap.get(IMU.class, "imu");
+        imu    = hardwareMap.get(IMU.class, "imu");
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
-        // ===== INIT 階段：持續對齊車輪直到按下 Start =====
-        boolean lastDpadUp = false;
-        boolean lastDpadDown = false;
-
+        // ★ 防止測試期間的角度寫入污染 Swerve_Control
         swerve.getFrontLeft().disableSaving();
         swerve.getFrontRight().disableSaving();
         swerve.getBackLeft().disableSaving();
         swerve.getBackRight().disableSaving();
 
+        // ══════════════════════════════
+        //  Init 階段：選擇模式 / 調功率
+        // ══════════════════════════════
+        boolean lastUp = false, lastDown = false;
+
         while (!isStarted() && !isStopRequested()) {
-            // === 按鍵控制測試模式 ===
-            if (gamepad1.a) {
-                angularMode = false;  // A 鍵：直線速度測試
-            }
-            if (gamepad1.b) {
-                angularMode = true;   // B 鍵：角速度測試
+            if (gamepad1.a) angularMode = false;
+            if (gamepad1.b) angularMode = true;
+
+            if (gamepad1.dpad_up   && !lastUp)   targetPowerRatio = Math.min(1.0, targetPowerRatio + 0.1);
+            if (gamepad1.dpad_down && !lastDown)  targetPowerRatio = Math.max(0.1, targetPowerRatio - 0.1);
+            lastUp   = gamepad1.dpad_up;
+            lastDown = gamepad1.dpad_down;
+
+            // ★ LB/RB 調整測試時間
+            boolean rb = gamepad1.right_bumper;
+            boolean lb = gamepad1.left_bumper;
+            if (rb && !lastRb) testDurationSec = Math.min(10.0, testDurationSec + 0.5);
+            if (lb && !lastLb) testDurationSec = Math.max(1.0,  testDurationSec - 0.5);
+            lastRb = rb; lastLb = lb;
+
+            // telemetry 加一行
+            telemetry.addData("測試時間", "%.1f 秒  (LB/RB 調整)", testDurationSec);
+
+            // ★ Init 階段持續對齊輪子到目標角度
+            if (angularMode) {
+                // 角速度模式：輪子呈 X 型（45°）
+                double angle45 = Math.PI / 4;
+                swerve.getFrontLeft().setDesiredState(new SwerveModuleState(0.001, new Rotation2d( angle45)));
+                swerve.getFrontRight().setDesiredState(new SwerveModuleState(0.001, new Rotation2d(-angle45)));
+                swerve.getBackLeft().setDesiredState(new SwerveModuleState(0.001, new Rotation2d(-angle45)));
+                swerve.getBackRight().setDesiredState(new SwerveModuleState(0.001, new Rotation2d( angle45)));
+            } else {
+                // 直線模式：輪子全部朝前（0°）
+                SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
+                swerve.getFrontLeft().setDesiredState(forward);
+                swerve.getFrontRight().setDesiredState(forward);
+                swerve.getBackLeft().setDesiredState(forward);
+                swerve.getBackRight().setDesiredState(forward);
             }
 
-            // === 按鍵調整功率比例 (防止連續觸發) ===
-            if (gamepad1.dpad_up && !lastDpadUp) {
-                targetPowerRatio = Math.min(1.0, targetPowerRatio + 0.1);
-            }
-            if (gamepad1.dpad_down && !lastDpadDown) {
-                targetPowerRatio = Math.max(0.1, targetPowerRatio - 0.1);
-            }
-            lastDpadUp = gamepad1.dpad_up;
-            lastDpadDown = gamepad1.dpad_down;
+            // 讀取目前角度顯示對齊狀態
+            double flDeg = Math.toDegrees(swerve.getFrontLeft().getTurningPosition());
+            double frDeg = Math.toDegrees(swerve.getFrontRight().getTurningPosition());
+            double blDeg = Math.toDegrees(swerve.getBackLeft().getTurningPosition());
+            double brDeg = Math.toDegrees(swerve.getBackRight().getTurningPosition());
 
-            // 持續對齊車輪
-            // alignWheelsForTest();
+            double targetDeg = angularMode ? 45.0 : 0.0;
+            boolean flOk = Math.abs(Math.abs(flDeg) - targetDeg) < 5;
+            boolean frOk = Math.abs(Math.abs(frDeg) - targetDeg) < 5;
+            boolean blOk = Math.abs(Math.abs(blDeg) - targetDeg) < 5;
+            boolean brOk = Math.abs(Math.abs(brDeg) - targetDeg) < 5;
+            boolean allOk = flOk && frOk && blOk && brOk;
 
-            telemetry.addLine("=== 最大速度/角速度 測試 ===");
+            telemetry.addLine("════ 最大速度 / 角速度 測試 ════");
             telemetry.addLine("");
-            telemetry.addLine("【按鍵控制】");
-            telemetry.addLine("  A 鍵 = 直線速度測試");
-            telemetry.addLine("  B 鍵 = 角速度測試");
-            telemetry.addLine("  DPAD UP/DOWN = 調整功率");
+            telemetry.addLine("A 鍵 = 直線速度測試（輪子朝前）");
+            telemetry.addLine("B 鍵 = 角速度測試（輪子呈 X 型）");
+            telemetry.addLine("DPAD UP / DOWN = 調整功率");
             telemetry.addLine("");
-            telemetry.addData("► 測試模式", angularMode ? "【角速度 (旋轉)】" : "【直線速度】");
-            telemetry.addData("► 功率比例", "%.0f%%", targetPowerRatio * 100);
-            telemetry.addData("► 測試時間", "%.1f 秒", testDurationSec);
+            telemetry.addData("測試模式", angularMode ? "【角速度（旋轉）】" : "【直線速度】");
+            telemetry.addData("功率比例", "%.0f%%", targetPowerRatio * 100);
+            telemetry.addData("測試時間", "%.1f 秒", testDurationSec);
             telemetry.addLine("");
-            telemetry.addLine(">>> 車輪校正中，按 Start 開始測試 <<<");
+            telemetry.addLine("── 輪子對齊狀態 ──");
+            telemetry.addData("FL", "%.1f°  %s", flDeg, flOk ? "✅" : "⏳");
+            telemetry.addData("FR", "%.1f°  %s", frDeg, frOk ? "✅" : "⏳");
+            telemetry.addData("BL", "%.1f°  %s", blDeg, blOk ? "✅" : "⏳");
+            telemetry.addData("BR", "%.1f°  %s", brDeg, brOk ? "✅" : "⏳");
+            telemetry.addLine("");
+            telemetry.addLine(allOk ? "✅ 對齊完成，可以按 Start！" : "⏳ 對齊中...");
             telemetry.update();
         }
 
         if (!opModeIsActive()) return;
 
-        // 重置紀錄
-        maxVelMps = 0;
-        maxOmegaDegPerSec = 0;
+        // ══════════════════════════════
+        //  Start：下達命令
+        // ══════════════════════════════
+        maxVelMps        = 0;
         maxOmegaRadPerSec = 0;
-        lastHeadingDeg = swerve.getHeading();
-        lastTime = getRuntime();
-        double startTime = getRuntime();
-        commandApplied = false;
 
-        // ===== 主測試迴圈 =====
+        if (angularMode) runAngularTest();
+        else             runLinearTest();
+
+        double startTime = getRuntime();
+        double lastTime  = startTime;
+        double lastHeadingDeg = swerve.getHeading();
+
+        // ══════════════════════════════
+        //  主測試迴圈
+        // ══════════════════════════════
         while (opModeIsActive()) {
-            double now = getRuntime();
+            double now     = getRuntime();
             double elapsed = now - startTime;
-            double dt = now - lastTime;
+            double dt      = now - lastTime;
             lastTime = now;
 
-            // 檢查是否超時
-            if (elapsed >= testDurationSec) {
-                break;
-            }
+            if (elapsed >= testDurationSec) break;
 
-            // 根據模式下達命令
-            if (!commandApplied) {
-                if (angularMode) {
-                    // 角速度測試：原地旋轉，只對齊一次
-                    runAngularTest();
-                } else {
-                    // 直線測試：向前全速，只對齊一次
-                    runLinearTest();
-                }
-                commandApplied = true;
-            }
-
-            // ===== 讀取並記錄數據 =====
-
-            // 1. 平均輪速（直線用）
-            double velAvg = averageWheelVelocity();
-            maxVelMps = Math.max(maxVelMps, Math.abs(velAvg));
-
-            // 2. IMU 角速度（直接讀取，更準確）
+            // 記錄最大值
+            double velAvg     = averageWheelVelocity();
             double imuOmegaDeg = getImuAngularVelocityDeg();
-            maxOmegaDegPerSec = Math.max(maxOmegaDegPerSec, Math.abs(imuOmegaDeg));
-            maxOmegaRadPerSec = Math.toRadians(maxOmegaDegPerSec);
 
-            // 3. 差分角速度（備用驗證）
-            double heading = swerve.getHeading();
-            double diffOmegaDeg = (dt > 0.001) ? (heading - lastHeadingDeg) / dt : 0;
+            maxVelMps         = Math.max(maxVelMps,        Math.abs(velAvg));
+            maxOmegaRadPerSec = Math.max(maxOmegaRadPerSec, Math.toRadians(Math.abs(imuOmegaDeg)));
+
+            // 差分角速度（備用驗證）
+            double heading     = swerve.getHeading();
+            double diffOmegaDeg = dt > 0.001 ? (heading - lastHeadingDeg) / dt : 0;
             lastHeadingDeg = heading;
 
-            // ===== Telemetry 顯示 =====
-            telemetry.addLine("=== 測試進行中 ===");
-            telemetry.addData("模式", angularMode ? "角速度" : "直線速度");
-            telemetry.addData("進度", "%.1f / %.1f 秒", elapsed, testDurationSec);
+            telemetry.addLine("════ 測試進行中 ════");
+            telemetry.addData("模式",  angularMode ? "角速度" : "直線速度");
+            telemetry.addData("進度",  "%.1f / %.1f 秒", elapsed, testDurationSec);
             telemetry.addLine("");
-
             if (angularMode) {
-                telemetry.addData("當前角速度 (rad/s)", "%.3f", Math.toRadians(imuOmegaDeg));
-                telemetry.addData("★ kPhysicalMaxAngularSpeed", "%.3f rad/s", maxOmegaRadPerSec);
+                telemetry.addData("當前角速度",        "%.3f rad/s", Math.toRadians(imuOmegaDeg));
+                telemetry.addData("差分角速度（備用）", "%.1f deg/s", diffOmegaDeg);
+                telemetry.addData("★ 最大角速度",      "%.3f rad/s", maxOmegaRadPerSec);
             } else {
-                telemetry.addData("當前輪速 (m/s)", "%.3f", velAvg);
-                telemetry.addData("★ kPhysicalMaxSpeed", "%.3f m/s", maxVelMps);
+                telemetry.addData("當前輪速",  "%.3f m/s", velAvg);
+                telemetry.addData("★ 最大輪速", "%.3f m/s", maxVelMps);
             }
             telemetry.update();
-
             sleep(20);
         }
 
-        // ===== 測試結束 =====
+        // ══════════════════════════════
+        //  結束：停車 + 清除角度記憶
+        // ══════════════════════════════
         swerve.stopModules();
 
-        // 顯示最終結果
+        // 先對齊輪子回 0°，再儲存正確角度
+        long alignStart = System.currentTimeMillis();
+        while (System.currentTimeMillis() - alignStart < 1500 && opModeIsActive()) {
+            SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
+            swerve.getFrontLeft().setDesiredState(forward);
+            swerve.getFrontRight().setDesiredState(forward);
+            swerve.getBackLeft().setDesiredState(forward);
+            swerve.getBackRight().setDesiredState(forward);
+        }
+
+        // 重新開啟儲存，存入 0° 角度
+        swerve.getFrontLeft().enableSaving();
+        swerve.getFrontRight().enableSaving();
+        swerve.getBackLeft().enableSaving();
+        swerve.getBackRight().enableSaving();
+        swerve.stopModules();
+
+        // 顯示結果
         while (opModeIsActive()) {
-            telemetry.addLine("========== 測試完成 ==========");
+            telemetry.addLine("════ 測試完成 ════");
             telemetry.addData("測試模式", angularMode ? "角速度" : "直線速度");
             telemetry.addLine("");
-            telemetry.addLine(">>> 請將以下數值填入 Constants.java <<<");
+            telemetry.addLine("請將以下數值填入 Constants.java：");
             if (angularMode) {
                 telemetry.addData("kPhysicalMaxAngularSpeedRadiansPerSecond", "%.3f", maxOmegaRadPerSec);
             } else {
                 telemetry.addData("kPhysicalMaxSpeedMetersPerSecond", "%.3f", maxVelMps);
             }
+            telemetry.addLine("");
+            telemetry.addLine("角度記憶已清除，可直接跑 Swerve_Control");
             telemetry.update();
             sleep(100);
         }
     }
 
-    /**
-     * 根據測試模式預先對齊車輪
-     */
-    /*private void alignWheelsForTest() {
-        if (angularMode) {
-            // 角速度測試：輪子呈 X 型（各模組 45 度角指向旋轉切線）
-            // 前左 & 後右: +45度, 前右 & 後左: -45度
-            double angle45 = Math.PI / 4;
-            SwerveModuleState stateFLBR = new SwerveModuleState(0.001, new Rotation2d(angle45));
-            SwerveModuleState stateFRBL = new SwerveModuleState(0.001, new Rotation2d(-angle45));
-
-            swerve.getFrontLeft().setDesiredState(stateFLBR);
-            swerve.getFrontRight().setDesiredState(stateFRBL);
-            swerve.getBackLeft().setDesiredState(stateFRBL);
-            swerve.getBackRight().setDesiredState(stateFLBR);
-        } else {
-            // 直線測試：所有輪子朝前（0 度）
-            SwerveModuleState stateForward = new SwerveModuleState(0.001, new Rotation2d(0));
-            swerve.getFrontLeft().setDesiredState(stateForward);
-            swerve.getFrontRight().setDesiredState(stateForward);
-            swerve.getBackLeft().setDesiredState(stateForward);
-            swerve.getBackRight().setDesiredState(stateForward);
-        }
-    }
-
-     */
-
-    /**
-     * 執行直線速度測試
-     */
     private void runLinearTest() {
-        // 直接設定各模組：朝前 + 最大速度
         double speed = Constants.DriveConstants.kPhysicalMaxSpeedMetersPerSecond * targetPowerRatio;
         SwerveModuleState state = new SwerveModuleState(speed, new Rotation2d(0));
-
         swerve.getFrontLeft().setDesiredState(state);
         swerve.getFrontRight().setDesiredState(state);
         swerve.getBackLeft().setDesiredState(state);
         swerve.getBackRight().setDesiredState(state);
     }
 
-    /**
-     * 執行角速度測試
-     */
     private void runAngularTest() {
-        // 使用 ChassisSpeeds 計算原地旋轉的各輪狀態
-        double omega = Constants.DriveConstants.kPhysicalMaxAngularSpeedRadiansPerSecond * targetPowerRatio;
-        ChassisSpeeds speeds = new ChassisSpeeds(0, 0, omega);
-        SwerveModuleState[] states = Constants.DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
-        swerve.setModuleStates(states);
+        // 只用 kinematics 算輪子方向，速度直接給 targetPowerRatio
+        ChassisSpeeds speeds = new ChassisSpeeds(0, 0, 1.0);
+        SwerveModuleState[] states = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
+        SwerveDriveKinematics.normalizeWheelSpeeds(states, 1.0);
+
+        // 方向用 kinematics 算的，速度用 targetPowerRatio 覆蓋
+        swerve.getFrontLeft().alignTurningOnly(states[0].angle.getRadians());
+        swerve.getFrontRight().alignTurningOnly(states[1].angle.getRadians());
+        swerve.getBackLeft().alignTurningOnly(states[2].angle.getRadians());
+        swerve.getBackRight().alignTurningOnly(states[3].angle.getRadians());
+
+        swerve.getFrontLeft().setDriveMotorPowerDirect(targetPowerRatio);
+        swerve.getFrontRight().setDriveMotorPowerDirect(targetPowerRatio);
+        swerve.getBackLeft().setDriveMotorPowerDirect(targetPowerRatio);
+        swerve.getBackRight().setDriveMotorPowerDirect(targetPowerRatio);
     }
 
-    /**
-     * 從 IMU 直接讀取角速度 (deg/s)
-     */
     private double getImuAngularVelocityDeg() {
         try {
             AngularVelocity angVel = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
-            return angVel.zRotationRate;  // Z 軸為 yaw 旋轉
-        } catch (Exception e) {
-            return 0;
-        }
+            return angVel.zRotationRate;
+        } catch (Exception e) { return 0; }
     }
 
-    /**
-     * 計算四輪平均速度
-     */
     private double averageWheelVelocity() {
-        SwerveModule fl = swerve.getFrontLeft();
-        SwerveModule fr = swerve.getFrontRight();
-        SwerveModule bl = swerve.getBackLeft();
-        SwerveModule br = swerve.getBackRight();
-        return (fl.getDriveVelocity() + fr.getDriveVelocity() +
-                bl.getDriveVelocity() + br.getDriveVelocity()) / 4.0;
+        SwerveModule fl = swerve.getFrontLeft(),  fr = swerve.getFrontRight();
+        SwerveModule bl = swerve.getBackLeft(),   br = swerve.getBackRight();
+        return (fl.getDriveVelocity() + fr.getDriveVelocity()
+                + bl.getDriveVelocity() + br.getDriveVelocity()) / 4.0;
+    }
+
+    // ★ 清除測試期間累積的角度記憶，避免污染 Swerve_Control
+    private void clearAnglePrefs() {
+        SharedPreferences prefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        for (String name : new String[]{
+                DriveConstants.kFrontLeftTurningMotorName,
+                DriveConstants.kFrontRightTurningMotorName,
+                DriveConstants.kBackLeftTurningMotorName,
+                DriveConstants.kBackRightTurningMotorName}) {
+            editor.remove("swerve_angle_" + name);
+            editor.remove("swerve_angle_" + name + "_raw");
+        }
+        editor.apply();
     }
 }

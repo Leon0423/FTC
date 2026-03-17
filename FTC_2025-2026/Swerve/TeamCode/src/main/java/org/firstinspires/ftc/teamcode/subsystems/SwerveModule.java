@@ -498,4 +498,26 @@ public class SwerveModule {
     }
 
     public void disableSaving() { enableSaving = false; }
+    public void enableSaving()  { enableSaving = true; }
+
+    public void alignTurningOnly(double targetRad) {
+        currentAngle = getTurningPosition();
+        targetAngle = targetRad;
+
+        Error = normalizeAngle(targetAngle - currentAngle);
+        double errorDeg = Math.abs(Math.toDegrees(Error));
+
+        turningPidController.setPID(
+                TuningConfig.turningP(),
+                TuningConfig.turningI(),
+                TuningConfig.turningD());
+
+        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
+        Output = Math.max(-1.0, Math.min(1.0, Output));
+
+        if (errorDeg < TuningConfig.deadbandDeg()) Output = 0;
+
+        turningMotor.setPower(Output);
+        // ★ 完全不碰 driveMotor
+    }
 }
