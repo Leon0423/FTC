@@ -68,6 +68,11 @@ public class _4_TurningPIDTuner extends LinearOpMode {
         telemetry.addLine("Dashboard Graph 觀察: target, FL, FR, BL, BR");
         telemetry.update();
 
+        swerve.getFrontLeft().disableSaving();
+        swerve.getFrontRight().disableSaving();
+        swerve.getBackLeft().disableSaving();
+        swerve.getBackRight().disableSaving();
+
         waitForStart();
 
         double startTime = getRuntime();

@@ -13,6 +13,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.teamcode.Tuning.TuningConfig;
+import android.content.Context;
+import android.content.SharedPreferences;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 public class SwerveModule {
 
@@ -24,6 +27,7 @@ public class SwerveModule {
     private final PIDController turningPidController;
     private final PIDController drivePidController;  // 新增：Drive PID Controller
 
+    private final String turningServoName;
     private final boolean absoluteEncoderReversed;
     private final double absoluteEncoderOffsetRad;
 
@@ -41,6 +45,17 @@ public class SwerveModule {
     private double currentVelocity = 0;
     private double driveError = 0;
     private double driveOutput = 0;
+
+    private double accumulatedAngle = 0;      // 累積的輪子角度（弧度）
+    private double lastRawServoRad = 0;       // 上一次伺服原始角度
+    private boolean turningInitialized = false;
+    private final SharedPreferences prefs;
+    private final String prefKey; // 每個模組用不同的 key
+
+    private double cachedTurningPosition = 0;
+    private long lastUpdateTime = -1;
+
+    private boolean enableSaving = true;
 
     /**
      * SwerveModule 建構函式
@@ -61,6 +76,12 @@ public class SwerveModule {
                         boolean turningMotorReversed,
                         double absoluteEncoderOffset,
                         boolean absoluteEncoderReversed){
+
+        this.turningServoName = turningServoName;
+        // ★ 每個模組用 turningServoName 當 key，確保四個模組互不干擾
+        prefKey = "swerve_angle_" + turningServoName;
+        prefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
 
         // absoluteEncoder 的參數設定
         this.absoluteEncoderOffsetRad = absoluteEncoderOffset;
@@ -107,8 +128,44 @@ public class SwerveModule {
         return driveMotor.getCurrentPosition() * ModuleConstants.kDriveEncoderRot2Meter;
     }
 
+    // ===== 修改 getTurningPosition()，每次更新後儲存 =====
     public double getTurningPosition() {
-        return getAbsoluteEncoderRad();
+        if (!turningInitialized) return getAbsoluteEncoderRad();
+
+        long now = System.currentTimeMillis();
+
+        // 同一毫秒內直接回傳快取值，不重複累積 delta
+        if (now == lastUpdateTime) return cachedTurningPosition;
+        lastUpdateTime = now;
+
+        double currentRaw = getRawServoRad();
+        double delta = currentRaw - lastRawServoRad;
+        if (delta >  Math.PI) delta -= 2 * Math.PI;
+        if (delta < -Math.PI) delta += 2 * Math.PI;
+
+        accumulatedAngle += delta * ModuleConstants.kTurningMotorGearRatio;
+        lastRawServoRad = currentRaw;
+
+        if (enableSaving) {
+            saveCounter++;
+            if (saveCounter >= 50) {
+                saveAccumulatedAngle();
+                saveCounter = 0;
+            }
+        }
+
+        double normalized = accumulatedAngle;
+        while (normalized >  Math.PI) normalized -= 2 * Math.PI;
+        while (normalized < -Math.PI) normalized += 2 * Math.PI;
+
+        cachedTurningPosition = normalized;
+        return cachedTurningPosition;
+    }
+    private int saveCounter = 0;
+
+    // ===== 強制清除儲存的角度（重新校正時用）=====
+    public void clearSavedAngle() {
+        prefs.edit().remove(prefKey).apply();
     }
 
     public double getDriveVelocity() {
@@ -145,20 +202,67 @@ public class SwerveModule {
         return velocity;
     }
 
+    private double getRawServoRad() {
+        return (absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage()) * 2.0 * Math.PI;
+    }
+
+    // ===== 儲存：同時存 accumulatedAngle 和 rawServoRad =====
+    private void saveAccumulatedAngle() {
+        prefs.edit()
+                .putFloat(prefKey, (float) accumulatedAngle)
+                .putFloat(prefKey + "_raw", (float) lastRawServoRad)
+                .apply();
+    }
+
+    // ===== 讀取 =====
+    private double loadAccumulatedAngle() {
+        return prefs.getFloat(prefKey, Float.MAX_VALUE);
+    }
+
+    private double loadRawServoRad() {
+        return prefs.getFloat(prefKey + "_raw", Float.MAX_VALUE);
+    }
+
+    // ===== initTurningTracking()：開機後用 delta 修正 =====
+    public void initTurningTracking() {
+        double currentRaw = getRawServoRad();
+        lastRawServoRad = currentRaw;
+
+        double savedAngle = loadAccumulatedAngle();
+        double savedRaw   = loadRawServoRad();
+
+        if (savedAngle == Float.MAX_VALUE || savedRaw == Float.MAX_VALUE) {
+            double initAngle = currentRaw;
+            initAngle *= ModuleConstants.kTurningMotorGearRatio;
+            initAngle -= loadOffset();          // ← 改這行，原本是 absoluteEncoderOffsetRad
+            while (initAngle >  Math.PI) initAngle -= 2 * Math.PI;
+            while (initAngle < -Math.PI) initAngle += 2 * Math.PI;
+            accumulatedAngle = initAngle;
+        } else {
+            double delta = currentRaw - savedRaw;
+            if (delta >  Math.PI) delta -= 2 * Math.PI;
+            if (delta < -Math.PI) delta += 2 * Math.PI;
+            accumulatedAngle = savedAngle + delta * ModuleConstants.kTurningMotorGearRatio;
+        }
+
+        turningInitialized = true;
+    }
+
+    private double loadOffset() {
+        SharedPreferences offsetPrefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveOffsetPrefs", Context.MODE_PRIVATE);
+        float saved = offsetPrefs.getFloat("offset_" + turningServoName, Float.MAX_VALUE);
+        if (saved != Float.MAX_VALUE) return saved;    // 用 1c 寫入的動態 offset
+        return absoluteEncoderOffsetRad;               // fallback 到 Constants
+    }
+
     public double getAbsoluteEncoderRad() {
         double angle = absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage();
         angle *= 2.0 * Math.PI;
-        angle -= absoluteEncoderOffsetRad;
-
-        // 如果反向，先乘以 -1
-        if (absoluteEncoderReversed) {
-            angle = -angle;
-        }
-
-        // 標準化角度到 [-π, π] 範圍
-        while (angle > Math.PI) angle -= 2.0 * Math.PI;
+        angle -= loadOffset();          // ← 改這行
+        if (absoluteEncoderReversed) angle = -angle;
+        while (angle >  Math.PI) angle -= 2.0 * Math.PI;
         while (angle < -Math.PI) angle += 2.0 * Math.PI;
-
         return angle;
     }
 
@@ -167,13 +271,14 @@ public class SwerveModule {
     }
 
     public void resetEncoders() {
-        // 重置驅動馬達編碼器
         driveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         driveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        // 重置速度計算變數
         previousAngle = getTurningPosition();
         previousTime = System.currentTimeMillis();
+
+        // ★ 改用 delta 追蹤
+        initTurningTracking();
     }
 
     public SwerveModuleState getState() {
@@ -228,7 +333,7 @@ public class SwerveModule {
         }
 
         // ===== Turning Motor 控制 (與 TurningPIDTuner 相同) =====
-        currentAngle = getAbsoluteEncoderRad();
+        currentAngle = getTurningPosition();
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
@@ -255,6 +360,7 @@ public class SwerveModule {
     public void stop() {
         driveMotor.setPower(0);
         turningMotor.setPower(0);
+        if (enableSaving) saveAccumulatedAngle(); // ← 加這行
     }
 
     /**
@@ -278,7 +384,7 @@ public class SwerveModule {
         driveMotor.setPower(drivePower);
 
         // ===== Turning Motor 控制（仍使用 PID）=====
-        currentAngle = getAbsoluteEncoderRad();
+        currentAngle = getTurningPosition();
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
@@ -303,7 +409,7 @@ public class SwerveModule {
      * 維持當前的目標轉向角度（用於速度為零時保持輪子方向）
      */
     private void maintainTurningAngle() {
-        currentAngle = getAbsoluteEncoderRad();
+        currentAngle = getTurningPosition();
 
         Error = normalizeAngle(targetAngle - currentAngle);
         double errorDeg = Math.abs(Math.toDegrees(Error));
@@ -390,4 +496,6 @@ public class SwerveModule {
         while (angle < -Math.PI) angle += 2 * Math.PI;
         return angle;
     }
+
+    public void disableSaving() { enableSaving = false; }
 }

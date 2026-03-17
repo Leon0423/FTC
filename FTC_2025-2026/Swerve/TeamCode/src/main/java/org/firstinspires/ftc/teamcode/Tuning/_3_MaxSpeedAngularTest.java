@@ -52,6 +52,9 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
     private double lastHeadingDeg = 0;
     private double lastTime = 0;
 
+    // 指令下達後不再重複調整角度，避免輪子在測試期間持續微調
+    private boolean commandApplied = false;
+
     @Override
     public void runOpMode() {
         // 初始化
@@ -62,6 +65,11 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
         // ===== INIT 階段：持續對齊車輪直到按下 Start =====
         boolean lastDpadUp = false;
         boolean lastDpadDown = false;
+
+        swerve.getFrontLeft().disableSaving();
+        swerve.getFrontRight().disableSaving();
+        swerve.getBackLeft().disableSaving();
+        swerve.getBackRight().disableSaving();
 
         while (!isStarted() && !isStopRequested()) {
             // === 按鍵控制測試模式 ===
@@ -83,7 +91,7 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             lastDpadDown = gamepad1.dpad_down;
 
             // 持續對齊車輪
-            alignWheelsForTest();
+            // alignWheelsForTest();
 
             telemetry.addLine("=== 最大速度/角速度 測試 ===");
             telemetry.addLine("");
@@ -109,6 +117,7 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
         lastHeadingDeg = swerve.getHeading();
         lastTime = getRuntime();
         double startTime = getRuntime();
+        commandApplied = false;
 
         // ===== 主測試迴圈 =====
         while (opModeIsActive()) {
@@ -123,12 +132,15 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             }
 
             // 根據模式下達命令
-            if (angularMode) {
-                // 角速度測試：原地旋轉
-                runAngularTest();
-            } else {
-                // 直線測試：向前全速
-                runLinearTest();
+            if (!commandApplied) {
+                if (angularMode) {
+                    // 角速度測試：原地旋轉，只對齊一次
+                    runAngularTest();
+                } else {
+                    // 直線測試：向前全速，只對齊一次
+                    runLinearTest();
+                }
+                commandApplied = true;
             }
 
             // ===== 讀取並記錄數據 =====
@@ -187,7 +199,7 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
     /**
      * 根據測試模式預先對齊車輪
      */
-    private void alignWheelsForTest() {
+    /*private void alignWheelsForTest() {
         if (angularMode) {
             // 角速度測試：輪子呈 X 型（各模組 45 度角指向旋轉切線）
             // 前左 & 後右: +45度, 前右 & 後左: -45度
@@ -208,6 +220,8 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             swerve.getBackRight().setDesiredState(stateForward);
         }
     }
+
+     */
 
     /**
      * 執行直線速度測試

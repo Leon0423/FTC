@@ -54,6 +54,7 @@ public class _5_DrivePIDTuner extends LinearOpMode {
     public static double autoTestPeriodSeconds = 4.0;
     public static double autoTestMaxVelocity = 1.0;  // m/s
 
+    private SwerveSubsystem swerve;
     private SwerveSubsystem swerveSubsystem;
     private FtcDashboard dashboard;
 
@@ -81,6 +82,11 @@ public class _5_DrivePIDTuner extends LinearOpMode {
         telemetry.addLine("");
         telemetry.addLine("按 Start 開始");
         telemetry.update();
+
+        swerve.getFrontLeft().disableSaving();
+        swerve.getFrontRight().disableSaving();
+        swerve.getBackLeft().disableSaving();
+        swerve.getBackRight().disableSaving();
 
         waitForStart();
 

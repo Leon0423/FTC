@@ -45,7 +45,7 @@ public class Swerve_Control extends LinearOpMode {
         SwerveJoystickCmd joystickCmd = new SwerveJoystickCmd(
                 swerveSubsystem,
                 () -> -driverGamepad.getLeftY(),      // 推上為前進
-                () -> driverGamepad.getLeftX(),     // 推右為右移
+                () -> -driverGamepad.getLeftX(),     // 推右為右移
                 () -> driverGamepad.getRightX(),    // 推右為順時針
                 () -> fieldOriented
         );
@@ -55,16 +55,14 @@ public class Swerve_Control extends LinearOpMode {
         dashboardTelemetry.addData("Status", "Initialized");
         dashboardTelemetry.update();
 
-        // Init 階段：持續對齊輪子朝前
-        while (!isStarted() && !isStopRequested()) {
-            swerveSubsystem.alignModulesToForward();
-            swerveSubsystem.updateTelemetry(dashboardTelemetry);
-            dashboardTelemetry.addData("Status", "Aligning wheels...");
-            dashboardTelemetry.update();
-            idle();
-        }
+        // * 輪子已經在 0° → 現在才重置追蹤基準
+        swerveSubsystem.resetAllModuleTracking();
 
         waitForStart();
+
+        // * 重置航向
+        swerveSubsystem.zeroHeading();
+        targetHeadingDeg = 0;
 
         lastTime = getRuntime();
 
@@ -95,7 +93,7 @@ public class Swerve_Control extends LinearOpMode {
 
             // 取得搖桿輸入
             double rawX = driverGamepad.getLeftY();   // 前進為正（推上）
-            double rawY = -driverGamepad.getLeftX();  // 右為正
+            double rawY = driverGamepad.getLeftX();  // 右為正
             double rawTurn = -driverGamepad.getRightX(); // 順時針為正（推右）
 
             // deadband

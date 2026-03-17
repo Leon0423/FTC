@@ -1,236 +1,164 @@
 package org.firstinspires.ftc.teamcode.Tuning;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
+import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
 
-/**
- * 編碼器 Offset 讀取程式 (AXON Servo 版本)
- *
- * 功能：
- * - 讀取並顯示 AXON Servo 絕對編碼器的原始角度
- * - 可以手動轉動輪子，觀察角度變化
- *
- * 使用步驟：
- * 1. 運行此程式
- * 2. 手動將所有輪子轉到朝向車頭方向（齒輪標記對齊）
- * 3. 記錄每個輪子顯示的 "Raw Angle" 值
- * 4. 將這些值填入 Constants.java 的 kXXXDriveAbsoluteEncoderOffsetDeg
- *
- * 例如：
- * FL 顯示 45.2° → kFrontLeftDriveAbsoluteEncoderOffsetDeg = 45.2
- */
-@Config
 @TeleOp(name = "1a. Encoder Offset Reader", group = "Tuning")
 public class _1a_EncoderOffsetReader extends LinearOpMode {
 
-    // AXON Servo 的 CRServo（需要初始化才能讓編碼器通電）
     private CRServo flServo, frServo, blServo, brServo;
-
-    // AXON Servo 的絕對編碼器
     private AnalogInput flEncoder, frEncoder, blEncoder, brEncoder;
-
-    private FtcDashboard dashboard;
 
     @Override
     public void runOpMode() {
-        dashboard = FtcDashboard.getInstance();
-        telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
-
-        // 嘗試初始化硬體
         boolean initSuccess = true;
         StringBuilder errorMsg = new StringBuilder();
 
-        // 初始化 CRServo（讓 AXON Servo 通電）
-        try {
-            flServo = hardwareMap.get(CRServo.class, DriveConstants.kFrontLeftTurningMotorName);
-            flServo.setPower(0); // 設定 0 功率但讓它通電
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("FL Servo: ").append(DriveConstants.kFrontLeftTurningMotorName).append(" 找不到!\n");
-        }
+        // ===== 初始化 CRServo =====
+        try { flServo = hardwareMap.get(CRServo.class, DriveConstants.kFrontLeftTurningMotorName);  flServo.setPower(0); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("FL Servo 找不到\n"); }
 
-        try {
-            frServo = hardwareMap.get(CRServo.class, DriveConstants.kFrontRightTurningMotorName);
-            frServo.setPower(0);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("FR Servo: ").append(DriveConstants.kFrontRightTurningMotorName).append(" 找不到!\n");
-        }
+        try { frServo = hardwareMap.get(CRServo.class, DriveConstants.kFrontRightTurningMotorName); frServo.setPower(0); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("FR Servo 找不到\n"); }
 
-        try {
-            blServo = hardwareMap.get(CRServo.class, DriveConstants.kBackLeftTurningMotorName);
-            blServo.setPower(0);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("BL Servo: ").append(DriveConstants.kBackLeftTurningMotorName).append(" 找不到!\n");
-        }
+        try { blServo = hardwareMap.get(CRServo.class, DriveConstants.kBackLeftTurningMotorName);   blServo.setPower(0); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("BL Servo 找不到\n"); }
 
-        try {
-            brServo = hardwareMap.get(CRServo.class, DriveConstants.kBackRightTurningMotorName);
-            brServo.setPower(0);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("BR Servo: ").append(DriveConstants.kBackRightTurningMotorName).append(" 找不到!\n");
-        }
+        try { brServo = hardwareMap.get(CRServo.class, DriveConstants.kBackRightTurningMotorName);  brServo.setPower(0); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("BR Servo 找不到\n"); }
 
-        // 初始化絕對編碼器
-        String flEncoderName = DriveConstants.kFrontLeftAbsoluteEncoderName;
-        String frEncoderName = DriveConstants.kFrontRightAbsoluteEncoderName;
-        String blEncoderName = DriveConstants.kBackLeftAbsoluteEncoderName;
-        String brEncoderName = DriveConstants.kBackRightAbsoluteEncoderName;
+        // ===== 初始化絕對編碼器 =====
+        try { flEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kFrontLeftAbsoluteEncoderName); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("FL Encoder 找不到\n"); }
 
-        try {
-            flEncoder = hardwareMap.get(AnalogInput.class, flEncoderName);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("FL Encoder: ").append(flEncoderName).append(" 找不到!\n");
-        }
+        try { frEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kFrontRightAbsoluteEncoderName); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("FR Encoder 找不到\n"); }
 
-        try {
-            frEncoder = hardwareMap.get(AnalogInput.class, frEncoderName);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("FR Encoder: ").append(frEncoderName).append(" 找不到!\n");
-        }
+        try { blEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kBackLeftAbsoluteEncoderName); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("BL Encoder 找不到\n"); }
 
-        try {
-            blEncoder = hardwareMap.get(AnalogInput.class, blEncoderName);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("BL Encoder: ").append(blEncoderName).append(" 找不到!\n");
-        }
+        try { brEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kBackRightAbsoluteEncoderName); }
+        catch (Exception e) { initSuccess = false; errorMsg.append("BR Encoder 找不到\n"); }
 
-        try {
-            brEncoder = hardwareMap.get(AnalogInput.class, brEncoderName);
-        } catch (Exception e) {
-            initSuccess = false;
-            errorMsg.append("BR Encoder: ").append(brEncoderName).append(" 找不到!\n");
-        }
-
-        // Init 階段顯示硬體狀態並即時讀取
+        // ===== Init 階段 =====
         while (!isStarted() && !isStopRequested()) {
-            telemetry.addLine("══════ Encoder Offset Reader ══════");
-            telemetry.addLine("(AXON Servo 版本)");
-            telemetry.addLine("");
-
             if (!initSuccess) {
                 telemetry.addLine("⚠️ 硬體初始化失敗！");
-                telemetry.addLine("");
                 telemetry.addLine(errorMsg.toString());
+            } else {
+                telemetry.addLine("硬體正常，按 START 開始監測");
                 telemetry.addLine("");
+                showAllData();
             }
-
-            telemetry.addLine("══════ 硬體名稱 ══════");
-            telemetry.addData("FL Servo", DriveConstants.kFrontLeftTurningMotorName);
-            telemetry.addData("FR Servo", DriveConstants.kFrontRightTurningMotorName);
-            telemetry.addData("BL Servo", DriveConstants.kBackLeftTurningMotorName);
-            telemetry.addData("BR Servo", DriveConstants.kBackRightTurningMotorName);
-            telemetry.addLine("");
-            telemetry.addData("FL Encoder", flEncoderName);
-            telemetry.addData("FR Encoder", frEncoderName);
-            telemetry.addData("BL Encoder", blEncoderName);
-            telemetry.addData("BR Encoder", brEncoderName);
-            telemetry.addLine("");
-
-            if (initSuccess) {
-                // 在 Init 階段也顯示即時數據
-                telemetry.addLine("══════ 即時讀數 ══════");
-                telemetry.addData("FL", "%.3fV → %.1f°", flEncoder.getVoltage(), getOffsetDegrees(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg));
-                telemetry.addData("FR", "%.3fV → %.1f°", frEncoder.getVoltage(), getOffsetDegrees(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg));
-                telemetry.addData("BL", "%.3fV → %.1f°", blEncoder.getVoltage(), getOffsetDegrees(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg));
-                telemetry.addData("BR", "%.3fV → %.1f°", brEncoder.getVoltage(), getOffsetDegrees(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg));
-                telemetry.addLine("");
-                telemetry.addData("MaxVoltage", "%.3fV", flEncoder.getMaxVoltage());
-                telemetry.addLine("");
-                telemetry.addLine("手動轉動輪子到車頭方向");
-                telemetry.addLine("記錄上面的角度值");
-            }
-
             telemetry.update();
             idle();
         }
 
-        if (!initSuccess) {
-            return;
-        }
+        if (!initSuccess) return;
 
-        // Start 後的主迴圈
+        // ===== 主迴圈 =====
         while (opModeIsActive()) {
-            // 讀取原始角度（0-360度）
-            double flRaw = getRawDegrees(flEncoder);
-            double frRaw = getRawDegrees(frEncoder);
-            double blRaw = getRawDegrees(blEncoder);
-            double brRaw = getRawDegrees(brEncoder);
-
-            // 讀取電壓
-            double flVolt = flEncoder.getVoltage();
-            double frVolt = frEncoder.getVoltage();
-            double blVolt = blEncoder.getVoltage();
-            double brVolt = brEncoder.getVoltage();
-
-            // 計算套用目前 offset 後的角度
-            double flCurrent = getOffsetDegrees(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
-            double frCurrent = getOffsetDegrees(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
-            double blCurrent = getOffsetDegrees(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
-            double brCurrent = getOffsetDegrees(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
-
-            // 顯示資訊
-            telemetry.addLine("══════ Encoder Offset Reader ══════");
-            telemetry.addLine("");
-            telemetry.addLine("手動轉動輪子到車頭方向後");
-            telemetry.addLine("複製 Raw Angle 到 Constants.java");
-            telemetry.addLine("");
-
-            telemetry.addLine("══════ 複製這些值 ══════");
-            telemetry.addData("FL OffsetDeg", "%.1f", flRaw);
-            telemetry.addData("FR OffsetDeg", "%.1f", frRaw);
-            telemetry.addData("BL OffsetDeg", "%.1f", blRaw);
-            telemetry.addData("BR OffsetDeg", "%.1f", brRaw);
-            telemetry.addLine("");
-
-            telemetry.addLine("══════ 詳細資訊 ══════");
-            telemetry.addData("FL", "Raw:%.1f° | V:%.3f | Cur:%.1f°", flRaw, flVolt, flCurrent);
-            telemetry.addData("FR", "Raw:%.1f° | V:%.3f | Cur:%.1f°", frRaw, frVolt, frCurrent);
-            telemetry.addData("BL", "Raw:%.1f° | V:%.3f | Cur:%.1f°", blRaw, blVolt, blCurrent);
-            telemetry.addData("BR", "Raw:%.1f° | V:%.3f | Cur:%.1f°", brRaw, brVolt, brCurrent);
-
-            // Dashboard 圖表
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.put("FL_raw", flRaw);
-            packet.put("FR_raw", frRaw);
-            packet.put("BL_raw", blRaw);
-            packet.put("BR_raw", brRaw);
-            dashboard.sendTelemetryPacket(packet);
-
+            showAllData();
             telemetry.update();
         }
     }
 
-    private double getRawDegrees(AnalogInput encoder) {
-        if (encoder == null) return 0;
-        double maxV = encoder.getMaxVoltage();
-        if (maxV == 0) return 0;
-        return (encoder.getVoltage() / maxV) * 360.0;
+    private void showAllData() {
+
+        // ===== 從 Constants 讀取目前設定 =====
+        double gearRatio    = ModuleConstants.kTurningMotorGearRatio;
+        double flOffsetDeg  = DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg;
+        double frOffsetDeg  = DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg;
+        double blOffsetDeg  = DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg;
+        double brOffsetDeg  = DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg;
+        boolean flRev = DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed;
+        boolean frRev = DriveConstants.kFrontRightDriveAbsoluteEncoderReversed;
+        boolean blRev = DriveConstants.kBackLeftDriveAbsoluteEncoderReversed;
+        boolean brRev = DriveConstants.kBackRightDriveAbsoluteEncoderReversed;
+
+        // ===== 計算各層數值 =====
+        double flRaw     = getRawDeg(flEncoder);
+        double frRaw     = getRawDeg(frEncoder);
+        double blRaw     = getRawDeg(blEncoder);
+        double brRaw     = getRawDeg(brEncoder);
+
+        double flGeared  = flRaw * gearRatio;
+        double frGeared  = frRaw * gearRatio;
+        double blGeared  = blRaw * gearRatio;
+        double brGeared  = brRaw * gearRatio;
+
+        double flFinal   = computeFinalDeg(flEncoder, flOffsetDeg, flRev);
+        double frFinal   = computeFinalDeg(frEncoder, frOffsetDeg, frRev);
+        double blFinal   = computeFinalDeg(blEncoder, blOffsetDeg, blRev);
+        double brFinal   = computeFinalDeg(brEncoder, brOffsetDeg, brRev);
+
+        // ===== 顯示目前 Constants 參數 =====
+        telemetry.addLine("══ Constants 設定 ══");
+        telemetry.addData("kTurningMotorGearRatio", "%.4f", gearRatio);
+        telemetry.addData("Offset (FL/FR/BL/BR)",
+                "%.1f° / %.1f° / %.1f° / %.1f°",
+                flOffsetDeg, frOffsetDeg, blOffsetDeg, brOffsetDeg);
+        telemetry.addData("Reversed (FL/FR/BL/BR)",
+                "%b / %b / %b / %b", flRev, frRev, blRev, brRev);
+        telemetry.addLine("");
+
+        // ===== 第一層：原始角度（編碼器直接輸出）=====
+        telemetry.addLine("── 第1層：Raw（編碼器直讀，不含任何處理）──");
+        telemetry.addData("FL Raw", "%.2f°", flRaw);
+        telemetry.addData("FR Raw", "%.2f°", frRaw);
+        telemetry.addData("BL Raw", "%.2f°", blRaw);
+        telemetry.addData("BR Raw", "%.2f°", brRaw);
+        telemetry.addLine("");
+
+        // ===== 第二層：乘以齒輪比之後（Offset 之前）=====
+        telemetry.addLine("── 第2層：Raw × GearRatio（套用齒輪比，扣 Offset 前）──");
+        telemetry.addData("FL Geared", "%.2f°", flGeared);
+        telemetry.addData("FR Geared", "%.2f°", frGeared);
+        telemetry.addData("BL Geared", "%.2f°", blGeared);
+        telemetry.addData("BR Geared", "%.2f°", brGeared);
+        telemetry.addLine("");
+
+        // ===== 第三層：SwerveModule 實際輸入值（套用所有計算後）=====
+        telemetry.addLine("── 第3層：SwerveModule 最終輸入（含 Offset、Reversed、Normalize）──");
+        telemetry.addData("FL Final", "%.2f°  [%.3f rad]", flFinal, Math.toRadians(flFinal));
+        telemetry.addData("FR Final", "%.2f°  [%.3f rad]", frFinal, Math.toRadians(frFinal));
+        telemetry.addData("BL Final", "%.2f°  [%.3f rad]", blFinal, Math.toRadians(blFinal));
+        telemetry.addData("BR Final", "%.2f°  [%.3f rad]", brFinal, Math.toRadians(brFinal));
+        telemetry.addLine("");
+
+        // ===== Voltage 原始值（方便 debug 斷線/接觸不良）=====
+        telemetry.addLine("── Voltage ──");
+        telemetry.addData("FL", "%.3fV  MaxV=%.2fV",
+                flEncoder != null ? flEncoder.getVoltage() : -1,
+                flEncoder != null ? flEncoder.getMaxVoltage() : -1);
+        telemetry.addData("FR", "%.3fV", frEncoder != null ? frEncoder.getVoltage() : -1);
+        telemetry.addData("BL", "%.3fV", blEncoder != null ? blEncoder.getVoltage() : -1);
+        telemetry.addData("BR", "%.3fV", brEncoder != null ? brEncoder.getVoltage() : -1);
     }
 
-    private double getOffsetDegrees(AnalogInput encoder, double offsetDeg) {
-        double raw = getRawDegrees(encoder);
-        double angle = raw - offsetDeg;
-        // 先環繞到 -180° ~ 180° 範圍
-        while (angle > 180) angle -= 360;
-        while (angle < -180) angle += 360;
-        // 再環繞到 -90° ~ 90° 範圍
-        while (angle > 90) angle -= 180;
-        while (angle < -90) angle += 180;
-        return angle;
+    // ===== 第一層：原始角度（0~360°，不含任何處理）=====
+    private double getRawDeg(AnalogInput enc) {
+        if (enc == null) return 0;
+        double maxV = enc.getMaxVoltage();
+        if (maxV == 0) return 0;
+        return (enc.getVoltage() / maxV) * 360.0;
+    }
+
+    // ===== 第三層：完整複製 SwerveModule.getAbsoluteEncoderRad() 邏輯 =====
+    private double computeFinalDeg(AnalogInput enc, double offsetDeg, boolean reversed) {
+        if (enc == null) return 0;
+        double angle = enc.getVoltage() / enc.getMaxVoltage();
+        angle *= 2.0 * Math.PI;                                      // raw rad
+        angle *= ModuleConstants.kTurningMotorGearRatio;             // 齒輪比
+        angle -= Math.toRadians(offsetDeg);                          // 扣 offset
+        if (reversed) angle = -angle;
+        while (angle >  Math.PI) angle -= 2.0 * Math.PI;            // normalize -π~π
+        while (angle < -Math.PI) angle += 2.0 * Math.PI;
+        return Math.toDegrees(angle);                                // 轉回角度方便讀
     }
 }
-

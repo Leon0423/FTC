@@ -42,6 +42,8 @@ public class SwerveSubsystem extends SubsystemBase {
 
     private static final double kStopSpeedMps = DriveConstants.kPhysicalMaxSpeedMetersPerSecond * 0.005; // ~0.5% of max
 
+    private double headingOffset = 0;
+
     public SwerveSubsystem(HardwareMap hardwareMap) {
 
         frontLeft = new SwerveModule(
@@ -108,15 +110,7 @@ public class SwerveSubsystem extends SubsystemBase {
             }
         }
 
-        new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                zeroHeading();
-        } catch (Exception e) {
-            // 如果角度計算失敗，直接使用原始角度
-            // Log the error for debugging purposes
-        }
-        }).start();
+        // 不再在背景自動歸零；如需歸零請在 OpMode 內明確呼叫 zeroHeading()
     }
 
     /**
@@ -149,20 +143,24 @@ public class SwerveSubsystem extends SubsystemBase {
         pinpoint.resetPosAndIMU();
     }
 
+    // 修改 zeroHeading()
     public void zeroHeading() {
         if (usingPinpoint && pinpoint != null) {
             pinpoint.resetPosAndIMU();
         } else {
-            imu.resetYaw();
+            headingOffset = Math.IEEEremainder(
+                    imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
         }
     }
 
+    // 修改 getHeading()
     public double getHeading() {
         if (usingPinpoint && pinpoint != null) {
             return Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
         } else {
-            YawPitchRollAngles robotOrientation = imu.getRobotYawPitchRollAngles();
-            return Math.IEEEremainder(robotOrientation.getYaw(AngleUnit.DEGREES), 360);
+            double raw = Math.IEEEremainder(
+                    imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
+            return Math.IEEEremainder(raw - headingOffset, 360);
         }
     }
 
@@ -212,13 +210,6 @@ public class SwerveSubsystem extends SubsystemBase {
     /**
      * 讓所有模組對齊到 0 rad（車頭方向），速度給極小值避免 setDesiredState 早停。
      */
-    public void alignModulesToForward() {
-        SwerveModuleState zero = new SwerveModuleState(0.001, new Rotation2d(0));
-        frontLeft.setDesiredState(zero);
-        frontRight.setDesiredState(zero);
-        backLeft.setDesiredState(zero);
-        backRight.setDesiredState(zero);
-    }
 
     @Override
     public void periodic() {
@@ -374,5 +365,12 @@ public class SwerveSubsystem extends SubsystemBase {
                 module.getCurrentAngleRad(),
                 module.getTurningErrorRad(),
                 module.getTurningOutput());
+    }
+
+    public void resetAllModuleTracking() {
+        frontLeft.resetEncoders();
+        frontRight.resetEncoders();
+        backLeft.resetEncoders();
+        backRight.resetEncoders();
     }
 }

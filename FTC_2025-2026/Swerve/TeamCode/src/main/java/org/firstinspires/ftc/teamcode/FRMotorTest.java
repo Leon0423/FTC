@@ -26,7 +26,7 @@ public class FRMotorTest extends LinearOpMode {
         
         // 嘗試取得 FR 驅動馬達
         try {
-            frDriveMotor = hardwareMap.get(DcMotorEx.class, "FR");
+            frDriveMotor = hardwareMap.get(DcMotorEx.class, "FL");
         } catch (Exception e) {
             telemetry.addData("ERROR", "找不到 'FR' 驅動馬達");
             telemetry.addData("信息", "檢查 hardwareMap 配置");

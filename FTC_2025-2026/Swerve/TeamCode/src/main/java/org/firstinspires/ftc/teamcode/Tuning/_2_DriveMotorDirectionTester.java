@@ -17,43 +17,52 @@ import org.firstinspires.ftc.teamcode.Constants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 
 /**
- * Swerve 馬達方向測試程式
+ * ════════════════════════════════════════
+ *  2. Drive Motor Direction Tester
+ * ════════════════════════════════════════
  *
- * 前置作業：先執行 "1. Encoder Offset Reader" 設定好 offset 值
+ * 目的：確認四顆驅動馬達的方向設定是否正確
  *
- * 功能：
- * - Init 階段：將所有輪子對齊到 0 度（車頭方向）
- * - Start 階段：測試驅動馬達方向
+ * 使用步驟：
+ *   Step 1│ 確認 1c 已設好 Offset（輪子朝前時 Final = 0°）
+ *   Step 2│ Init 階段等待輪子對齊到 0°（朝前）
+ *   Step 3│ 按 Start，按 A 讓所有輪子前進
+ *   Step 4│ 觀察 Encoder 數值：
+ *            前進時數值應增加（↑）→ 方向正確 ✅
+ *            前進時數值減少（↓）  → 需要 Reverse ⚠️
+ *   Step 5│ 把需要 Reverse 的輪子改成 true：
+ *            Constants.java → kXXXDriveEncoderReversed = true
  *
- * 測試步驟：
- * 1. Init 時觀察輪子是否對齊到車頭方向
- *    - 如果沒有對齊，請先用 "1. Encoder Offset Reader" 調整 offset
- * 2. 按 Start 後測試驅動馬達：
- *    - A = 全部前進（輪子應該往車頭方向滾動）
- *    - B = 全部後退
- *    - X = 只有左側前進
- *    - Y = 只有右側前進
- * 3. 如果馬達方向錯誤，修改 Constants.java 的 kXXXDriveEncoderReversed
+ * 按鍵對照：
+ *   A        = 全部前進（主要測試）
+ *   B        = 全部後退（驗證用）
+ *   X        = 左側前進（FL + BL）
+ *   Y        = 右側前進（FR + BR）
+ *   DPAD ↑   = 只有 FL
+ *   DPAD →   = 只有 FR
+ *   DPAD ←   = 只有 BL
+ *   DPAD ↓   = 只有 BR
+ *   LB / RB  = 調整測試功率 ±10%
  */
 @Config
 @TeleOp(name = "2. Drive Motor Direction Tester", group = "Tuning")
 public class _2_DriveMotorDirectionTester extends LinearOpMode {
 
-    // Dashboard 可調參數
     public static double driveTestPower = 0.3;
-    public static double turningP = Constants.ModuleConstants.kPTurning;
-    public static double turningI = Constants.ModuleConstants.kITurning;
-    public static double turningD = Constants.ModuleConstants.kDTurning;
 
     // 硬體
     private DcMotorEx flDrive, frDrive, blDrive, brDrive;
-    private CRServo flTurn, frTurn, blTurn, brTurn;
+    private CRServo   flTurn,  frTurn,  blTurn,  brTurn;
     private AnalogInput flEncoder, frEncoder, blEncoder, brEncoder;
 
-    // PID Controllers
+    // 轉向 PID
     private PIDController flPid, frPid, blPid, brPid;
 
     private FtcDashboard dashboard;
+
+    // 按鍵防抖
+    private boolean lastLb = false;
+    private boolean lastRb = false;
 
     @Override
     public void runOpMode() {
@@ -62,209 +71,159 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
 
         initHardware();
 
-        telemetry.addLine("=== Drive Motor Tester ===");
-        telemetry.addLine("");
-        telemetry.addLine("Init：輪子將對齊到 0°");
-        telemetry.addLine("Start：測試驅動馬達方向");
-        telemetry.addLine("");
-        telemetry.addLine("如果輪子沒有正確對齊，");
-        telemetry.addLine("請先執行 Encoder Offset Reader");
-        telemetry.update();
-
-        // ========== Init 階段：對齊輪子到 0 度 ==========
+        // ══════════════════════════════
+        //  Init 階段：對齊輪子到 0°
+        // ══════════════════════════════
         while (!isStarted() && !isStopRequested()) {
-            // 讀取角度
-            double flDeg = getEncoderDegrees(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
-            double frDeg = getEncoderDegrees(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
-            double blDeg = getEncoderDegrees(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
-            double brDeg = getEncoderDegrees(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
+            double flDeg = getWheelDeg(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
+            double frDeg = getWheelDeg(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
+            double blDeg = getWheelDeg(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
+            double brDeg = getWheelDeg(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
 
-            // PID 控制到 0 度
-            double flOut = calculateTurningOutput(flPid, flDeg, 0);
-            double frOut = calculateTurningOutput(frPid, frDeg, 0);
-            double blOut = calculateTurningOutput(blPid, blDeg, 0);
-            double brOut = calculateTurningOutput(brPid, brDeg, 0);
+            flTurn.setPower(turningPID(flPid, flDeg));
+            frTurn.setPower(turningPID(frPid, frDeg));
+            blTurn.setPower(turningPID(blPid, blDeg));
+            brTurn.setPower(turningPID(brPid, brDeg));
 
-            flTurn.setPower(flOut);
-            frTurn.setPower(frOut);
-            blTurn.setPower(blOut);
-            brTurn.setPower(brOut);
-
-            // 判斷是否對齊
             boolean flOk = Math.abs(flDeg) < 5;
             boolean frOk = Math.abs(frDeg) < 5;
             boolean blOk = Math.abs(blDeg) < 5;
             boolean brOk = Math.abs(brDeg) < 5;
+            boolean allOk = flOk && frOk && blOk && brOk;
 
-            telemetry.addLine("===== Drive Motor Tester (Init) =====");
+            telemetry.addLine("════ Drive Motor Direction Tester ════");
+            telemetry.addLine("Init 階段：輪子對齊到朝前（0°）");
+            telemetry.addLine("對齊完成後按 Start 開始測試");
             telemetry.addLine("");
-            telemetry.addLine("輪子正在對齊到 0°...");
+            telemetry.addLine("── 輪子角度（目標：0°）──");
+            telemetry.addData("FL", "%.1f°  %s", flDeg, flOk ? "✅" : "⏳");
+            telemetry.addData("FR", "%.1f°  %s", frDeg, frOk ? "✅" : "⏳");
+            telemetry.addData("BL", "%.1f°  %s", blDeg, blOk ? "✅" : "⏳");
+            telemetry.addData("BR", "%.1f°  %s", brDeg, brOk ? "✅" : "⏳");
             telemetry.addLine("");
+            telemetry.addLine(allOk ? "✅ 全部對齊，可以按 Start！" : "⏳ 等待對齊中...");
 
-            telemetry.addLine("===== 輪子角度 (目標: 0°) =====");
-            telemetry.addData("FL", "%.1f° %s", flDeg, flOk ? "✓" : "");
-            telemetry.addData("FR", "%.1f° %s", frDeg, frOk ? "✓" : "");
-            telemetry.addData("BL", "%.1f° %s", blDeg, blOk ? "✓" : "");
-            telemetry.addData("BR", "%.1f° %s", brDeg, brOk ? "✓" : "");
-            telemetry.addLine("");
-
-            if (flOk && frOk && blOk && brOk) {
-                telemetry.addLine("★ 所有輪子已對齊！可以按 Start ★");
-            } else {
-                telemetry.addLine("等待輪子對齊中...");
-            }
-
-            // Dashboard
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.put("FL", flDeg);
-            packet.put("FR", frDeg);
-            packet.put("BL", blDeg);
-            packet.put("BR", brDeg);
-            packet.put("target", 0);
-            dashboard.sendTelemetryPacket(packet);
-
+            sendDashboardAngles(flDeg, frDeg, blDeg, brDeg);
             telemetry.update();
             idle();
         }
 
-        // 重置驅動馬達 Encoder
         resetDriveEncoders();
+        if (!opModeIsActive()) return;
 
-        // ========== Start 階段：測試驅動馬達 ==========
+        // ══════════════════════════════
+        //  Start 階段：測試驅動馬達
+        // ══════════════════════════════
         while (opModeIsActive()) {
-            // 持續對齊輪子
-            double flDeg = getEncoderDegrees(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
-            double frDeg = getEncoderDegrees(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
-            double blDeg = getEncoderDegrees(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
-            double brDeg = getEncoderDegrees(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
 
-            flTurn.setPower(calculateTurningOutput(flPid, flDeg, 0));
-            frTurn.setPower(calculateTurningOutput(frPid, frDeg, 0));
-            blTurn.setPower(calculateTurningOutput(blPid, blDeg, 0));
-            brTurn.setPower(calculateTurningOutput(brPid, brDeg, 0));
+            // 調整功率
+            boolean rb = gamepad1.right_bumper;
+            boolean lb = gamepad1.left_bumper;
+            if (rb && !lastRb) driveTestPower = Math.min(1.0, driveTestPower + 0.1);
+            if (lb && !lastLb) driveTestPower = Math.max(0.1, driveTestPower - 0.1);
+            lastRb = rb; lastLb = lb;
 
-            // 驅動馬達測試
-            double power = 0;
-            String status = "停止 (放開所有按鈕)";
+            // 持續維持轉向對齊
+            double flDeg = getWheelDeg(flEncoder, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetDeg);
+            double frDeg = getWheelDeg(frEncoder, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetDeg);
+            double blDeg = getWheelDeg(blEncoder, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetDeg);
+            double brDeg = getWheelDeg(brEncoder, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetDeg);
+            flTurn.setPower(turningPID(flPid, flDeg));
+            frTurn.setPower(turningPID(frPid, frDeg));
+            blTurn.setPower(turningPID(blPid, blDeg));
+            brTurn.setPower(turningPID(brPid, brDeg));
 
-            if (gamepad1.a) {
-                power = driveTestPower;
-                status = "▲ 全部前進 (A)";
-                flDrive.setPower(power);
-                frDrive.setPower(power);
-                blDrive.setPower(power);
-                brDrive.setPower(power);
-            } else if (gamepad1.b) {
-                power = -driveTestPower;
-                status = "▼ 全部後退 (B)";
-                flDrive.setPower(power);
-                frDrive.setPower(power);
-                blDrive.setPower(power);
-                brDrive.setPower(power);
-            } else if (gamepad1.x) {
-                status = "◀ 只有左側前進 (X)";
-                flDrive.setPower(driveTestPower);
-                blDrive.setPower(driveTestPower);
-                frDrive.setPower(0);
-                brDrive.setPower(0);
-            } else if (gamepad1.y) {
-                status = "▶ 只有右側前進 (Y)";
-                frDrive.setPower(driveTestPower);
-                brDrive.setPower(driveTestPower);
-                flDrive.setPower(0);
-                blDrive.setPower(0);
-            } else if (gamepad1.dpad_up) {
-                status = "FL 單獨前進 (↑)";
-                flDrive.setPower(driveTestPower);
-                frDrive.setPower(0);
-                blDrive.setPower(0);
-                brDrive.setPower(0);
-            } else if (gamepad1.dpad_right) {
-                status = "FR 單獨前進 (→)";
-                flDrive.setPower(0);
-                frDrive.setPower(driveTestPower);
-                blDrive.setPower(0);
-                brDrive.setPower(0);
-            } else if (gamepad1.dpad_left) {
-                status = "BL 單獨前進 (←)";
-                flDrive.setPower(0);
-                frDrive.setPower(0);
-                blDrive.setPower(driveTestPower);
-                brDrive.setPower(0);
-            } else if (gamepad1.dpad_down) {
-                status = "BR 單獨前進 (↓)";
-                flDrive.setPower(0);
-                frDrive.setPower(0);
-                blDrive.setPower(0);
-                brDrive.setPower(driveTestPower);
-            } else {
-                flDrive.setPower(0);
-                frDrive.setPower(0);
-                blDrive.setPower(0);
-                brDrive.setPower(0);
-            }
+            // 驅動馬達控制
+            String action = "無（放開所有按鈕）";
+            double fl = 0, fr = 0, bl = 0, br = 0;
 
-            // 讀取 Encoder 位置
+            if      (gamepad1.a)          { fl=fr=bl=br= driveTestPower; action = "A → 全部前進"; }
+            else if (gamepad1.b)          { fl=fr=bl=br=-driveTestPower; action = "B → 全部後退"; }
+            else if (gamepad1.x)          { fl=bl= driveTestPower;       action = "X → 左側前進 (FL+BL)"; }
+            else if (gamepad1.y)          { fr=br= driveTestPower;       action = "Y → 右側前進 (FR+BR)"; }
+            else if (gamepad1.dpad_up)    { fl=    driveTestPower;       action = "↑ → FL 單獨前進"; }
+            else if (gamepad1.dpad_right) { fr=    driveTestPower;       action = "→ → FR 單獨前進"; }
+            else if (gamepad1.dpad_left)  { bl=    driveTestPower;       action = "← → BL 單獨前進"; }
+            else if (gamepad1.dpad_down)  { br=    driveTestPower;       action = "↓ → BR 單獨前進"; }
+
+            flDrive.setPower(fl);
+            frDrive.setPower(fr);
+            blDrive.setPower(bl);
+            brDrive.setPower(br);
+
+            // Encoder 數值
             int flPos = flDrive.getCurrentPosition();
             int frPos = frDrive.getCurrentPosition();
             int blPos = blDrive.getCurrentPosition();
             int brPos = brDrive.getCurrentPosition();
 
+            // 判斷方向結論
+            String flResult = dirResult(fl, flPos);
+            String frResult = dirResult(fr, frPos);
+            String blResult = dirResult(bl, blPos);
+            String brResult = dirResult(br, brPos);
+
+            boolean anyReverse = flResult.contains("⚠️") || frResult.contains("⚠️")
+                    || blResult.contains("⚠️") || brResult.contains("⚠️");
+
+            // Telemetry
+            telemetry.addLine("════ Drive Motor Direction Tester ════");
+            telemetry.addData("目前動作", action);
+            telemetry.addData("測試功率", "%.0f%%  (LB/RB 調整)", driveTestPower * 100);
             telemetry.addLine("");
 
-            telemetry.addData("狀態", status);
-            telemetry.addData("測試功率", "%.1f%%", driveTestPower * 100);
+            telemetry.addLine("── Encoder 數值（前進應增加↑）──");
+            telemetry.addData("FL", "%6d  %s", flPos, flResult);
+            telemetry.addData("FR", "%6d  %s", frPos, frResult);
+            telemetry.addData("BL", "%6d  %s", blPos, blResult);
+            telemetry.addData("BR", "%6d  %s", brPos, brResult);
             telemetry.addLine("");
 
-            telemetry.addLine("══════ 輪子角度 ══════");
-            telemetry.addData("FL", "%.1f°", flDeg);
-            telemetry.addData("FR", "%.1f°", frDeg);
-            telemetry.addData("BL", "%.1f°", blDeg);
-            telemetry.addData("BR", "%.1f°", brDeg);
+            telemetry.addLine("── 輪子角度（應維持 0°）──");
+            telemetry.addData("FL/FR/BL/BR", "%.1f° / %.1f° / %.1f° / %.1f°",
+                    flDeg, frDeg, blDeg, brDeg);
             telemetry.addLine("");
 
-            telemetry.addLine("══════ 馬達 Encoder ══════");
-            telemetry.addLine("(前進時數值應增加)");
-            telemetry.addData("FL", "%d %s", flPos, flPos > 50 ? "↑" : (flPos < -50 ? "↓ 需反轉!" : ""));
-            telemetry.addData("FR", "%d %s", frPos, frPos > 50 ? "↑" : (frPos < -50 ? "↓ 需反轉!" : ""));
-            telemetry.addData("BL", "%d %s", blPos, blPos > 50 ? "↑" : (blPos < -50 ? "↓ 需反轉!" : ""));
-            telemetry.addData("BR", "%d %s", brPos, brPos > 50 ? "↑" : (brPos < -50 ? "↓ 需反轉!" : ""));
-            telemetry.addLine("");
+            if (anyReverse) {
+                telemetry.addLine("⚠️ 需要 Reverse 的輪子請改 Constants.java：");
+                telemetry.addLine("   kXXXDriveEncoderReversed = true");
+            } else if (!action.equals("無（放開所有按鈕）")) {
+                telemetry.addLine("✅ 全部方向正確！");
+            } else {
+                telemetry.addLine("── 按鍵說明 ──");
+                telemetry.addLine("A=全部前進  B=全部後退");
+                telemetry.addLine("X=左側  Y=右側");
+                telemetry.addLine("↑=FL  →=FR  ←=BL  ↓=BR");
+            }
 
-            telemetry.addLine("══════ 控制說明 ══════");
-            telemetry.addLine("A=全部前進 B=全部後退");
-            telemetry.addLine("X=左側前進 Y=右側前進");
-            telemetry.addLine("↑=FL ←=BL →=FR ↓=BR");
-
-            // Dashboard
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.put("FL_pos", flPos);
-            packet.put("FR_pos", frPos);
-            packet.put("BL_pos", blPos);
-            packet.put("BR_pos", brPos);
-            dashboard.sendTelemetryPacket(packet);
-
+            sendDashboardEncoders(flPos, frPos, blPos, brPos);
             telemetry.update();
         }
 
         stopAll();
     }
 
+    /**
+     * 判斷驅動方向是否正確
+     * 有給功率且 |pos| > 30 才判斷，避免靜止時誤判
+     */
+    private String dirResult(double power, int pos) {
+        if (Math.abs(power) < 0.01) return "──";
+        if (Math.abs(pos) < 30)     return "測量中...";
+        boolean correct = (power > 0 && pos > 0) || (power < 0 && pos < 0);
+        return correct ? "✅ 正確" : "⚠️ 需要 Reverse";
+    }
+
     private void initHardware() {
-        // 驅動馬達
         flDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kFrontLeftDriveMotorName);
         frDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kFrontRightDriveMotorName);
         blDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kBackLeftDriveMotorName);
         brDrive = hardwareMap.get(DcMotorEx.class, DriveConstants.kBackRightDriveMotorName);
 
-        flDrive.setDirection(DriveConstants.kFrontLeftDriveEncoderReversed ?
-                DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        frDrive.setDirection(DriveConstants.kFrontRightDriveEncoderReversed ?
-                DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        blDrive.setDirection(DriveConstants.kBackLeftDriveEncoderReversed ?
-                DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        brDrive.setDirection(DriveConstants.kBackRightDriveEncoderReversed ?
-                DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+        flDrive.setDirection(DriveConstants.kFrontLeftDriveEncoderReversed  ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+        frDrive.setDirection(DriveConstants.kFrontRightDriveEncoderReversed ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+        blDrive.setDirection(DriveConstants.kBackLeftDriveEncoderReversed   ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+        brDrive.setDirection(DriveConstants.kBackRightDriveEncoderReversed  ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
 
         flDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -273,81 +232,75 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
 
         resetDriveEncoders();
 
-        // 轉向馬達
         flTurn = hardwareMap.get(CRServo.class, DriveConstants.kFrontLeftTurningMotorName);
         frTurn = hardwareMap.get(CRServo.class, DriveConstants.kFrontRightTurningMotorName);
         blTurn = hardwareMap.get(CRServo.class, DriveConstants.kBackLeftTurningMotorName);
         brTurn = hardwareMap.get(CRServo.class, DriveConstants.kBackRightTurningMotorName);
 
-        flTurn.setDirection(DriveConstants.kFrontLeftTurningEncoderReversed ?
-                CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-        frTurn.setDirection(DriveConstants.kFrontRightTurningEncoderReversed ?
-                CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-        blTurn.setDirection(DriveConstants.kBackLeftTurningEncoderReversed ?
-                CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
-        brTurn.setDirection(DriveConstants.kBackRightTurningEncoderReversed ?
-                CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
+        flTurn.setDirection(DriveConstants.kFrontLeftTurningEncoderReversed  ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
+        frTurn.setDirection(DriveConstants.kFrontRightTurningEncoderReversed ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
+        blTurn.setDirection(DriveConstants.kBackLeftTurningEncoderReversed   ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
+        brTurn.setDirection(DriveConstants.kBackRightTurningEncoderReversed  ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
 
-        // 絕對編碼器
         flEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kFrontLeftAbsoluteEncoderName);
         frEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kFrontRightAbsoluteEncoderName);
         blEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kBackLeftAbsoluteEncoderName);
         brEncoder = hardwareMap.get(AnalogInput.class, DriveConstants.kBackRightAbsoluteEncoderName);
 
-        // PID
-        flPid = new PIDController(turningP, turningI, turningD);
-        frPid = new PIDController(turningP, turningI, turningD);
-        blPid = new PIDController(turningP, turningI, turningD);
-        brPid = new PIDController(turningP, turningI, turningD);
+        double p = Constants.ModuleConstants.kPTurning;
+        double i = Constants.ModuleConstants.kITurning;
+        double d = Constants.ModuleConstants.kDTurning;
+        flPid = new PIDController(p, i, d);
+        frPid = new PIDController(p, i, d);
+        blPid = new PIDController(p, i, d);
+        brPid = new PIDController(p, i, d);
     }
 
     private void resetDriveEncoders() {
-        flDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        frDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        blDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        brDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        flDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        frDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        blDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        brDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        for (DcMotorEx m : new DcMotorEx[]{flDrive, frDrive, blDrive, brDrive}) {
+            m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
     }
 
-    private double getEncoderDegrees(AnalogInput encoder, double offsetDeg) {
-        double raw = (encoder.getVoltage() / encoder.getMaxVoltage()) * 360.0;
-        double angle = raw - offsetDeg;
-        // 環繞到 -90° ~ 90° 範圍
-        while (angle > 90) angle -= 180;
+    /** 讀取車輪角度（扣 offset，normalize 到 -90~90°）*/
+    private double getWheelDeg(AnalogInput enc, double offsetDeg) {
+        double angle = (enc.getVoltage() / enc.getMaxVoltage()) * 360.0 - offsetDeg;
+        while (angle >  90) angle -= 180;
         while (angle < -90) angle += 180;
         return angle;
     }
 
-    private double calculateTurningOutput(PIDController pid, double currentDeg, double targetDeg) {
-        pid.setPID(turningP, turningI, turningD);
-
-        double error = targetDeg - currentDeg;
-        // 環繞到 -90° ~ 90° 範圍
-        while (error > 90) error -= 180;
+    /** 轉向 PID 輸出 */
+    private double turningPID(PIDController pid, double currentDeg) {
+        double error = -currentDeg;
+        while (error >  90) error -= 180;
         while (error < -90) error += 180;
+        double out = pid.calculate(0, Math.toRadians(error));
+        out = Math.max(-0.8, Math.min(0.8, out));
+        if (Math.abs(error) < 3) out *= 0.5;
+        return out;
+    }
 
-        // 使用環繞處理後的誤差計算 PID 輸出，避免角度跳變
-        double output = pid.calculate(0, Math.toRadians(error));
-        output = Math.max(-0.8, Math.min(0.8, output));
+    private void sendDashboardAngles(double fl, double fr, double bl, double br) {
+        TelemetryPacket p = new TelemetryPacket();
+        p.put("FL_deg", fl); p.put("FR_deg", fr);
+        p.put("BL_deg", bl); p.put("BR_deg", br);
+        p.put("target", 0);
+        dashboard.sendTelemetryPacket(p);
+    }
 
-        // 小誤差時降低輸出，避免抖動
-        if (Math.abs(error) < 3) output *= 0.5;
-
-        return output;
+    private void sendDashboardEncoders(int fl, int fr, int bl, int br) {
+        TelemetryPacket p = new TelemetryPacket();
+        p.put("FL_enc", fl); p.put("FR_enc", fr);
+        p.put("BL_enc", bl); p.put("BR_enc", br);
+        dashboard.sendTelemetryPacket(p);
     }
 
     private void stopAll() {
-        flDrive.setPower(0);
-        frDrive.setPower(0);
-        blDrive.setPower(0);
-        brDrive.setPower(0);
-        flTurn.setPower(0);
-        frTurn.setPower(0);
-        blTurn.setPower(0);
-        brTurn.setPower(0);
+        flDrive.setPower(0); frDrive.setPower(0);
+        blDrive.setPower(0); brDrive.setPower(0);
+        flTurn.setPower(0);  frTurn.setPower(0);
+        blTurn.setPower(0);  brTurn.setPower(0);
     }
 }

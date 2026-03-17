@@ -34,14 +34,14 @@ public final class Constants {
         public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
 
         // === 轉向 PID 控制器參數 ===
-        public static final double kPTurning = 0.5;  // TODO P 係數：反應速度，過大會震盪
-        public static final double kITurning = 0.0;   // TODO I 係數：消除穩態誤差
+        public static final double kPTurning = 0.4;  // TODO P 係數：反應速度，過大會震盪
+        public static final double kITurning = 0.02;   // TODO I 係數：消除穩態誤差
         public static final double kDTurning = 0.0;   // TODO D 係數：抑制震盪
         public static final double kTurningOutputScale = 1.0; // TODO 轉向輸出縮放
 
         // 轉向輸出與感測穩定化
         // 調整於 2026-03-16：改善馬達同步精度、解決1j6g4馬達轉不動問題
-        public static final double kTurningDeadbandDeg = 2;     // TODO 死區角度 (度) - 降至 0.5 以增強靈敏度（解決轉不動問題）
+        public static final double kTurningDeadbandDeg = 0.0;     // TODO 死區角度 (度)
         public static final double kTurningPeriodSec = 2;
         public static final double kTurningMinOutput = 0.12;      // 轉向馬達最小輸出 (克服靜摩擦) - 增至 0.12 以克服高力矩（解決轉不動問題）
         public static final double kTurningMaxJumpDeg = 45.0;     // 單次允許的角度跳變上限 (度)
@@ -54,8 +54,8 @@ public final class Constants {
         public static final double kIDrive = 0.0;  // TODO I 係數：增加至 0.01 以穩定低速轉動
         public static final double kDDrive = 0.0; // TODO D 係數：添加阻尼以穩定控制
         public static final double kFDrive = 0.0;  // TODO F 係數：增加前饋至 0.05 以增強初動力
-        public static final double kDriveOutputScale = 1.0; // TODO 驅動輸出縮放
-        public static final boolean kEnableDrivePID = true; // TODO 是否啟用 Drive PID（啟用速度反饋控制）
+        public static final double kDriveOutputScale = 1.0; // TODO Drive輸出縮放
+        public static final boolean kEnableDrivePID = false; // TODO 是否啟用 Drive PID（啟用速度反饋控制）
 
     }
 
@@ -108,17 +108,17 @@ public final class Constants {
         public static final String kBackRightAbsoluteEncoderName = "BREncoder";   // TODO 後右絕對編碼器
 
         // === 絕對編碼器方向設定 ===
-        public static final boolean kFrontLeftDriveAbsoluteEncoderReversed = false;   // TODO 前左絕對編碼器反向
+        public static final boolean kFrontLeftDriveAbsoluteEncoderReversed = true;   // TODO 前左絕對編碼器反向
         public static final boolean kBackLeftDriveAbsoluteEncoderReversed = false;    // TODO 後左絕對編碼器反向
         public static final boolean kFrontRightDriveAbsoluteEncoderReversed = false;  // TODO 前右絕對編碼器反向
-        public static final boolean kBackRightDriveAbsoluteEncoderReversed = false;   // TODO 後右絕對編碼器反向
+        public static final boolean kBackRightDriveAbsoluteEncoderReversed = true;   // TODO 後右絕對編碼器反向
 
         // === 絕對編碼器偏移角度 (度數) ===
         // 用於校正輪子的初始方向，使用 SwerveModuleTuner 測量正確的偏移值
-        public static final double kFrontLeftDriveAbsoluteEncoderOffsetDeg = 0.0;  // TODO 前左輪偏移角度
-        public static final double kFrontRightDriveAbsoluteEncoderOffsetDeg = 0.0; // TODO 前右輪偏移角度
-        public static final double kBackLeftDriveAbsoluteEncoderOffsetDeg = 0.0;   // TODO 後左輪偏移角度
-        public static final double kBackRightDriveAbsoluteEncoderOffsetDeg = 0.0;    // TODO 後右輪偏移角度
+        public static final double kFrontLeftDriveAbsoluteEncoderOffsetDeg = 118.00;  // TODO 前左輪偏移角度
+        public static final double kFrontRightDriveAbsoluteEncoderOffsetDeg = 0.39; // TODO 前右輪偏移角度
+        public static final double kBackLeftDriveAbsoluteEncoderOffsetDeg = 16.06;   // TODO 後左輪偏移角度
+        public static final double kBackRightDriveAbsoluteEncoderOffsetDeg = 33.60;    // TODO 後右輪偏移角度
 
         // === 絕對編碼器偏移角度 (弧度) - 自動計算 ===
         public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = Math.toRadians(kFrontLeftDriveAbsoluteEncoderOffsetDeg);
@@ -128,12 +128,12 @@ public final class Constants {
 
         // === 機器人物理性能極限 ===
         public static final double kPhysicalMaxSpeedMetersPerSecond = 0.4;                       // TODO 機器人最大線速度 (公尺/秒)
-        public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 2 * 2 * Math.PI;    // TODO 機器人最大角速度 (弧度/秒)
+        public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 9.42;    // TODO 機器人最大角速度 (弧度/秒)
 
         // === 手動控制性能限制 ===
         // 建議調整後進行測試以確保良好的操控手感
-        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 1;                    // TODO 手動控制最大線速度
-        public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = kPhysicalMaxAngularSpeedRadiansPerSecond / 1;    // TODO 手動控制最大角速度
+        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 3;                    // TODO 手動控制最大線速度
+        public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = kPhysicalMaxAngularSpeedRadiansPerSecond / 32;    // TODO 手動控制最大角速度
         public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 3;                                                 // 最大線性加速度
         public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 3;                                          // 最大角加速度
 
@@ -197,6 +197,6 @@ public final class Constants {
      * 定義手把和輸入裝置的相關參數
      */
     public static final class OIConstants {
-        public static final double kDeadband = 0.05;  // 手把搖桿死區範圍，避免微小抖動影響
+        public static final double kDeadband = 0.1;  // 手把搖桿死區範圍，避免微小抖動影響
     }
 }
