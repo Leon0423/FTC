@@ -12,6 +12,9 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import android.content.Context;
+import android.content.SharedPreferences;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import org.firstinspires.ftc.teamcode.Constants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
@@ -302,5 +305,19 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
         blDrive.setPower(0); brDrive.setPower(0);
         flTurn.setPower(0);  frTurn.setPower(0);
         blTurn.setPower(0);  brTurn.setPower(0);
+
+        // ★ 清除累積角度，讓 Swerve_Control 下次啟動用絕對編碼器重新計算
+        SharedPreferences anglePrefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = anglePrefs.edit();
+        for (String name : new String[]{
+                DriveConstants.kFrontLeftTurningMotorName,
+                DriveConstants.kFrontRightTurningMotorName,
+                DriveConstants.kBackLeftTurningMotorName,
+                DriveConstants.kBackRightTurningMotorName}) {
+            editor.remove("swerve_angle_" + name);
+            editor.remove("swerve_angle_" + name + "_raw");
+        }
+        editor.apply();
     }
 }

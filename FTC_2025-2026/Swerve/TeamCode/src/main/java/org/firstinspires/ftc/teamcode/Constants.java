@@ -90,14 +90,15 @@ public final class Constants {
 
         // === 轉向編碼器方向設定 ===
         public static final boolean kFrontLeftTurningEncoderReversed = true;   // TODO 前左轉向編碼器反向
-        public static final boolean kBackLeftTurningEncoderReversed = true;    // TODO 後左轉向編碼器反向
         public static final boolean kFrontRightTurningEncoderReversed = true;  // TODO 前右轉向編碼器反向
+        public static final boolean kBackLeftTurningEncoderReversed = true;    // TODO 後左轉向編碼器反向
         public static final boolean kBackRightTurningEncoderReversed = true;   // TODO 後右轉向編碼器反向
 
         // === 驅動編碼器方向設定 ===
-        public static final boolean kFrontLeftDriveEncoderReversed = false;   // TODO 前左驅動編碼器反向
+        public static final boolean kFrontLeftDriveEncoderReversed = true;   // TODO 前左驅動編碼器反向
+        public static final boolean kFrontRightDriveEncoderReversed = true;  // TODO 前右驅動編碼器反向
+
         public static final boolean kBackLeftDriveEncoderReversed = false;    // TODO 後左驅動編碼器反向
-        public static final boolean kFrontRightDriveEncoderReversed = false;  // TODO 前右驅動編碼器反向
         public static final boolean kBackRightDriveEncoderReversed = false;   // TODO 後右驅動編碼器反向
 
         // === 絕對編碼器硬體名稱 ===

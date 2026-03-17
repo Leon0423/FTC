@@ -44,7 +44,7 @@ public class Swerve_Control extends LinearOpMode {
         // 創建指令一次即可
         SwerveJoystickCmd joystickCmd = new SwerveJoystickCmd(
                 swerveSubsystem,
-                () -> -driverGamepad.getLeftY(),      // 推上為前進
+                () -> driverGamepad.getLeftY(),      // 推上為前進
                 () -> -driverGamepad.getLeftX(),     // 推右為右移
                 () -> driverGamepad.getRightX(),    // 推右為順時針
                 () -> fieldOriented
