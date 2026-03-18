@@ -27,6 +27,14 @@ public class Swerve_Control extends LinearOpMode {
     private double targetHeadingDeg = 0;
     private double lastTime = 0;
 
+    // 成員變數加
+    private double speedMultiplier   = 1.0;  // 直走倍率
+    private double turningMultiplier = 1.0;  // 轉動倍率
+    private boolean lastDpadUp    = false;
+    private boolean lastDpadDown  = false;
+    private boolean lastDpadLeft  = false;
+    private boolean lastDpadRight = false;
+
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -44,9 +52,9 @@ public class Swerve_Control extends LinearOpMode {
         // 創建指令一次即可
         SwerveJoystickCmd joystickCmd = new SwerveJoystickCmd(
                 swerveSubsystem,
-                () -> driverGamepad.getLeftY(),      // 推上為前進
-                () -> -driverGamepad.getLeftX(),     // 推右為右移
-                () -> driverGamepad.getRightX(),    // 推右為順時針
+                () -> -driverGamepad.getLeftY()  * speedMultiplier,
+                () -> -driverGamepad.getLeftX()  * speedMultiplier,
+                () -> -driverGamepad.getRightX() * turningMultiplier,
                 () -> fieldOriented
         );
 
@@ -86,6 +94,22 @@ public class Swerve_Control extends LinearOpMode {
             }
             lastA = a;
 
+            // DPAD UP/DOWN：調整直走倍率
+            boolean dpadUp   = driverGamepad.getButton(GamepadKeys.Button.DPAD_UP);
+            boolean dpadDown = driverGamepad.getButton(GamepadKeys.Button.DPAD_DOWN);
+            if (dpadUp   && !lastDpadUp)   speedMultiplier = Math.min(1.0, speedMultiplier + 0.1);
+            if (dpadDown && !lastDpadDown) speedMultiplier = Math.max(0.1, speedMultiplier - 0.1);
+            lastDpadUp   = dpadUp;
+            lastDpadDown = dpadDown;
+
+            // DPAD LEFT/RIGHT：調整轉動倍率
+            boolean dpadLeft  = driverGamepad.getButton(GamepadKeys.Button.DPAD_LEFT);
+            boolean dpadRight = driverGamepad.getButton(GamepadKeys.Button.DPAD_RIGHT);
+            if (dpadRight && !lastDpadRight) turningMultiplier = Math.min(1.0, turningMultiplier + 0.1);
+            if (dpadLeft  && !lastDpadLeft)  turningMultiplier = Math.max(0.1, turningMultiplier - 0.1);
+            lastDpadLeft  = dpadLeft;
+            lastDpadRight = dpadRight;
+
             // === 用搖桿積分更新目標位置 (綠點) ===
             double now = getRuntime();
             double dt = Math.max(0, now - lastTime);
@@ -103,8 +127,8 @@ public class Swerve_Control extends LinearOpMode {
 
 
             // 依 DriveConstants 縮放到物理速度
-            double xSpeed = rawX * Constants.DriveConstants.kTeleDriveMaxSpeedMetersPerSecond;
-            double ySpeed = rawY * Constants.DriveConstants.kTeleDriveMaxSpeedMetersPerSecond;
+            double xSpeed    = rawX    * Constants.DriveConstants.kTeleDriveMaxSpeedMetersPerSecond;
+            double ySpeed    = rawY    * Constants.DriveConstants.kTeleDriveMaxSpeedMetersPerSecond;
             double turnSpeed = rawTurn * Constants.DriveConstants.kTeleDriveMaxAngularSpeedRadiansPerSecond;
 
             // 轉成場地座標速度（若目前是 robot-oriented）
@@ -157,6 +181,9 @@ public class Swerve_Control extends LinearOpMode {
                     Math.toDegrees(swerveSubsystem.getFrontRight().getTurningPosition()),
                     Math.toDegrees(swerveSubsystem.getBackLeft().getTurningPosition()),
                     Math.toDegrees(swerveSubsystem.getBackRight().getTurningPosition()));
+
+            dashboardTelemetry.addData("Speed",   "%.0f%%  (DPAD↑↓)", speedMultiplier   * 100);
+            dashboardTelemetry.addData("Turning", "%.0f%%  (DPAD←→)", turningMultiplier * 100);
 
             dashboardTelemetry.addData("Status", "Running");
             dashboardTelemetry.update();

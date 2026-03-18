@@ -34,16 +34,16 @@ public final class Constants {
         public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
 
         // === 轉向 PID 控制器參數 ===
-        public static final double kPTurning = 0.4;  // TODO P 係數：反應速度，過大會震盪
-        public static final double kITurning = 0.02;   // TODO I 係數：消除穩態誤差
-        public static final double kDTurning = 0.0;   // TODO D 係數：抑制震盪
-        public static final double kTurningOutputScale = 1.0; // TODO 轉向輸出縮放
+        // 調整於 2026-03-19：解決邊直走邊轉時轉向滯後的問題
+        public static final double kPTurning = 0.8;  // 提升至 0.8 以加快初期反應速度
+        public static final double kITurning = 0.01; // 改為 0.01 以消除穩態誤差
+        public static final double kDTurning = 0.05; // 改為 0.05 以減少超調
+        public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
 
         // 轉向輸出與感測穩定化
         // 調整於 2026-03-16：改善馬達同步精度、解決1j6g4馬達轉不動問題
-        public static final double kTurningDeadbandDeg = 0.0;     // TODO 死區角度 (度)
-        public static final double kTurningPeriodSec = 2;
-        public static final double kTurningMinOutput = 0.12;      // 轉向馬達最小輸出 (克服靜摩擦) - 增至 0.12 以克服高力矩（解決轉不動問題）
+        // 調整於 2026-03-19：減小死區以加快轉向響應
+        public static final double kTurningDeadbandDeg = 0.5;     // 減至 0.5 度以提高轉向敏銳度
         public static final double kTurningMaxJumpDeg = 45.0;     // 單次允許的角度跳變上限 (度)
         public static final double kTurningMaxTransitionOutput = 0.7; // 過渡期間最大輸出
 
@@ -65,8 +65,8 @@ public final class Constants {
      */
     public static final class DriveConstants {
         // === 機器人幾何參數 ===
-        public static final double kTrackWidth = 0.33;  // TODO 左右輪距 (公尺)
-        public static final double kWheelBase = 0.33;   // TODO 前後輪距 (公尺)
+        public static final double kTrackWidth = 0.21;  // TODO 左右輪距 (公尺)
+        public static final double kWheelBase = 0.21;   // TODO 前後輪距 (公尺)
 
         // 飛輪驅動運動學計算，定義各輪子相對於機器人中心的位置
         // 順序：前左、前右、後左、後右
@@ -77,16 +77,16 @@ public final class Constants {
                 new Translation2d(-kWheelBase / 2, kTrackWidth / 2)); // 後右輪位置   // TODO: 調整
 
         // === 驅動馬達硬體名稱 ===
-        public static final String kFrontLeftDriveMotorName = "FL";   // 前左驅動馬達
-        public static final String kBackLeftDriveMotorName = "BL";    // 後左驅動馬達
-        public static final String kFrontRightDriveMotorName = "FR";  // 前右驅動馬達
-        public static final String kBackRightDriveMotorName = "BR";   // 後右驅動馬達
+        public static final String kFrontLeftDriveMotorName = "BR";   // 前左驅動馬達
+        public static final String kBackLeftDriveMotorName = "FR";    // 後左驅動馬達
+        public static final String kFrontRightDriveMotorName = "BL";  // 前右驅動馬達
+        public static final String kBackRightDriveMotorName = "FL";   // 後右驅動馬達
 
         // === 轉向馬達硬體名稱 ===
-        public static final String kFrontLeftTurningMotorName = "FLTurn";   // 前左轉向馬達
-        public static final String kBackLeftTurningMotorName = "BLTurn";    // 後左轉向馬達
-        public static final String kFrontRightTurningMotorName = "FRTurn";  // 前右轉向馬達
-        public static final String kBackRightTurningMotorName = "BRTurn";   // 後右轉向馬達
+        public static final String kFrontLeftTurningMotorName = "BRTurn";   // 前左轉向馬達
+        public static final String kBackLeftTurningMotorName = "FRTurn";    // 後左轉向馬達
+        public static final String kFrontRightTurningMotorName = "BLTurn";  // 前右轉向馬達
+        public static final String kBackRightTurningMotorName = "FLTurn";   // 後右轉向馬達
 
         // === 轉向編碼器方向設定 ===
         public static final boolean kFrontLeftTurningEncoderReversed = true;   // TODO 前左轉向編碼器反向
@@ -98,15 +98,15 @@ public final class Constants {
         public static final boolean kFrontLeftDriveEncoderReversed = true;   // TODO 前左驅動編碼器反向
         public static final boolean kFrontRightDriveEncoderReversed = false;  // TODO 前右驅動編碼器反向
 
-        public static final boolean kBackLeftDriveEncoderReversed = false;    // TODO 後左驅動編碼器反向
-        public static final boolean kBackRightDriveEncoderReversed = true;   // TODO 後右驅動編碼器反向
+        public static final boolean kBackLeftDriveEncoderReversed = true;    // TODO 後左驅動編碼器反向
+        public static final boolean kBackRightDriveEncoderReversed = false;   // TODO 後右驅動編碼器反向
 
         // === 絕對編碼器硬體名稱 ===
         // 使用與 servo 相同的命名方式，便於硬體配置管理
-        public static final String kFrontLeftAbsoluteEncoderName = "FLEncoder";   // TODO 前左絕對編碼器
-        public static final String kFrontRightAbsoluteEncoderName = "FREncoder";  // TODO 前右絕對編碼器
-        public static final String kBackLeftAbsoluteEncoderName = "BLEncoder";    // TODO 後左絕對編碼器
-        public static final String kBackRightAbsoluteEncoderName = "BREncoder";   // TODO 後右絕對編碼器
+        public static final String kFrontLeftAbsoluteEncoderName = "BREncoder";   // TODO 前左絕對編碼器
+        public static final String kFrontRightAbsoluteEncoderName = "BLEncoder";  // TODO 前右絕對編碼器
+        public static final String kBackLeftAbsoluteEncoderName = "FREncoder";    // TODO 後左絕對編碼器
+        public static final String kBackRightAbsoluteEncoderName = "FLEncoder";   // TODO 後右絕對編碼器
 
         // === 絕對編碼器方向設定 ===
         public static final boolean kFrontLeftDriveAbsoluteEncoderReversed = true;   // TODO 前左絕對編碼器反向
@@ -128,22 +128,28 @@ public final class Constants {
         public static final double kBackRightDriveAbsoluteEncoderOffsetRad = Math.toRadians(kBackRightDriveAbsoluteEncoderOffsetDeg);
 
         // === 機器人物理性能極限 ===
-        public static final double kPhysicalMaxSpeedMetersPerSecond = 0.4;                       // TODO 機器人最大線速度 (公尺/秒)
-        public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 9.42;    // TODO 機器人最大角速度 (弧度/秒)
+        public static final double kPhysicalMaxSpeedMetersPerSecond = 0.764;                       // TODO 機器人最大線速度 (公尺/秒)
+        public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 5.495;    // TODO 機器人最大角速度 (弧度/秒)
 
         // === 手動控制性能限制 ===
         // 建議調整後進行測試以確保良好的操控手感
-        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 3;                    // TODO 手動控制最大線速度
-        public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = kPhysicalMaxAngularSpeedRadiansPerSecond / 32;    // TODO 手動控制最大角速度
+        public static final double kTeleDriveMaxSpeedMetersPerSecond = kPhysicalMaxSpeedMetersPerSecond / 1;                    // TODO 手動控制最大線速度
+        public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = kPhysicalMaxAngularSpeedRadiansPerSecond / 1;    // TODO 手動控制最大角速度
         public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 3;                                                 // 最大線性加速度
         public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 3;                                          // 最大角加速度
+
+        // 各輪功率補償（1.0 = 不補償，> 1.0 = 加大功率補償阻力）
+        public static final double kFrontLeftDrivePowerScale  = 1.00;  // TODO
+        public static final double kFrontRightDrivePowerScale = 0.80;  // TODO
+        public static final double kBackLeftDrivePowerScale   = 0.82;  // TODO
+        public static final double kBackRightDrivePowerScale  = 0.85;  // TODO
 
         // === IMU 慣性測量單元配置 ===
         // 必須根據 Control Hub 的實際安裝方向進行設定
         public static final RevHubOrientationOnRobot.LogoFacingDirection kImuLogoFacingDirection =
                 RevHubOrientationOnRobot.LogoFacingDirection.UP;        // TODO REV 標誌朝向
         public static final RevHubOrientationOnRobot.UsbFacingDirection kImuUsbFacingDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;    // TODO: USB 端口朝向
+                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;    // TODO: USB 端口朝向
 
         // === GoBILDA Pinpoint 配置 ===
         // 設定為 true 使用 Pinpoint 進行定位，false 使用原本的 SwerveDriveOdometry + IMU

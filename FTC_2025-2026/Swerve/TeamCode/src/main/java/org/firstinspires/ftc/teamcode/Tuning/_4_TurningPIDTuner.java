@@ -15,179 +15,224 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveModule;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 /**
- * Turning PID 調整 OpMode - 四輪同時測試
+ * Turning CRServo PID 調整 OpMode - 四輪同時測試
  *
- * ★ 使用與 Swerve_Control 完全相同的控制流程 ★
- * 透過 SwerveModuleState.optimize() 控制
- * 這樣調出來的 PID 值才是真正在實際運作時使用的值
+ * ★ 保證不改變 offset 值 ★
+ *   - 整個 opmode 期間 disableSaving() 保持開啟
+ *   - 測試期間轉向軌跡不會儲存，不會改變已校正的 offset
+ *   - 直接停止馬達即可，不對齊也不儲存
  *
- * ★ 所有參數獨立於 TuningConfig，在 Dashboard 的 TurningPIDTuner 區塊調整 ★
+ * ★ 驅動馬達完全靜止 ★
+ *   - 只呼叫 setTurningPower()，不碰 driveMotor
  *
  * 使用方法：
  * 1. 連接 FTC Dashboard (http://192.168.43.1:8080/dash)
- * 2. 在 Config > TurningPIDTuner 調整 P/I/D 參數
- * 3. 在 Graph 觀察：target, FL, FR, BL, BR
+ * 2. Config > _4_TurningPIDTuner 調整參數
+ * 3. Graph 觀察：target_deg, FL_deg, FR_deg, BL_deg, BR_deg
+ * 4. STOP 後馬達停止，offset 保持不變
  */
 @Config
 @TeleOp(name = "4. Turning PID Tuner", group = "Tuning")
 public class _4_TurningPIDTuner extends LinearOpMode {
 
-    // ===== Dashboard 可調參數 (獨立於 TuningConfig) =====
-    // 1. Turning PID 參數
-    public static double _1a_turningP = Constants.ModuleConstants.kPTurning;
-    public static double _1b_turningI = Constants.ModuleConstants.kITurning;
-    public static double _1c_turningD = Constants.ModuleConstants.kDTurning;
-    public static double _1d_outputScale = Constants.ModuleConstants.kTurningOutputScale;
-    public static double _1e_deadbandDeg = Constants.ModuleConstants.kTurningDeadbandDeg;
+    // ===== Dashboard 可調參數 =====
+    // 1. Turning PID
+    public static double _1a_turningP       = Constants.ModuleConstants.kPTurning;
+    public static double _1b_turningI       = Constants.ModuleConstants.kITurning;
+    public static double _1c_turningD       = Constants.ModuleConstants.kDTurning;
+    public static double _1d_outputScale    = Constants.ModuleConstants.kTurningOutputScale;
+    public static double _1e_deadbandDeg    = Constants.ModuleConstants.kTurningDeadbandDeg;
 
-    // 2. 測試參數
-    public static double _2a_testPeriodSec = 2.0;       // 測試週期 (秒)
-    public static double _2b_testAmplitudeDeg = 45.0;   // 測試振幅 (度)
+    // 2. 測試波形
+    public static double _2a_testPeriodSec    = 2.0;   // 正弦波週期 (秒)
+    public static double _2b_testAmplitudeDeg = 45.0;  // 振幅 (度)
 
+    // ===== 私有成員 =====
     private SwerveSubsystem swerve;
-    private FtcDashboard dashboard;
-
-    // 四個獨立的 PID Controller
-    private PIDController flPID, frPID, blPID, brPID;
+    private FtcDashboard    dashboard;
+    private PIDController   flPID, frPID, blPID, brPID;
 
     @Override
     public void runOpMode() throws InterruptedException {
-        swerve = new SwerveSubsystem(hardwareMap);
+
+        swerve   = new SwerveSubsystem(hardwareMap);
         dashboard = FtcDashboard.getInstance();
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
 
-        // 初始化 PID Controllers
+        // ★ 清除所有儲存的角度記憶，強制從絕對編碼器重新初始化
+        // ★ 這樣測試期間的 getTurningPosition() 累積錯誤就無法被存儲
+        clearAllSavedAngles();
+
+        // ★ 關閉儲存，此後任何路徑都不會意外寫入 angle prefs
+        disableSavingAll();
+
+        // ★ 重新初始化轉向追蹤，用絕對編碼器值
+        swerve.getFrontLeft() .initTurningTracking();
+        swerve.getFrontRight().initTurningTracking();
+        swerve.getBackLeft()  .initTurningTracking();
+        swerve.getBackRight() .initTurningTracking();
+
         flPID = new PIDController(_1a_turningP, _1b_turningI, _1c_turningD);
         frPID = new PIDController(_1a_turningP, _1b_turningI, _1c_turningD);
         blPID = new PIDController(_1a_turningP, _1b_turningI, _1c_turningD);
         brPID = new PIDController(_1a_turningP, _1b_turningI, _1c_turningD);
 
-        telemetry.addLine("=== Turning PID Tuner (4輪同時) ===");
-        telemetry.addLine("★ 參數獨立於 Swerve_Control ★");
-        telemetry.addLine("Dashboard Config > TurningPIDTuner 調整參數");
-        telemetry.addLine("Dashboard Graph 觀察: target, FL, FR, BL, BR");
+        telemetry.addLine("=== Turning PID Tuner (4 輪同時) ===");
+        telemetry.addLine("Graph: target_deg / FL_deg / FR_deg / BL_deg / BR_deg");
+        telemetry.addLine("STOP 後自動對齊 0° 並存檔");
         telemetry.update();
-
-        swerve.getFrontLeft().disableSaving();
-        swerve.getFrontRight().disableSaving();
-        swerve.getBackLeft().disableSaving();
-        swerve.getBackRight().disableSaving();
 
         waitForStart();
 
         double startTime = getRuntime();
 
-        while (opModeIsActive()) {
-            // 即時更新 PID 參數
-            flPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
-            frPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
-            blPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
-            brPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
+        // ★ try-finally：不管是正常 STOP 還是例外，都一定執行結束程序
+        try {
+            while (opModeIsActive()) {
 
-            // 產生正弦波目標角度
-            double elapsed = getRuntime() - startTime;
-            double targetRad = Math.toRadians(_2b_testAmplitudeDeg) * Math.sin(2 * Math.PI * elapsed / _2a_testPeriodSec);
+                // ── 即時更新 PID 參數（Dashboard 滑桿有效）──
+                flPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
+                frPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
+                blPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
+                brPID.setPID(_1a_turningP, _1b_turningI, _1c_turningD);
 
-            // 取得各輪模組
-            SwerveModule fl = swerve.getFrontLeft();
-            SwerveModule fr = swerve.getFrontRight();
-            SwerveModule bl = swerve.getBackLeft();
-            SwerveModule br = swerve.getBackRight();
+                // ── 驅動馬達鎖死（每圈一次即可）──
+                stopDriveMotors();
 
-            // 讀取實際角度
-            double flAngle = fl.getAbsoluteEncoderRad();
-            double frAngle = fr.getAbsoluteEncoderRad();
-            double blAngle = bl.getAbsoluteEncoderRad();
-            double brAngle = br.getAbsoluteEncoderRad();
+                // ── 正弦波目標角度 ──
+                double elapsed   = getRuntime() - startTime;
+                double targetRad = Math.toRadians(_2b_testAmplitudeDeg)
+                        * Math.sin(2 * Math.PI * elapsed / _2a_testPeriodSec);
 
-            // ★ 使用與 SwerveModule.setDesiredState 相同的控制邏輯 ★
-            // 建立 SwerveModuleState 並執行 optimize
-            SwerveModuleState targetState = new SwerveModuleState(1.0, new Rotation2d(targetRad));
+                // ── 讀取各輪實際角度 ──
+                double flAngle = swerve.getFrontLeft() .getTurningPosition();
+                double frAngle = swerve.getFrontRight().getTurningPosition();
+                double blAngle = swerve.getBackLeft()  .getTurningPosition();
+                double brAngle = swerve.getBackRight() .getTurningPosition();
 
-            // FL
-            SwerveModuleState flOptimized = SwerveModuleState.optimize(targetState, new Rotation2d(flAngle));
-            double flError = normalizeAngle(flOptimized.angle.getRadians() - flAngle);
-            double flOutput = applyPID(flPID, flError);
-            fl.setTurningPower(flOutput);
+                // ── 計算 optimized 目標並輸出功率 ──
+                // 使用 optimize 確保與 Swerve_Control 實際行為一致
+                // speed=1.0 只是讓 optimize 有方向可判斷，不驅動任何馬達
+                SwerveModuleState targetState = new SwerveModuleState(1.0, new Rotation2d(targetRad));
 
-            // FR
-            SwerveModuleState frOptimized = SwerveModuleState.optimize(targetState, new Rotation2d(frAngle));
-            double frError = normalizeAngle(frOptimized.angle.getRadians() - frAngle);
-            double frOutput = applyPID(frPID, frError);
-            fr.setTurningPower(frOutput);
+                double flOutput = computeTurningOutput(flPID, targetState, flAngle);
+                double frOutput = computeTurningOutput(frPID, targetState, frAngle);
+                double blOutput = computeTurningOutput(blPID, targetState, blAngle);
+                double brOutput = computeTurningOutput(brPID, targetState, brAngle);
 
-            // BL
-            SwerveModuleState blOptimized = SwerveModuleState.optimize(targetState, new Rotation2d(blAngle));
-            double blError = normalizeAngle(blOptimized.angle.getRadians() - blAngle);
-            double blOutput = applyPID(blPID, blError);
-            bl.setTurningPower(blOutput);
+                swerve.getFrontLeft() .setTurningPower(flOutput);
+                swerve.getFrontRight().setTurningPower(frOutput);
+                swerve.getBackLeft()  .setTurningPower(blOutput);
+                swerve.getBackRight() .setTurningPower(brOutput);
 
-            // BR
-            SwerveModuleState brOptimized = SwerveModuleState.optimize(targetState, new Rotation2d(brAngle));
-            double brError = normalizeAngle(brOptimized.angle.getRadians() - brAngle);
-            double brOutput = applyPID(brPID, brError);
-            br.setTurningPower(brOutput);
+                // ── Dashboard 圖表（角度用度數，易讀）──
+                TelemetryPacket packet = new TelemetryPacket();
+                double targetDeg = Math.toDegrees(targetRad);
+                packet.put("target_deg", targetDeg);
+                packet.put("FL_deg",     Math.toDegrees(flAngle));
+                packet.put("FR_deg",     Math.toDegrees(frAngle));
+                packet.put("BL_deg",     Math.toDegrees(blAngle));
+                packet.put("BR_deg",     Math.toDegrees(brAngle));
+                // 誤差與輸出供進階分析
+                packet.put("FL_err_deg", targetDeg - Math.toDegrees(flAngle));
+                packet.put("FR_err_deg", targetDeg - Math.toDegrees(frAngle));
+                packet.put("BL_err_deg", targetDeg - Math.toDegrees(blAngle));
+                packet.put("BR_err_deg", targetDeg - Math.toDegrees(brAngle));
+                packet.put("FL_out",     flOutput);
+                packet.put("FR_out",     frOutput);
+                packet.put("BL_out",     blOutput);
+                packet.put("BR_out",     brOutput);
+                dashboard.sendTelemetryPacket(packet);
 
-            // 圖表數據
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.put("target", Math.toDegrees(targetRad));
-            packet.put("FL", Math.toDegrees(flAngle));
-            packet.put("FR", Math.toDegrees(frAngle));
-            packet.put("BL", Math.toDegrees(blAngle));
-            packet.put("BR", Math.toDegrees(brAngle));
-            packet.put("FL_error", Math.toDegrees(flError));
-            packet.put("FR_error", Math.toDegrees(frError));
-            packet.put("BL_error", Math.toDegrees(blError));
-            packet.put("BR_error", Math.toDegrees(brError));
-            packet.put("FL_output", flOutput);
-            packet.put("FR_output", frOutput);
-            packet.put("BL_output", blOutput);
-            packet.put("BR_output", brOutput);
-            dashboard.sendTelemetryPacket(packet);
+                // ── Driver Station 文字顯示 ──
+                telemetry.addData("P / I / D",  "%.4f / %.4f / %.4f",
+                        _1a_turningP, _1b_turningI, _1c_turningD);
+                telemetry.addData("Scale / DB", "%.2f / %.1f°",
+                        _1d_outputScale, _1e_deadbandDeg);
+                telemetry.addData("Target",     "%.1f°  (±%.0f°, T=%.1fs)",
+                        targetDeg, _2b_testAmplitudeDeg, _2a_testPeriodSec);
+                telemetry.addLine("─────────────────────────");
+                telemetry.addData("FL", "%.1f° → out: %.2f", Math.toDegrees(flAngle), flOutput);
+                telemetry.addData("FR", "%.1f° → out: %.2f", Math.toDegrees(frAngle), frOutput);
+                telemetry.addData("BL", "%.1f° → out: %.2f", Math.toDegrees(blAngle), blOutput);
+                telemetry.addData("BR", "%.1f° → out: %.2f", Math.toDegrees(brAngle), brOutput);
+                telemetry.update();
+            }
 
-            // 文字顯示
-            telemetry.addData("P", "%.4f", _1a_turningP);
-            telemetry.addData("I", "%.4f", _1b_turningI);
-            telemetry.addData("D", "%.4f", _1c_turningD);
-            telemetry.addData("Output Scale", "%.2f", _1d_outputScale);
-            telemetry.addData("Deadband", "%.1f°", _1e_deadbandDeg);
-            telemetry.addLine("");
-            telemetry.addData("Target", "%.1f°", Math.toDegrees(targetRad));
-            telemetry.addData("Test Period", "%.1f sec", _2a_testPeriodSec);
-            telemetry.addData("Test Amplitude", "%.1f°", _2b_testAmplitudeDeg);
-            telemetry.addLine("");
-            telemetry.addData("FL", "%.1f° (err: %.1f°, out: %.2f)",
-                    Math.toDegrees(flAngle), Math.toDegrees(flError), flOutput);
-            telemetry.addData("FR", "%.1f° (err: %.1f°, out: %.2f)",
-                    Math.toDegrees(frAngle), Math.toDegrees(frError), frOutput);
-            telemetry.addData("BL", "%.1f° (err: %.1f°, out: %.2f)",
-                    Math.toDegrees(blAngle), Math.toDegrees(blError), blOutput);
-            telemetry.addData("BR", "%.1f° (err: %.1f°, out: %.2f)",
-                    Math.toDegrees(brAngle), Math.toDegrees(brError), brOutput);
-            telemetry.update();
+        } finally {
+            // ★ 無論如何都執行：停止所有馬達
+            stopDriveMotors();
+            stopTurningMotors();
+
+            // ★ 保持 disableSaving() 狀態，不儲存任何測試期間的角度變化
+            // ★ 直接停止，不呼叫 enableSavingAll() / swerve.stopModules()
         }
+    }
 
-        swerve.stopModules();
+    // ═══════════════════════════════════════════════════════
+    //  私有輔助方法
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * 計算單輪轉向 PID 輸出
+     * 流程與 SwerveModule.setDesiredState() 完全相同：
+     *   optimize → 計算 error → PID → clamp → deadband
+     */
+    private double computeTurningOutput(PIDController pid,
+                                        SwerveModuleState targetState,
+                                        double currentAngle) {
+        SwerveModuleState optimized = SwerveModuleState.optimize(
+                targetState, new Rotation2d(currentAngle));
+
+        double error    = normalizeAngle(optimized.angle.getRadians() - currentAngle);
+        double errorDeg = Math.abs(Math.toDegrees(error));
+
+        if (errorDeg < _1e_deadbandDeg) return 0;
+
+        double output = pid.calculate(0, error) * _1d_outputScale;
+        return Math.max(-1.0, Math.min(1.0, output));
+    }
+
+
+    /** 鎖死所有驅動馬達 */
+    private void stopDriveMotors() {
+        swerve.getFrontLeft() .setDriveMotorPowerDirect(0);
+        swerve.getFrontRight().setDriveMotorPowerDirect(0);
+        swerve.getBackLeft()  .setDriveMotorPowerDirect(0);
+        swerve.getBackRight() .setDriveMotorPowerDirect(0);
+    }
+
+    /** 停止所有轉向 CRServo */
+    private void stopTurningMotors() {
+        swerve.getFrontLeft() .setTurningPower(0);
+        swerve.getFrontRight().setTurningPower(0);
+        swerve.getBackLeft()  .setTurningPower(0);
+        swerve.getBackRight() .setTurningPower(0);
+    }
+
+    private void disableSavingAll() {
+        swerve.getFrontLeft() .disableSaving();
+        swerve.getFrontRight().disableSaving();
+        swerve.getBackLeft()  .disableSaving();
+        swerve.getBackRight() .disableSaving();
     }
 
     /**
-     * 應用 PID 控制（與 SwerveModule.setDesiredState 相同邏輯）
+     * 清除所有儲存的角度記憶
+     * 強制下一次 initTurningTracking() 從絕對編碼器重新初始化
+     * 確保測試期間的累積誤差不會被保存
      */
-    private double applyPID(PIDController pid, double error) {
-        double errorDeg = Math.abs(Math.toDegrees(error));
-
-        double output = pid.calculate(0, error) * _1d_outputScale;
-        output = Math.max(-1.0, Math.min(1.0, output));
-
-        if (errorDeg < _1e_deadbandDeg) {
-            output = 0;
-        }
-
-        return output;
+    private void clearAllSavedAngles() {
+        swerve.getFrontLeft() .clearSavedAngle();
+        swerve.getFrontRight().clearSavedAngle();
+        swerve.getBackLeft()  .clearSavedAngle();
+        swerve.getBackRight() .clearSavedAngle();
     }
 
+
+    /** 角度標準化到 [-π, π] */
     private double normalizeAngle(double angle) {
-        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle >  Math.PI) angle -= 2 * Math.PI;
         while (angle < -Math.PI) angle += 2 * Math.PI;
         return angle;
     }

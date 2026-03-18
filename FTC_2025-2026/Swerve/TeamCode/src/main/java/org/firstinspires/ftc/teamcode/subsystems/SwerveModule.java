@@ -57,6 +57,8 @@ public class SwerveModule {
 
     private boolean enableSaving = true;
 
+    private final double powerScale;
+
     /**
      * SwerveModule 建構函式
      * @param hardwareMap 硬體映射物件
@@ -75,8 +77,10 @@ public class SwerveModule {
                         boolean driveMotorReversed,
                         boolean turningMotorReversed,
                         double absoluteEncoderOffset,
-                        boolean absoluteEncoderReversed){
+                        boolean absoluteEncoderReversed,
+                        double powerScale){
 
+        this.powerScale = powerScale;
         this.turningServoName = turningServoName;
         // ★ 每個模組用 turningServoName 當 key，確保四個模組互不干擾
         prefKey = "swerve_angle_" + turningServoName;
@@ -327,7 +331,7 @@ public class SwerveModule {
             driveMotor.setPower(driveOutput);
         } else {
             // 簡單的開環控制（原本的方式）
-            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;;
             driveError = 0;
             driveMotor.setPower(driveOutput);
         }
@@ -337,23 +341,7 @@ public class SwerveModule {
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        double errorDeg = Math.abs(Math.toDegrees(Error));
-
-        // Apply live-tuned PID gains
-        turningPidController.setPID(
-                TuningConfig.turningP(),
-                TuningConfig.turningI(),
-                TuningConfig.turningD());
-
-        // 直接計算 PID 輸出
-        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
-        Output = Math.max(-1.0, Math.min(1.0, Output));
-
-        // 只有 deadband
-        if (errorDeg < TuningConfig.deadbandDeg()) {
-            Output = 0;
-        }
-
+        Output = computeTurningOutput(Error);
         turningMotor.setPower(Output);
     }
 
@@ -380,7 +368,7 @@ public class SwerveModule {
         state = SwerveModuleState.optimize(state, getState().angle);
 
         // ===== Drive Motor 控制（無 PID，直接功率）=====
-        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;;
         driveMotor.setPower(drivePower);
 
         // ===== Turning Motor 控制（仍使用 PID）=====
@@ -388,20 +376,7 @@ public class SwerveModule {
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        double errorDeg = Math.abs(Math.toDegrees(Error));
-
-        turningPidController.setPID(
-                TuningConfig.turningP(),
-                TuningConfig.turningI(),
-                TuningConfig.turningD());
-
-        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
-        Output = Math.max(-1.0, Math.min(1.0, Output));
-
-        if (errorDeg < TuningConfig.deadbandDeg()) {
-            Output = 0;
-        }
-
+        Output = computeTurningOutput(Error);
         turningMotor.setPower(Output);
     }
 
@@ -412,20 +387,7 @@ public class SwerveModule {
         currentAngle = getTurningPosition();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        double errorDeg = Math.abs(Math.toDegrees(Error));
-
-        turningPidController.setPID(
-                TuningConfig.turningP(),
-                TuningConfig.turningI(),
-                TuningConfig.turningD());
-
-        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
-        Output = Math.max(-1.0, Math.min(1.0, Output));
-
-        if (errorDeg < TuningConfig.deadbandDeg()) {
-            Output = 0;
-        }
-
+        Output = computeTurningOutput(Error);
         turningMotor.setPower(Output);
     }
 
@@ -505,19 +467,37 @@ public class SwerveModule {
         targetAngle = targetRad;
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        double errorDeg = Math.abs(Math.toDegrees(Error));
+        Output = computeTurningOutput(Error);
+        turningMotor.setPower(Output);
+        // ★ 完全不碰 driveMotor
+    }
+
+    public void setDriveDirection(boolean reversed) {
+        driveMotor.setDirection(reversed ?
+                DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+    }
+
+    public void resetDriveEncoder() {
+        driveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        driveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+    public int getDriveEncoderPosition() {
+        return driveMotor.getCurrentPosition();
+    }
+
+    // 為轉向 PID 計算輸出（移除 minOutput 以避免震盪）
+    private double computeTurningOutput(double errorRad) {
+        double errorDeg = Math.abs(Math.toDegrees(errorRad));
 
         turningPidController.setPID(
                 TuningConfig.turningP(),
                 TuningConfig.turningI(),
                 TuningConfig.turningD());
 
-        Output = turningPidController.calculate(0, Error) * TuningConfig.turningOutputScale();
-        Output = Math.max(-1.0, Math.min(1.0, Output));
+        if (errorDeg < TuningConfig.deadbandDeg()) return 0;
 
-        if (errorDeg < TuningConfig.deadbandDeg()) Output = 0;
-
-        turningMotor.setPower(Output);
-        // ★ 完全不碰 driveMotor
+        double output = turningPidController.calculate(0, errorRad) * TuningConfig.turningOutputScale();
+        return Math.max(-1.0, Math.min(1.0, output));
     }
 }

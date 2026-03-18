@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -18,6 +21,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -54,7 +58,8 @@ public class SwerveSubsystem extends SubsystemBase {
                 DriveConstants.kFrontLeftDriveEncoderReversed,
                 DriveConstants.kFrontLeftTurningEncoderReversed,
                 DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetRad,
-                DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed);
+                DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed,
+                DriveConstants.kFrontLeftDrivePowerScale);
 
         frontRight = new SwerveModule(
                 hardwareMap,
@@ -64,7 +69,9 @@ public class SwerveSubsystem extends SubsystemBase {
                 DriveConstants.kFrontRightDriveEncoderReversed,
                 DriveConstants.kFrontRightTurningEncoderReversed,
                 DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetRad,
-                DriveConstants.kFrontRightDriveAbsoluteEncoderReversed);
+                DriveConstants.kFrontRightDriveAbsoluteEncoderReversed,
+                DriveConstants.kFrontRightDrivePowerScale);
+
 
         backLeft = new SwerveModule(
                 hardwareMap,
@@ -74,7 +81,8 @@ public class SwerveSubsystem extends SubsystemBase {
                 DriveConstants.kBackLeftDriveEncoderReversed,
                 DriveConstants.kBackLeftTurningEncoderReversed,
                 DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetRad,
-                DriveConstants.kBackLeftDriveAbsoluteEncoderReversed);
+                DriveConstants.kBackLeftDriveAbsoluteEncoderReversed,
+                DriveConstants.kBackLeftDrivePowerScale);
 
         backRight = new SwerveModule(
                 hardwareMap,
@@ -84,7 +92,8 @@ public class SwerveSubsystem extends SubsystemBase {
                 DriveConstants.kBackRightDriveEncoderReversed,
                 DriveConstants.kBackRightTurningEncoderReversed,
                 DriveConstants.kBackRightDriveAbsoluteEncoderOffsetRad,
-                DriveConstants.kBackRightDriveAbsoluteEncoderReversed);
+                DriveConstants.kBackRightDriveAbsoluteEncoderReversed,
+                DriveConstants.kBackRightDrivePowerScale);
 
         // 使用傳入的 hardwareMap
         imu = hardwareMap.get(IMU.class, "imu");
@@ -372,5 +381,23 @@ public class SwerveSubsystem extends SubsystemBase {
         frontRight.resetEncoders();
         backLeft.resetEncoders();
         backRight.resetEncoders();
+    }
+
+    private void applyDriveReverseFromPrefs() {
+        SharedPreferences prefs = AppUtil.getInstance().getRootActivity()
+                .getSharedPreferences("SwerveDrivePrefs", Context.MODE_PRIVATE);
+
+        // 如果有存過，覆蓋 Constants 的設定
+        applyReverse(frontLeft,  DriveConstants.kFrontLeftTurningMotorName,  prefs);
+        applyReverse(frontRight, DriveConstants.kFrontRightTurningMotorName, prefs);
+        applyReverse(backLeft,   DriveConstants.kBackLeftTurningMotorName,   prefs);
+        applyReverse(backRight,  DriveConstants.kBackRightTurningMotorName,  prefs);
+    }
+
+    private void applyReverse(SwerveModule module, String name, SharedPreferences prefs) {
+        if (prefs.contains("drive_reverse_" + name)) {
+            boolean reversed = prefs.getBoolean("drive_reverse_" + name, false);
+            module.setDriveDirection(reversed);
+        }
     }
 }

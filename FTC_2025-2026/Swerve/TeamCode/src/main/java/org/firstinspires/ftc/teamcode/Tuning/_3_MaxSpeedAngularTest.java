@@ -93,22 +93,25 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             // telemetry 加一行
             telemetry.addData("測試時間", "%.1f 秒  (LB/RB 調整)", testDurationSec);
 
-            // ★ Init 階段持續對齊輪子到目標角度
+            // ★ 計算該輪次的目標角度（根據當前模式）
+            double[] currentTargetAngles = null;
             if (angularMode) {
-                // 角速度模式：輪子呈 X 型（45°）
-                double angle45 = Math.PI / 4;
-                swerve.getFrontLeft().setDesiredState(new SwerveModuleState(0.001, new Rotation2d( angle45)));
-                swerve.getFrontRight().setDesiredState(new SwerveModuleState(0.001, new Rotation2d(-angle45)));
-                swerve.getBackLeft().setDesiredState(new SwerveModuleState(0.001, new Rotation2d(-angle45)));
-                swerve.getBackRight().setDesiredState(new SwerveModuleState(0.001, new Rotation2d( angle45)));
+                ChassisSpeeds speeds = new ChassisSpeeds(0, 0, 1.0);
+                SwerveModuleState[] states = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
+                currentTargetAngles = new double[4];
+                currentTargetAngles[0] = states[0].angle.getRadians();
+                currentTargetAngles[1] = states[1].angle.getRadians();
+                currentTargetAngles[2] = states[2].angle.getRadians();
+                currentTargetAngles[3] = states[3].angle.getRadians();
             } else {
-                // 直線模式：輪子全部朝前（0°）
-                SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
-                swerve.getFrontLeft().setDesiredState(forward);
-                swerve.getFrontRight().setDesiredState(forward);
-                swerve.getBackLeft().setDesiredState(forward);
-                swerve.getBackRight().setDesiredState(forward);
+                currentTargetAngles = new double[]{0, 0, 0, 0};
             }
+
+            // ★ Init 階段持續對齊輪子到目標角度
+            swerve.getFrontLeft().alignTurningOnly(currentTargetAngles[0]);
+            swerve.getFrontRight().alignTurningOnly(currentTargetAngles[1]);
+            swerve.getBackLeft().alignTurningOnly(currentTargetAngles[2]);
+            swerve.getBackRight().alignTurningOnly(currentTargetAngles[3]);
 
             // 讀取目前角度顯示對齊狀態
             double flDeg = Math.toDegrees(swerve.getFrontLeft().getTurningPosition());
@@ -116,11 +119,16 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             double blDeg = Math.toDegrees(swerve.getBackLeft().getTurningPosition());
             double brDeg = Math.toDegrees(swerve.getBackRight().getTurningPosition());
 
-            double targetDeg = angularMode ? 45.0 : 0.0;
-            boolean flOk = Math.abs(Math.abs(flDeg) - targetDeg) < 5;
-            boolean frOk = Math.abs(Math.abs(frDeg) - targetDeg) < 5;
-            boolean blOk = Math.abs(Math.abs(blDeg) - targetDeg) < 5;
-            boolean brOk = Math.abs(Math.abs(brDeg) - targetDeg) < 5;
+            // ★ 計算預期的對齐角度
+            double flTargetDeg = Math.toDegrees(currentTargetAngles[0]);
+            double frTargetDeg = Math.toDegrees(currentTargetAngles[1]);
+            double blTargetDeg = Math.toDegrees(currentTargetAngles[2]);
+            double brTargetDeg = Math.toDegrees(currentTargetAngles[3]);
+
+            boolean flOk = Math.abs(normalizeAngleDeg(flDeg - flTargetDeg)) < 5;
+            boolean frOk = Math.abs(normalizeAngleDeg(frDeg - frTargetDeg)) < 5;
+            boolean blOk = Math.abs(normalizeAngleDeg(blDeg - blTargetDeg)) < 5;
+            boolean brOk = Math.abs(normalizeAngleDeg(brDeg - brTargetDeg)) < 5;
             boolean allOk = flOk && frOk && blOk && brOk;
 
             telemetry.addLine("════ 最大速度 / 角速度 測試 ════");
@@ -134,10 +142,10 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             telemetry.addData("測試時間", "%.1f 秒", testDurationSec);
             telemetry.addLine("");
             telemetry.addLine("── 輪子對齊狀態 ──");
-            telemetry.addData("FL", "%.1f°  %s", flDeg, flOk ? "✅" : "⏳");
-            telemetry.addData("FR", "%.1f°  %s", frDeg, frOk ? "✅" : "⏳");
-            telemetry.addData("BL", "%.1f°  %s", blDeg, blOk ? "✅" : "⏳");
-            telemetry.addData("BR", "%.1f°  %s", brDeg, brOk ? "✅" : "⏳");
+            telemetry.addData("FL", "%.1f° / %.1f°  %s", flDeg, flTargetDeg, flOk ? "✅" : "⏳");
+            telemetry.addData("FR", "%.1f° / %.1f°  %s", frDeg, frTargetDeg, frOk ? "✅" : "⏳");
+            telemetry.addData("BL", "%.1f° / %.1f°  %s", blDeg, blTargetDeg, blOk ? "✅" : "⏳");
+            telemetry.addData("BR", "%.1f° / %.1f°  %s", brDeg, brTargetDeg, brOk ? "✅" : "⏳");
             telemetry.addLine("");
             telemetry.addLine(allOk ? "✅ 對齊完成，可以按 Start！" : "⏳ 對齊中...");
             telemetry.update();
@@ -151,12 +159,23 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
         maxVelMps        = 0;
         maxOmegaRadPerSec = 0;
 
-        if (angularMode) runAngularTest();
-        else             runLinearTest();
-
         double startTime = getRuntime();
         double lastTime  = startTime;
         double lastHeadingDeg = swerve.getHeading();
+
+        // ★ 在主測試迴圈之前計算好角速度的輪子方向
+        // ★ 【重要】不要用 normalize，避免 optimize 改變角度
+        double[] targetAngles = null;
+        if (angularMode) {
+            ChassisSpeeds speeds = new ChassisSpeeds(0, 0, 1.0);
+            SwerveModuleState[] states = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
+            // SwerveDriveKinematics.normalizeWheelSpeeds(states, 1.0);  // ← 不用 normalize！
+            targetAngles = new double[4];
+            targetAngles[0] = states[0].angle.getRadians();
+            targetAngles[1] = states[1].angle.getRadians();
+            targetAngles[2] = states[2].angle.getRadians();
+            targetAngles[3] = states[3].angle.getRadians();
+        }
 
         // ══════════════════════════════
         //  主測試迴圈
@@ -169,28 +188,62 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
 
             if (elapsed >= testDurationSec) break;
 
-            // 記錄最大值
-            double velAvg     = averageWheelVelocity();
+            // ★ 每個迴圈都持續給命令
+            if (angularMode) {
+                swerve.getFrontLeft().alignTurningOnly(targetAngles[0]);
+                swerve.getFrontRight().alignTurningOnly(targetAngles[1]);
+                swerve.getBackLeft().alignTurningOnly(targetAngles[2]);
+                swerve.getBackRight().alignTurningOnly(targetAngles[3]);
+                swerve.getFrontLeft().setDriveMotorPowerDirect(targetPowerRatio);
+                swerve.getFrontRight().setDriveMotorPowerDirect(targetPowerRatio);
+                swerve.getBackLeft().setDriveMotorPowerDirect(targetPowerRatio);
+                swerve.getBackRight().setDriveMotorPowerDirect(targetPowerRatio);
+            } else {
+                swerve.getFrontLeft().alignTurningOnly(0);
+                swerve.getFrontRight().alignTurningOnly(0);
+                swerve.getBackLeft().alignTurningOnly(0);
+                swerve.getBackRight().alignTurningOnly(0);
+                swerve.getFrontLeft().setDriveMotorPowerDirect(targetPowerRatio);
+                swerve.getFrontRight().setDriveMotorPowerDirect(targetPowerRatio);
+                swerve.getBackLeft().setDriveMotorPowerDirect(targetPowerRatio);
+                swerve.getBackRight().setDriveMotorPowerDirect(targetPowerRatio);
+            }
+
+            double velAvg      = averageWheelVelocity();
             double imuOmegaDeg = getImuAngularVelocityDeg();
-
-            maxVelMps         = Math.max(maxVelMps,        Math.abs(velAvg));
-            maxOmegaRadPerSec = Math.max(maxOmegaRadPerSec, Math.toRadians(Math.abs(imuOmegaDeg)));
-
-            // 差分角速度（備用驗證）
-            double heading     = swerve.getHeading();
+            maxVelMps          = Math.max(maxVelMps, Math.abs(velAvg));
+            maxOmegaRadPerSec  = Math.max(maxOmegaRadPerSec, Math.toRadians(Math.abs(imuOmegaDeg)));
+            double heading      = swerve.getHeading();
             double diffOmegaDeg = dt > 0.001 ? (heading - lastHeadingDeg) / dt : 0;
-            lastHeadingDeg = heading;
+            lastHeadingDeg      = heading;
 
             telemetry.addLine("════ 測試進行中 ════");
             telemetry.addData("模式",  angularMode ? "角速度" : "直線速度");
             telemetry.addData("進度",  "%.1f / %.1f 秒", elapsed, testDurationSec);
             telemetry.addLine("");
+
+            // ★ 加這段：四顆個別速度
+            telemetry.addLine("── 各顆速度 ──");
+            telemetry.addData("FL", "%.3f m/s  (%.0f RPM)",
+                    swerve.getFrontLeft().getDriveVelocity(),
+                    swerve.getFrontLeft().getDriveRPM());
+            telemetry.addData("FR", "%.3f m/s  (%.0f RPM)",
+                    swerve.getFrontRight().getDriveVelocity(),
+                    swerve.getFrontRight().getDriveRPM());
+            telemetry.addData("BL", "%.3f m/s  (%.0f RPM)",
+                    swerve.getBackLeft().getDriveVelocity(),
+                    swerve.getBackLeft().getDriveRPM());
+            telemetry.addData("BR", "%.3f m/s  (%.0f RPM)",
+                    swerve.getBackRight().getDriveVelocity(),
+                    swerve.getBackRight().getDriveRPM());
+            telemetry.addLine("");
+
             if (angularMode) {
                 telemetry.addData("當前角速度",        "%.3f rad/s", Math.toRadians(imuOmegaDeg));
                 telemetry.addData("差分角速度（備用）", "%.1f deg/s", diffOmegaDeg);
                 telemetry.addData("★ 最大角速度",      "%.3f rad/s", maxOmegaRadPerSec);
             } else {
-                telemetry.addData("當前輪速",  "%.3f m/s", velAvg);
+                telemetry.addData("平均輪速",  "%.3f m/s", velAvg);
                 telemetry.addData("★ 最大輪速", "%.3f m/s", maxVelMps);
             }
             telemetry.update();
@@ -200,19 +253,30 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
         // ══════════════════════════════
         //  結束：停車 + 清除角度記憶
         // ══════════════════════════════
-        swerve.stopModules();
+        // 先停驅動馬達
+        swerve.getFrontLeft().setDriveMotorPowerDirect(0);
+        swerve.getFrontRight().setDriveMotorPowerDirect(0);
+        swerve.getBackLeft().setDriveMotorPowerDirect(0);
+        swerve.getBackRight().setDriveMotorPowerDirect(0);
 
-        // 先對齊輪子回 0°，再儲存正確角度
+        // 對齊回 0°，等到全部 < 5° 才存
         long alignStart = System.currentTimeMillis();
-        while (System.currentTimeMillis() - alignStart < 1500 && opModeIsActive()) {
-            SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
-            swerve.getFrontLeft().setDesiredState(forward);
-            swerve.getFrontRight().setDesiredState(forward);
-            swerve.getBackLeft().setDesiredState(forward);
-            swerve.getBackRight().setDesiredState(forward);
+        while (System.currentTimeMillis() - alignStart < 2000 && opModeIsActive()) {
+            swerve.getFrontLeft().alignTurningOnly(0);
+            swerve.getFrontRight().alignTurningOnly(0);
+            swerve.getBackLeft().alignTurningOnly(0);
+            swerve.getBackRight().alignTurningOnly(0);
+
+            double flDeg = Math.toDegrees(swerve.getFrontLeft().getTurningPosition());
+            double frDeg = Math.toDegrees(swerve.getFrontRight().getTurningPosition());
+            double blDeg = Math.toDegrees(swerve.getBackLeft().getTurningPosition());
+            double brDeg = Math.toDegrees(swerve.getBackRight().getTurningPosition());
+
+            if (Math.abs(flDeg) < 5 && Math.abs(frDeg) < 5
+                    && Math.abs(blDeg) < 5 && Math.abs(brDeg) < 5) break;
         }
 
-        // 重新開啟儲存，存入 0° 角度
+        // 全部對齊後才存
         swerve.getFrontLeft().enableSaving();
         swerve.getFrontRight().enableSaving();
         swerve.getBackLeft().enableSaving();
@@ -235,15 +299,6 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
             telemetry.update();
             sleep(100);
         }
-    }
-
-    private void runLinearTest() {
-        double speed = Constants.DriveConstants.kPhysicalMaxSpeedMetersPerSecond * targetPowerRatio;
-        SwerveModuleState state = new SwerveModuleState(speed, new Rotation2d(0));
-        swerve.getFrontLeft().setDesiredState(state);
-        swerve.getFrontRight().setDesiredState(state);
-        swerve.getBackLeft().setDesiredState(state);
-        swerve.getBackRight().setDesiredState(state);
     }
 
     private void runAngularTest() {
@@ -278,19 +333,13 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
                 + bl.getDriveVelocity() + br.getDriveVelocity()) / 4.0;
     }
 
-    // ★ 清除測試期間累積的角度記憶，避免污染 Swerve_Control
-    private void clearAnglePrefs() {
-        SharedPreferences prefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        for (String name : new String[]{
-                DriveConstants.kFrontLeftTurningMotorName,
-                DriveConstants.kFrontRightTurningMotorName,
-                DriveConstants.kBackLeftTurningMotorName,
-                DriveConstants.kBackRightTurningMotorName}) {
-            editor.remove("swerve_angle_" + name);
-            editor.remove("swerve_angle_" + name + "_raw");
-        }
-        editor.apply();
+    /**
+     * 將角度標準化到 [-180, 180] 度
+     */
+    private double normalizeAngleDeg(double angleDeg) {
+        while (angleDeg >  180) angleDeg -= 360;
+        while (angleDeg < -180) angleDeg += 360;
+        return angleDeg;
     }
 }
+

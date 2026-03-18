@@ -4,257 +4,241 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveModule;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 /**
- * Drive PID 調整專用 OpMode
+ * ════════════════════════════════════════
+ *  5. Drive PID Tuner
+ * ════════════════════════════════════════
  *
- * 使用方法：
- * 1. 連接 FTC Dashboard (http://192.168.43.1:8080/dash)
- * 2. 在 Config 頁籤調整 TuningConfig 中的 driveP, driveI, driveD, driveF
- * 3. 在 Graph 頁籤觀察以下數值：
- *    - targetVel: 目標速度 (m/s)
- *    - currentVel: 當前速度 (m/s)
- *    - driveError: 速度誤差 (m/s)
- *    - driveOutput: PID輸出 (-1 到 1)
+ * 目的：調整驅動馬達 PID，讓速度精確跟隨目標
  *
- * PID + F 調整建議：
- * - F (前饋): 基於目標速度的基本功率，建議先調這個
- *   設定方式：讓馬達達到目標速度所需的大約功率比例
- *   例如：如果目標 1 m/s 需要約 50% 功率，則 F ≈ 0.5
- * - P (比例): 控制速度響應，修正剩餘誤差
- * - I (積分): 消除穩態誤差，通常設為 0 或很小的值
- * - D (微分): 抑制震盪，速度控制通常不需要
+ * 使用步驟：
+ *   Init  │ 選擇測試模組（A=全部 / DPAD 選單顆）
+ *   Start │ 自動週期性切換速度（0 → Max → 0）
+ *          │ 在 Dashboard Graph 觀察 targetVel vs currentVel
+ *   調整順序：
+ *     1. P=0 I=0 D=0，先調 F 讓速度大致跟上
+ *     2. 加 P 修正誤差
+ *     3. 有持續偏差才加 I（通常不需要）
+ *     4. 有震盪加 D 或降 P
  *
- * 調整順序：
- * 1. 先將 P, I, D 設為 0
- * 2. 調整 F 使馬達在穩定目標速度下能大致達到（可能有小誤差）
- * 3. 增加 P 來修正剩餘誤差
- * 4. 如果有持續的穩態誤差，小心增加 I
- * 5. 如果有震盪，嘗試增加 D 或降低 P
+ * 按鍵：
+ *   A        = 測試全部四顆
+ *   DPAD ↑   = 只測 FL
+ *   DPAD →   = 只測 FR
+ *   DPAD ←   = 只測 BL
+ *   DPAD ↓   = 只測 BR
+ *   LB / RB  = 調整目標速度
+ *   X        = 暫停 / 繼續
  */
 @Config
 @TeleOp(name = "5. Drive PID Tuner", group = "Tuning")
 public class _5_DrivePIDTuner extends LinearOpMode {
 
-    // 可在 Dashboard 調整的測試目標速度 (m/s)
-    public static double testTargetVelocity = 0.5;
-
-    // 選擇要測試的模組 (0=FL, 1=FR, 2=BL, 3=BR)
-    public static int moduleIndex = 0;
-
-    // 自動測試模式：週期性改變目標速度
-    public static boolean autoTestMode = true;
-    public static double autoTestPeriodSeconds = 4.0;
-    public static double autoTestMaxVelocity = 1.0;  // m/s
+    public static double autoTestPeriodSeconds = 2.0;  // 每段持續秒數
+    public static double autoTestMaxVelocity   = 0.3;  // m/s
 
     private SwerveSubsystem swerve;
-    private SwerveSubsystem swerveSubsystem;
     private FtcDashboard dashboard;
 
+    // 測試模式：0=全部, 1=FL, 2=FR, 3=BL, 4=BR
+    private int testMode = 0;
+
+    private boolean isPaused = false;
+    private boolean lastX = false;
+    private boolean lastLb = false, lastRb = false;
+
     @Override
-    public void runOpMode() throws InterruptedException {
-        swerveSubsystem = new SwerveSubsystem(hardwareMap);
+    public void runOpMode() {
+        swerve = new SwerveSubsystem(hardwareMap);
         dashboard = FtcDashboard.getInstance();
-
-        // 合併 telemetry 以便同時輸出到 Driver Station 和 Dashboard
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
-
-        telemetry.addLine("=== Drive PID Tuner ===");
-        telemetry.addLine("在 Dashboard 的 Config 調整:");
-        telemetry.addLine("  TuningConfig.driveP/I/D/F");
-        telemetry.addLine("");
-        telemetry.addLine("在 Graph 頁籤觀察:");
-        telemetry.addLine("  targetVel, currentVel, driveError, driveOutput");
-        telemetry.addLine("");
-        telemetry.addLine("控制按鍵:");
-        telemetry.addLine("  X = 暫停測試，啟動手動控制");
-        telemetry.addLine("  Y = 繼續自動測試");
-        telemetry.addLine("");
-        telemetry.addLine("注意：Drive PID 需要在地板上測試");
-        telemetry.addLine("      請確保有足夠空間讓機器人移動！");
-        telemetry.addLine("");
-        telemetry.addLine("按 Start 開始");
-        telemetry.update();
 
         swerve.getFrontLeft().disableSaving();
         swerve.getFrontRight().disableSaving();
         swerve.getBackLeft().disableSaving();
         swerve.getBackRight().disableSaving();
 
-        waitForStart();
+        // ══════════════════════════════
+        //  Init 階段：對齊輪子 + 選模組
+        // ══════════════════════════════
+        while (!isStarted() && !isStopRequested()) {
+            if (gamepad1.a)          testMode = 0;
+            if (gamepad1.dpad_up)    testMode = 1;
+            if (gamepad1.dpad_right) testMode = 2;
+            if (gamepad1.dpad_left)  testMode = 3;
+            if (gamepad1.dpad_down)  testMode = 4;
 
-        double startTime = getRuntime();
-        boolean isPaused = false;  // 暫停模式標記
-        boolean lastX = false;     // 用於邊緣檢測
-        boolean lastY = false;
+            // 對齊輪子到 0°
+            swerve.getFrontLeft().alignTurningOnly(0);
+            swerve.getFrontRight().alignTurningOnly(0);
+            swerve.getBackLeft().alignTurningOnly(0);
+            swerve.getBackRight().alignTurningOnly(0);
 
-        while (opModeIsActive()) {
-            // 按鍵邊緣檢測
-            boolean currentX = gamepad1.x;
-            boolean currentY = gamepad1.y;
-
-            // X 按下：暫停測試，進入手動控制
-            if (currentX && !lastX) {
-                isPaused = true;
-                swerveSubsystem.stopModules();
-            }
-            // Y 按下：繼續測試
-            if (currentY && !lastY) {
-                isPaused = false;
-                startTime = getRuntime();  // 重置計時器
-            }
-
-            lastX = currentX;
-            lastY = currentY;
-
-            // 暫停模式：手動底盤控制（無 PID）
-            if (isPaused) {
-                runManualControl();
-                continue;
-            }
-
-            // 計算目標速度
-            double targetVelocity;
-            if (autoTestMode) {
-                // 自動測試模式：使用正弦波產生週期性目標（只有正向）
-                double elapsedTime = getRuntime() - startTime;
-                double phase = (elapsedTime / autoTestPeriodSeconds) * 2 * Math.PI;
-                // 使用 (sin + 1) / 2 使速度在 0 和 max 之間變化
-                targetVelocity = autoTestMaxVelocity * (Math.sin(phase) + 1) / 2;
-            } else {
-                // 手動模式：使用 Dashboard 設定的目標
-                targetVelocity = testTargetVelocity;
-            }
-
-            // 選擇要測試的模組
-            SwerveModule testModule;
-            String moduleName;
-            switch (moduleIndex) {
-                case 1:
-                    testModule = swerveSubsystem.getFrontRight();
-                    moduleName = "FR";
-                    break;
-                case 2:
-                    testModule = swerveSubsystem.getBackLeft();
-                    moduleName = "BL";
-                    break;
-                case 3:
-                    testModule = swerveSubsystem.getBackRight();
-                    moduleName = "BR";
-                    break;
-                default:
-                    testModule = swerveSubsystem.getFrontLeft();
-                    moduleName = "FL";
-                    break;
-            }
-
-            // 設定模組狀態（角度設為 0，只測試驅動）
-            SwerveModuleState state = new SwerveModuleState(targetVelocity, new Rotation2d(0));
-            testModule.setDesiredState(state);
-
-            // 停止其他模組
-            stopOtherModules(moduleIndex);
-
-            // 發送數據到 Dashboard 圖表
-            TelemetryPacket packet = new TelemetryPacket();
-
-            // 主要 Drive PID 監控數據 (用於圖表)
-            packet.put("targetVel", testModule.getTargetVelocity());
-            packet.put("currentVel", testModule.getCurrentVelocityMps());
-            packet.put("driveError", testModule.getDriveError());
-            packet.put("driveOutput", testModule.getDriveOutput());
-
-            // 同時顯示 Turning 數據供參考
-            packet.put("turnTarget", testModule.getTargetAngleRad());
-            packet.put("turnCurrent", testModule.getCurrentAngleRad());
-
-            dashboard.sendTelemetryPacket(packet);
-
-            // 文字 telemetry
-            telemetry.addData("模組", moduleName);
-            telemetry.addData("模式", autoTestMode ? "自動測試" : "手動");
-            telemetry.addData("Drive PID", TuningConfig.enableDrivePID() ? "啟用" : "關閉");
+            telemetry.addLine("════ Drive PID Tuner ════");
             telemetry.addLine("");
-            telemetry.addData("=== Drive PID 參數 ===", "");
-            telemetry.addData("P", "%.4f", TuningConfig.driveP());
-            telemetry.addData("I", "%.4f", TuningConfig.driveI());
-            telemetry.addData("D", "%.4f", TuningConfig.driveD());
-            telemetry.addData("F (前饋)", "%.4f", TuningConfig.driveF());
-            telemetry.addData("Output Scale", "%.2f", TuningConfig.driveOutputScale());
+            telemetry.addLine("選擇測試模組：");
+            telemetry.addLine("  A = 全部四顆");
+            telemetry.addLine("  DPAD ↑=FL  →=FR  ←=BL  ↓=BR");
             telemetry.addLine("");
-            telemetry.addData("=== 當前數據 ===", "");
-            telemetry.addData("目標速度", "%.3f m/s", testModule.getTargetVelocity());
-            telemetry.addData("當前速度", "%.3f m/s", testModule.getCurrentVelocityMps());
-            telemetry.addData("速度誤差", "%.3f m/s", testModule.getDriveError());
-            telemetry.addData("輸出功率", "%.3f", testModule.getDriveOutput());
+            telemetry.addData("目前選擇", getModeLabel());
+            telemetry.addData("目標速度", "%.2f m/s  (Start後 LB/RB 調整)", autoTestMaxVelocity);
+            telemetry.addLine("");
+            telemetry.addLine("確認後按 Start");
             telemetry.update();
         }
 
-        // 停止所有模組
-        swerveSubsystem.stopModules();
+        if (!opModeIsActive()) return;
+
+        double startTime = getRuntime();
+
+        // ══════════════════════════════
+        //  主測試迴圈
+        // ══════════════════════════════
+        while (opModeIsActive()) {
+
+            // X 鍵暫停/繼續
+            boolean x = gamepad1.x;
+            if (x && !lastX) {
+                isPaused = !isPaused;
+                if (!isPaused) startTime = getRuntime();
+            }
+            lastX = x;
+
+            // LB/RB 調整目標速度
+            boolean rb = gamepad1.right_bumper;
+            boolean lb = gamepad1.left_bumper;
+            if (rb && !lastRb) autoTestMaxVelocity = Math.min(Constants.DriveConstants.kPhysicalMaxSpeedMetersPerSecond, autoTestMaxVelocity + 0.05);
+            if (lb && !lastLb) autoTestMaxVelocity = Math.max(0.05, autoTestMaxVelocity - 0.05);
+            lastRb = rb; lastLb = lb;
+
+            if (isPaused) {
+                swerve.stopModules();
+                telemetry.addLine("⏸ 暫停中，按 X 繼續");
+                telemetry.update();
+                continue;
+            }
+
+            // 方波：每 autoTestPeriodSeconds 切換一次
+            double elapsed = getRuntime() - startTime;
+            int phase = (int)(elapsed / autoTestPeriodSeconds);
+            double targetVel = (phase % 2 == 0) ? autoTestMaxVelocity : 0;
+
+            // 依模式設定目標
+            SwerveModuleState state = new SwerveModuleState(targetVel, new Rotation2d(0));
+            applyToModules(state);
+
+            // 取主要監測模組（全部模式取 FL）
+            SwerveModule monitor = getMonitorModule();
+
+            // Dashboard graph
+            TelemetryPacket packet = new TelemetryPacket();
+            packet.put("targetVel",   monitor.getTargetVelocity());
+            packet.put("currentVel",  monitor.getCurrentVelocityMps());
+            packet.put("driveError",  monitor.getDriveError());
+            packet.put("driveOutput", monitor.getDriveOutput());
+            // 四顆分開顯示
+            packet.put("FL_vel", swerve.getFrontLeft().getCurrentVelocityMps());
+            packet.put("FR_vel", swerve.getFrontRight().getCurrentVelocityMps());
+            packet.put("BL_vel", swerve.getBackLeft().getCurrentVelocityMps());
+            packet.put("BR_vel", swerve.getBackRight().getCurrentVelocityMps());
+            dashboard.sendTelemetryPacket(packet);
+
+            // Telemetry
+            telemetry.addLine("════ Drive PID Tuner ════");
+            telemetry.addData("測試模組", getModeLabel());
+            telemetry.addData("目標速度", "%.3f m/s  (%.0f%%)",
+                    targetVel, (targetVel / Constants.DriveConstants.kPhysicalMaxSpeedMetersPerSecond) * 100);
+            telemetry.addData("LB/RB 調整最大速度", "%.2f m/s", autoTestMaxVelocity);
+            telemetry.addLine("");
+            telemetry.addLine("── PID 參數 ──");
+            telemetry.addData("P", "%.4f", TuningConfig.driveP());
+            telemetry.addData("I", "%.4f", TuningConfig.driveI());
+            telemetry.addData("D", "%.4f", TuningConfig.driveD());
+            telemetry.addData("F", "%.4f", TuningConfig.driveF());
+            telemetry.addLine("");
+            telemetry.addLine("── 即時數據 ──");
+            telemetry.addData("FL", "%.3f / %.3f m/s",
+                    swerve.getFrontLeft().getTargetVelocity(),
+                    swerve.getFrontLeft().getCurrentVelocityMps());
+            telemetry.addData("FR", "%.3f / %.3f m/s",
+                    swerve.getFrontRight().getTargetVelocity(),
+                    swerve.getFrontRight().getCurrentVelocityMps());
+            telemetry.addData("BL", "%.3f / %.3f m/s",
+                    swerve.getBackLeft().getTargetVelocity(),
+                    swerve.getBackLeft().getCurrentVelocityMps());
+            telemetry.addData("BR", "%.3f / %.3f m/s",
+                    swerve.getBackRight().getTargetVelocity(),
+                    swerve.getBackRight().getCurrentVelocityMps());
+            telemetry.addLine("");
+            telemetry.addLine("X=暫停  LB/RB=調速度");
+            telemetry.update();
+        }
+
+        // 結束：對齊回 0° 再存
+        swerve.getFrontLeft().setDriveMotorPowerDirect(0);
+        swerve.getFrontRight().setDriveMotorPowerDirect(0);
+        swerve.getBackLeft().setDriveMotorPowerDirect(0);
+        swerve.getBackRight().setDriveMotorPowerDirect(0);
+
+        long alignStart = System.currentTimeMillis();
+        while (System.currentTimeMillis() - alignStart < 1500) {
+            swerve.getFrontLeft().alignTurningOnly(0);
+            swerve.getFrontRight().alignTurningOnly(0);
+            swerve.getBackLeft().alignTurningOnly(0);
+            swerve.getBackRight().alignTurningOnly(0);
+        }
+
+        swerve.getFrontLeft().enableSaving();
+        swerve.getFrontRight().enableSaving();
+        swerve.getBackLeft().enableSaving();
+        swerve.getBackRight().enableSaving();
+        swerve.stopModules();
     }
 
-    /**
-     * 停止除了測試模組以外的其他模組
-     */
-    private void stopOtherModules(int activeIndex) {
-        if (activeIndex != 0) swerveSubsystem.getFrontLeft().stop();
-        if (activeIndex != 1) swerveSubsystem.getFrontRight().stop();
-        if (activeIndex != 2) swerveSubsystem.getBackLeft().stop();
-        if (activeIndex != 3) swerveSubsystem.getBackRight().stop();
+    private void applyToModules(SwerveModuleState state) {
+        boolean fl = (testMode == 0 || testMode == 1);
+        boolean fr = (testMode == 0 || testMode == 2);
+        boolean bl = (testMode == 0 || testMode == 3);
+        boolean br = (testMode == 0 || testMode == 4);
+
+        if (fl) swerve.getFrontLeft().setDesiredState(state);
+        else    swerve.getFrontLeft().alignTurningOnly(0);
+
+        if (fr) swerve.getFrontRight().setDesiredState(state);
+        else    swerve.getFrontRight().alignTurningOnly(0);
+
+        if (bl) swerve.getBackLeft().setDesiredState(state);
+        else    swerve.getBackLeft().alignTurningOnly(0);
+
+        if (br) swerve.getBackRight().setDesiredState(state);
+        else    swerve.getBackRight().alignTurningOnly(0);
     }
 
-    /**
-     * 手動 Swerve 底盤控制模式（無 Drive PID，直接功率輸出）
-     * 用於暫停測試時手動移動機器人
-     */
-    private void runManualControl() {
-        // 讀取搖桿輸入
-        double forward = -gamepad1.left_stick_y;  // 前進/後退
-        double strafe = gamepad1.left_stick_x;    // 左右平移
-        double rotate = gamepad1.right_stick_x;   // 旋轉
+    private SwerveModule getMonitorModule() {
+        switch (testMode) {
+            case 2: return swerve.getFrontRight();
+            case 3: return swerve.getBackLeft();
+            case 4: return swerve.getBackRight();
+            default: return swerve.getFrontLeft();
+        }
+    }
 
-        // 簡單的死區處理
-        double deadzone = 0.1;
-        if (Math.abs(forward) < deadzone) forward = 0;
-        if (Math.abs(strafe) < deadzone) strafe = 0;
-        if (Math.abs(rotate) < deadzone) rotate = 0;
-
-        // 降低速度以便精確控制
-        double speedMultiplier = 0.5;
-        forward *= speedMultiplier;
-        strafe *= speedMultiplier;
-        rotate *= speedMultiplier;
-
-        // 使用 SwerveSubsystem 的無 PID 驅動方法
-        swerveSubsystem.driveNoPID(forward, strafe, rotate);
-
-        // 顯示手動控制狀態
-        TelemetryPacket packet = new TelemetryPacket();
-        packet.put("mode", "MANUAL");
-        packet.put("targetVel", 0);
-        packet.put("currentVel", 0);
-        dashboard.sendTelemetryPacket(packet);
-
-        telemetry.addLine("=== 手動 Swerve 控制模式 ===");
-        telemetry.addLine("（測試暫停中，Drive PID 關閉）");
-        telemetry.addLine("");
-        telemetry.addLine("左搖桿: 平移移動");
-        telemetry.addLine("右搖桿: 旋轉");
-        telemetry.addLine("");
-        telemetry.addLine("按 Y 繼續自動測試");
-        telemetry.addLine("");
-        telemetry.addData("前進/後退", "%.2f", forward);
-        telemetry.addData("左右平移", "%.2f", strafe);
-        telemetry.addData("旋轉", "%.2f", rotate);
-        telemetry.update();
+    private String getModeLabel() {
+        switch (testMode) {
+            case 1: return "FL 單獨";
+            case 2: return "FR 單獨";
+            case 3: return "BL 單獨";
+            case 4: return "BR 單獨";
+            default: return "全部四顆";
+        }
     }
 }
-

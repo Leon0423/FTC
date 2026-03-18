@@ -1,0 +1,67 @@
+# 快速修复总结 - 角速度测试问题
+
+## 问题
+按 init 转到定点，按 start 后：
+- ❌ 有 2 颗轮子转 180°（应该转到相同角度）
+- ❌ 另外 2 颗轮子正常
+- ❌ 测试结束都恢复到 0°（失去累积）
+
+## 原因
+使用了 `SwerveModuleState.optimize()` 会自动改变角度，导致轮子采用不同的等价角度（如 45° vs 225°）
+
+## 修复内容
+
+### 修改 1: Init 阶段 - 行 97-131
+```
+用 alignTurningOnly() 替代 setDesiredState()
+alignTurningOnly() 不会调用 optimize，确保角度一致
+```
+
+### 修改 2: Start 前准备 - 行 179-192
+```
+提前计算目标角度数组
+直接提取 states[i].angle，不使用 normalizeWheelSpeeds()
+```
+
+### 修改 3: 主循环 - 行 196-213
+```
+使用存储的 targetAngles 数组而不是重复计算
+```
+
+### 修改 4: 对齐检查 - 行 118-125
+```
+使用 normalizeAngleDeg(差值) 替代 Math.abs(Math.abs(角度) - 目标)
+```
+
+## 验证方法
+
+### 修复成功的标志
+✅ Init 阶段所有 4 个轮子对齐到同一个角度
+✅ Start 后所有轮子转到相同目标方向（没有 2 个突然 180°）
+✅ 测试结束轮子回到 0°
+
+### 测试步骤
+1. 按 B 键选择角速度模式
+2. 等待轮子对齐完成（显示 ✅）
+3. 按 Start，观察 4 个轮子同时转向相同方向
+4. 等待 3 秒测试完成
+
+## 文件更新
+- ✅ `_3_MaxSpeedAngularTest.java` - 已修复
+- 📋 详细说明见 `ANGULAR_TEST_FIX.md`
+
+## 关键概念
+
+**alignTurningOnly()**
+直接对齐到指定角度，不经过 optimize，轮子角度追踪保持一致
+
+**不使用 normalizeWheelSpeeds()**
+这个方法会自动调整角度，破坏累积追踪的一致性
+
+**目标角度预计算**
+在测试循环前计算好所有目标角度，整个测试过程中保持一致
+
+---
+
+需要帮助？检查 `ANGULAR_TEST_FIX.md` 了解完整技术细节
+
