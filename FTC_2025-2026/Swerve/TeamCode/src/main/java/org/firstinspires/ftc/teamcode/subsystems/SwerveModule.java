@@ -59,6 +59,9 @@ public class SwerveModule {
 
     private final double powerScale;
 
+    private double filteredVelocity = 0;
+    private static final double VELOCITY_FILTER_ALPHA = 0.2;
+
     /**
      * SwerveModule 建構函式
      * @param hardwareMap 硬體映射物件
@@ -170,13 +173,6 @@ public class SwerveModule {
     // ===== 強制清除儲存的角度（重新校正時用）=====
     public void clearSavedAngle() {
         prefs.edit().remove(prefKey).apply();
-    }
-
-    public double getDriveVelocity() {
-        // FTC 的 getVelocity() 回傳 ticks per second
-        // 需要使用速度轉換因子將其轉換為 m/s
-        // 等效於 driveEncoder.setVelocityConversionFactor(ModuleConstants.kDriveEncoderRPM2MeterPerSec)
-        return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRPM2MeterPerSec;
     }
 
     /**
@@ -499,5 +495,15 @@ public class SwerveModule {
 
         double output = turningPidController.calculate(0, errorRad) * TuningConfig.turningOutputScale();
         return Math.max(-1.0, Math.min(1.0, output));
+    }
+
+    public double getDriveVelocity() {
+        double raw = driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
+        filteredVelocity = VELOCITY_FILTER_ALPHA * raw + (1 - VELOCITY_FILTER_ALPHA) * filteredVelocity;
+        return filteredVelocity;
+    }
+
+    public double getRawDriveVelocity() {
+        return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
     }
 }

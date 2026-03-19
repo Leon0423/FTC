@@ -35,22 +35,22 @@ public final class Constants {
 
         // === 轉向 PID 控制器參數 ===
         // 調整於 2026-03-19：解決邊直走邊轉時轉向滯後的問題
-        public static final double kPTurning = 0.8;  // 提升至 0.8 以加快初期反應速度
-        public static final double kITurning = 0.01; // 改為 0.01 以消除穩態誤差
-        public static final double kDTurning = 0.05; // 改為 0.05 以減少超調
+        public static final double kPTurning = 0.4;  // 提升至 0.8 以加快初期反應速度
+        public static final double kITurning = 0.0; // 改為 0.01 以消除穩態誤差
+        public static final double kDTurning = 0.00; // 改為 0.05 以減少超調
         public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
 
         // 轉向輸出與感測穩定化
         // 調整於 2026-03-16：改善馬達同步精度、解決1j6g4馬達轉不動問題
         // 調整於 2026-03-19：減小死區以加快轉向響應
-        public static final double kTurningDeadbandDeg = 0.5;     // 減至 0.5 度以提高轉向敏銳度
+        public static final double kTurningDeadbandDeg = 0.0;     // 減至 0.5 度以提高轉向敏銳度
         public static final double kTurningMaxJumpDeg = 45.0;     // 單次允許的角度跳變上限 (度)
         public static final double kTurningMaxTransitionOutput = 0.7; // 過渡期間最大輸出
 
         // === 驅動 PID 控制器參數 ===
         // 調整於 2026-03-16：解決1j6g4馬達力矩過大轉不動問題
         // 啟用PID以提供速度反饋控制，加強低速時的扭矩以克服卡住
-        public static final double kPDrive = 0.05;  // TODO P 係數：降低以減少過度響應，防止抖動
+        public static final double kPDrive = 0.0;  // TODO P 係數：降低以減少過度響應，防止抖動
         public static final double kIDrive = 0.0;  // TODO I 係數：增加至 0.01 以穩定低速轉動
         public static final double kDDrive = 0.0; // TODO D 係數：添加阻尼以穩定控制
         public static final double kFDrive = 0.0;  // TODO F 係數：增加前饋至 0.05 以增強初動力
@@ -140,9 +140,10 @@ public final class Constants {
 
         // 各輪功率補償（1.0 = 不補償，> 1.0 = 加大功率補償阻力）
         public static final double kFrontLeftDrivePowerScale  = 1.00;  // TODO
-        public static final double kFrontRightDrivePowerScale = 0.80;  // TODO
-        public static final double kBackLeftDrivePowerScale   = 0.82;  // TODO
-        public static final double kBackRightDrivePowerScale  = 0.85;  // TODO
+        public static final double kFrontRightDrivePowerScale = 1.00;  // TODO
+        public static final double kBackLeftDrivePowerScale   = 1.00;  // TODO
+        public static final double kBackRightDrivePowerScale  = 1.00;  // TODO
+
 
         // === IMU 慣性測量單元配置 ===
         // 必須根據 Control Hub 的實際安裝方向進行設定

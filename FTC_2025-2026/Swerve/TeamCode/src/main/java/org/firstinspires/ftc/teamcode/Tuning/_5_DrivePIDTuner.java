@@ -18,40 +18,32 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
  *  5. Drive PID Tuner
  * ════════════════════════════════════════
  *
- * 目的：調整驅動馬達 PID，讓速度精確跟隨目標
+ * 調整順序：
+ *   Step 1：只用 F，調到速度大致跟上（P=I=D=0）
+ *   Step 2：加 P 修正誤差（從 0.01 開始）
+ *   Step 3：如果震盪，降 P 或加 D
+ *   Step 4：有穩態誤差才加 I（通常不需要）
  *
- * 使用步驟：
- *   Init  │ 選擇測試模組（A=全部 / DPAD 選單顆）
- *   Start │ 自動週期性切換速度（0 → Max → 0）
- *          │ 在 Dashboard Graph 觀察 targetVel vs currentVel
- *   調整順序：
- *     1. P=0 I=0 D=0，先調 F 讓速度大致跟上
- *     2. 加 P 修正誤差
- *     3. 有持續偏差才加 I（通常不需要）
- *     4. 有震盪加 D 或降 P
- *
- * 按鍵：
- *   A        = 測試全部四顆
- *   DPAD ↑   = 只測 FL
- *   DPAD →   = 只測 FR
- *   DPAD ←   = 只測 BL
- *   DPAD ↓   = 只測 BR
- *   LB / RB  = 調整目標速度
- *   X        = 暫停 / 繼續
+ * 如果不管怎麼調都震盪：
+ *   → 只用 F，不用 PID
+ *   → 在 TuningConfig 把 enableDrivePID 設 false
  */
 @Config
 @TeleOp(name = "5. Drive PID Tuner", group = "Tuning")
 public class _5_DrivePIDTuner extends LinearOpMode {
 
-    public static double autoTestPeriodSeconds = 2.0;  // 每段持續秒數
-    public static double autoTestMaxVelocity   = 0.3;  // m/s
+    public static double autoTestPeriodSeconds = 2.0;
+    public static double autoTestMaxVelocity   = 0.3;
+
+    // ★ F-only 模式：只用前饋，完全不用 PID
+    // 先調這個讓速度大致正確，再考慮要不要加 PID
+    public static boolean fOnlyMode = true;
+    public static double manualF = 0.5;  // F-only 模式下直接給這個比例的功率
 
     private SwerveSubsystem swerve;
     private FtcDashboard dashboard;
 
-    // 測試模式：0=全部, 1=FL, 2=FR, 3=BL, 4=BR
     private int testMode = 0;
-
     private boolean isPaused = false;
     private boolean lastX = false;
     private boolean lastLb = false, lastRb = false;
@@ -68,7 +60,7 @@ public class _5_DrivePIDTuner extends LinearOpMode {
         swerve.getBackRight().disableSaving();
 
         // ══════════════════════════════
-        //  Init 階段：對齊輪子 + 選模組
+        //  Init 階段
         // ══════════════════════════════
         while (!isStarted() && !isStopRequested()) {
             if (gamepad1.a)          testMode = 0;
@@ -77,22 +69,16 @@ public class _5_DrivePIDTuner extends LinearOpMode {
             if (gamepad1.dpad_left)  testMode = 3;
             if (gamepad1.dpad_down)  testMode = 4;
 
-            // 對齊輪子到 0°
             swerve.getFrontLeft().alignTurningOnly(0);
             swerve.getFrontRight().alignTurningOnly(0);
             swerve.getBackLeft().alignTurningOnly(0);
             swerve.getBackRight().alignTurningOnly(0);
 
             telemetry.addLine("════ Drive PID Tuner ════");
-            telemetry.addLine("");
-            telemetry.addLine("選擇測試模組：");
-            telemetry.addLine("  A = 全部四顆");
-            telemetry.addLine("  DPAD ↑=FL  →=FR  ←=BL  ↓=BR");
-            telemetry.addLine("");
+            telemetry.addLine("A=全部  ↑=FL  →=FR  ←=BL  ↓=BR");
             telemetry.addData("目前選擇", getModeLabel());
-            telemetry.addData("目標速度", "%.2f m/s  (Start後 LB/RB 調整)", autoTestMaxVelocity);
-            telemetry.addLine("");
-            telemetry.addLine("確認後按 Start");
+            telemetry.addData("F-Only 模式", fOnlyMode ? "ON（推薦先用這個）" : "OFF（使用 PID）");
+            telemetry.addLine("按 Start 開始");
             telemetry.update();
         }
 
@@ -105,7 +91,6 @@ public class _5_DrivePIDTuner extends LinearOpMode {
         // ══════════════════════════════
         while (opModeIsActive()) {
 
-            // X 鍵暫停/繼續
             boolean x = gamepad1.x;
             if (x && !lastX) {
                 isPaused = !isPaused;
@@ -113,7 +98,6 @@ public class _5_DrivePIDTuner extends LinearOpMode {
             }
             lastX = x;
 
-            // LB/RB 調整目標速度
             boolean rb = gamepad1.right_bumper;
             boolean lb = gamepad1.left_bumper;
             if (rb && !lastRb) autoTestMaxVelocity = Math.min(Constants.DriveConstants.kPhysicalMaxSpeedMetersPerSecond, autoTestMaxVelocity + 0.05);
@@ -127,63 +111,104 @@ public class _5_DrivePIDTuner extends LinearOpMode {
                 continue;
             }
 
-            // 方波：每 autoTestPeriodSeconds 切換一次
+            // 方波（四段式）
             double elapsed = getRuntime() - startTime;
-            int phase = (int)(elapsed / autoTestPeriodSeconds);
-            double targetVel = (phase % 2 == 0) ? autoTestMaxVelocity : 0;
+            double cycleTime = autoTestPeriodSeconds * 4;
+            double cyclePos = elapsed % cycleTime;
+            double targetVel;
+            if (cyclePos < autoTestPeriodSeconds) {
+                targetVel = autoTestMaxVelocity;
+            } else if (cyclePos < autoTestPeriodSeconds * 2) {
+                targetVel = 0;
+            } else if (cyclePos < autoTestPeriodSeconds * 3) {
+                targetVel = -autoTestMaxVelocity;
+            } else {
+                targetVel = 0;
+            }
 
-            // 依模式設定目標
-            SwerveModuleState state = new SwerveModuleState(targetVel, new Rotation2d(0));
-            applyToModules(state);
+            // F-Only 模式功率
+            double power;
+            if (cyclePos < autoTestPeriodSeconds) {
+                power = manualF;
+            } else if (cyclePos < autoTestPeriodSeconds * 2) {
+                power = 0;
+            } else if (cyclePos < autoTestPeriodSeconds * 3) {
+                power = -manualF;
+            } else {
+                power = 0;
+            }
 
-            // 取主要監測模組（全部模式取 FL）
+            if (fOnlyMode) {
+                applyFOnly(power);
+            } else {
+                SwerveModuleState state = new SwerveModuleState(targetVel, new Rotation2d(0));
+                applyToModules(state);
+            }
+
             SwerveModule monitor = getMonitorModule();
+
+            // 取得速度數據（根據模式選擇正確的讀取方式）
+            // F-Only 模式下因為沒有呼叫 setDesiredState，必須主動呼叫 getDriveVelocity() 來更新濾波器並取得當前速度
+            // PID 模式下 setDesiredState 已經呼叫過 getDriveVelocity()，所以直接讀取 getCurrentVelocityMps() 避免重複濾波
+            double flVel, frVel, blVel, brVel;
+            if (fOnlyMode) {
+                flVel = swerve.getFrontLeft().getDriveVelocity();
+                frVel = swerve.getFrontRight().getDriveVelocity();
+                blVel = swerve.getBackLeft().getDriveVelocity();
+                brVel = swerve.getBackRight().getDriveVelocity();
+            } else {
+                flVel = swerve.getFrontLeft().getCurrentVelocityMps();
+                frVel = swerve.getFrontRight().getCurrentVelocityMps();
+                blVel = swerve.getBackLeft().getCurrentVelocityMps();
+                brVel = swerve.getBackRight().getCurrentVelocityMps();
+            }
 
             // Dashboard graph
             TelemetryPacket packet = new TelemetryPacket();
-            packet.put("targetVel",   monitor.getTargetVelocity());
-            packet.put("currentVel",  monitor.getCurrentVelocityMps());
-            packet.put("driveError",  monitor.getDriveError());
-            packet.put("driveOutput", monitor.getDriveOutput());
-            // 四顆分開顯示
-            packet.put("FL_vel", swerve.getFrontLeft().getCurrentVelocityMps());
-            packet.put("FR_vel", swerve.getFrontRight().getCurrentVelocityMps());
-            packet.put("BL_vel", swerve.getBackLeft().getCurrentVelocityMps());
-            packet.put("BR_vel", swerve.getBackRight().getCurrentVelocityMps());
+            packet.put("targetVel",  targetVel);
+            packet.put("FL_vel",     flVel);
+            packet.put("FR_vel",     frVel);
+            packet.put("BL_vel",     blVel);
+            packet.put("BR_vel",     brVel);
+            // ★ 同時顯示 raw 速度，判斷雜訊量
+            packet.put("FL_raw",     swerve.getFrontLeft().getRawDriveVelocity());
+            if (!fOnlyMode) {
+                packet.put("driveOutput", monitor.getDriveOutput());
+                packet.put("driveError",  monitor.getDriveError());
+            }
             dashboard.sendTelemetryPacket(packet);
 
             // Telemetry
             telemetry.addLine("════ Drive PID Tuner ════");
+            telemetry.addData("模式", fOnlyMode ? "F-Only（直接功率）" : "PID");
             telemetry.addData("測試模組", getModeLabel());
-            telemetry.addData("目標速度", "%.3f m/s  (%.0f%%)",
-                    targetVel, (targetVel / Constants.DriveConstants.kPhysicalMaxSpeedMetersPerSecond) * 100);
-            telemetry.addData("LB/RB 調整最大速度", "%.2f m/s", autoTestMaxVelocity);
+            if (fOnlyMode) {
+                telemetry.addData("功率", "%.2f  (Dashboard 調 manualF)", manualF);
+            } else {
+                telemetry.addData("P", "%.4f", TuningConfig.driveP());
+                telemetry.addData("I", "%.4f", TuningConfig.driveI());
+                telemetry.addData("D", "%.4f", TuningConfig.driveD());
+                telemetry.addData("F", "%.4f", TuningConfig.driveF());
+            }
             telemetry.addLine("");
-            telemetry.addLine("── PID 參數 ──");
-            telemetry.addData("P", "%.4f", TuningConfig.driveP());
-            telemetry.addData("I", "%.4f", TuningConfig.driveI());
-            telemetry.addData("D", "%.4f", TuningConfig.driveD());
-            telemetry.addData("F", "%.4f", TuningConfig.driveF());
-            telemetry.addLine("");
-            telemetry.addLine("── 即時數據 ──");
+            telemetry.addData("目標速度", "%.3f m/s", targetVel);
+            telemetry.addLine("── filtered / raw ──");
             telemetry.addData("FL", "%.3f / %.3f m/s",
-                    swerve.getFrontLeft().getTargetVelocity(),
-                    swerve.getFrontLeft().getCurrentVelocityMps());
+                    flVel,
+                    swerve.getFrontLeft().getRawDriveVelocity());
             telemetry.addData("FR", "%.3f / %.3f m/s",
-                    swerve.getFrontRight().getTargetVelocity(),
-                    swerve.getFrontRight().getCurrentVelocityMps());
+                    frVel,
+                    swerve.getFrontRight().getRawDriveVelocity());
             telemetry.addData("BL", "%.3f / %.3f m/s",
-                    swerve.getBackLeft().getTargetVelocity(),
-                    swerve.getBackLeft().getCurrentVelocityMps());
+                    blVel,
+                    swerve.getBackLeft().getRawDriveVelocity());
             telemetry.addData("BR", "%.3f / %.3f m/s",
-                    swerve.getBackRight().getTargetVelocity(),
-                    swerve.getBackRight().getCurrentVelocityMps());
-            telemetry.addLine("");
+                    brVel,
+                    swerve.getBackRight().getRawDriveVelocity());
             telemetry.addLine("X=暫停  LB/RB=調速度");
             telemetry.update();
         }
 
-        // 結束：對齊回 0° 再存
         swerve.getFrontLeft().setDriveMotorPowerDirect(0);
         swerve.getFrontRight().setDriveMotorPowerDirect(0);
         swerve.getBackLeft().setDriveMotorPowerDirect(0);
@@ -204,6 +229,24 @@ public class _5_DrivePIDTuner extends LinearOpMode {
         swerve.stopModules();
     }
 
+    // ★ F-Only：只給轉向對齊 + 直接功率，完全不走 PID
+    private void applyFOnly(double power) {
+        boolean fl = (testMode == 0 || testMode == 1);
+        boolean fr = (testMode == 0 || testMode == 2);
+        boolean bl = (testMode == 0 || testMode == 3);
+        boolean br = (testMode == 0 || testMode == 4);
+
+        swerve.getFrontLeft().alignTurningOnly(0);
+        swerve.getFrontRight().alignTurningOnly(0);
+        swerve.getBackLeft().alignTurningOnly(0);
+        swerve.getBackRight().alignTurningOnly(0);
+
+        swerve.getFrontLeft().setDriveMotorPowerDirect(fl ? power : 0);
+        swerve.getFrontRight().setDriveMotorPowerDirect(fr ? power : 0);
+        swerve.getBackLeft().setDriveMotorPowerDirect(bl ? power : 0);
+        swerve.getBackRight().setDriveMotorPowerDirect(br ? power : 0);
+    }
+
     private void applyToModules(SwerveModuleState state) {
         boolean fl = (testMode == 0 || testMode == 1);
         boolean fr = (testMode == 0 || testMode == 2);
@@ -212,13 +255,10 @@ public class _5_DrivePIDTuner extends LinearOpMode {
 
         if (fl) swerve.getFrontLeft().setDesiredState(state);
         else    swerve.getFrontLeft().alignTurningOnly(0);
-
         if (fr) swerve.getFrontRight().setDesiredState(state);
         else    swerve.getFrontRight().alignTurningOnly(0);
-
         if (bl) swerve.getBackLeft().setDesiredState(state);
         else    swerve.getBackLeft().alignTurningOnly(0);
-
         if (br) swerve.getBackRight().setDesiredState(state);
         else    swerve.getBackRight().alignTurningOnly(0);
     }
@@ -242,3 +282,4 @@ public class _5_DrivePIDTuner extends LinearOpMode {
         }
     }
 }
+
