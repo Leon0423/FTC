@@ -37,8 +37,8 @@ public final class Constants {
 
         // === 轉向 PID 控制器參數 ===
         // 調整於 2026-03-19：解決邊直走邊轉時轉向滯後的問題
-        public static final double kPTurning = 0.4;  // 提升至 0.8 以加快初期反應速度
-        public static final double kITurning = 0.0; // 改為 0.01 以消除穩態誤差
+        public static final double kPTurning = 0.5;  // 提升至 0.8 以加快初期反應速度
+        public static final double kITurning = 0.02; // 改為 0.01 以消除穩態誤差
         public static final double kDTurning = 0.00; // 改為 0.05 以減少超調
         public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
 
@@ -131,7 +131,7 @@ public final class Constants {
 
         // === 機器人物理性能極限 ===
         public static final double kPhysicalMaxSpeedMetersPerSecond = 0.764;                       // TODO 機器人最大線速度 (公尺/秒)
-        public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 5.495;    // TODO 機器人最大角速度 (弧度/秒)
+        public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 10.879;    // TODO 機器人最大角速度 (弧度/秒)
 
         // === 手動控制性能限制 ===
         // 建議調整後進行測試以確保良好的操控手感

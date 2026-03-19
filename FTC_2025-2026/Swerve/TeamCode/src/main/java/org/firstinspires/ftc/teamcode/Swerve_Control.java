@@ -20,6 +20,8 @@ public class Swerve_Control extends LinearOpMode {
     private boolean fieldOriented = true;
     private boolean lastA = false;
     private boolean lastLB = false;
+    private boolean yLockModeEnabled = true;
+    private boolean lastY = false;
 
     // 用於整合搖桿成目標位置 (綠點)
     private double targetX = 0;
@@ -52,10 +54,12 @@ public class Swerve_Control extends LinearOpMode {
         // 創建指令一次即可
         SwerveJoystickCmd joystickCmd = new SwerveJoystickCmd(
                 swerveSubsystem,
-                () -> driverGamepad.getLeftY()  * speedMultiplier,
-                () -> driverGamepad.getLeftX()  * speedMultiplier,
-                () -> driverGamepad.getRightX() * turningMultiplier,
-                () -> fieldOriented
+                // FTC gamepad: stick up/left usually reports negative, so invert to match driver intuition.
+                () -> -driverGamepad.getLeftY()  * speedMultiplier,
+                () -> -driverGamepad.getLeftX()  * speedMultiplier,
+                () -> -driverGamepad.getRightX() * turningMultiplier,
+                () -> fieldOriented,
+                () -> yLockModeEnabled
         );
 
         configureButtonBindings();
@@ -63,7 +67,22 @@ public class Swerve_Control extends LinearOpMode {
         dashboardTelemetry.addData("Status", "Initialized");
         dashboardTelemetry.update();
 
+        // Init 階段持續把四顆輪角對齊到 0 度，方便上場前校正。
+        while (!isStarted() && !isStopRequested()) {
+            swerveSubsystem.alignAllModulesToZero();
+            swerveSubsystem.periodic();
+
+            dashboardTelemetry.addData("Status", "Init: Aligning wheels to 0°");
+            dashboardTelemetry.update();
+            idle();
+        }
+
         waitForStart();
+        if (isStopRequested()) {
+            swerveSubsystem.stopModules();
+            return;
+        }
+
         // 重建所有模組的角度追蹤狀態，避免開機時沿用舊的 delta
         swerveSubsystem.resetAllModuleTracking();
         swerveSubsystem.zeroHeading();
@@ -91,6 +110,13 @@ public class Swerve_Control extends LinearOpMode {
                 targetHeadingDeg = 0;
             }
             lastA = a;
+
+            // Y 鍵：切換 Lock/Unlock mode
+            boolean y = driverGamepad.getButton(GamepadKeys.Button.Y);
+            if (y && !lastY) {
+                yLockModeEnabled = !yLockModeEnabled;
+            }
+            lastY = y;
 
             // DPAD UP/DOWN：調整直走倍率
             boolean dpadUp   = driverGamepad.getButton(GamepadKeys.Button.DPAD_UP);
@@ -123,6 +149,9 @@ public class Swerve_Control extends LinearOpMode {
             rawY = Math.abs(rawY) > 0.05 ? rawY : 0;
             rawTurn = Math.abs(rawTurn) > 0.05 ? rawTurn : 0;
 
+            boolean sticksIdle = (rawX == 0) && (rawY == 0) && (rawTurn == 0);
+            boolean xLockActiveNow = yLockModeEnabled && sticksIdle;
+
 
             // 依 DriveConstants 縮放到物理速度
             double xSpeed    = rawX    * Constants.DriveConstants.kTeleDriveMaxSpeedMetersPerSecond;
@@ -149,7 +178,7 @@ public class Swerve_Control extends LinearOpMode {
 
             swerveSubsystem.setTargetPose(targetX, targetY, targetHeadingDeg);
 
-            // 執行指令
+            // 執行指令：Lock mode 時 idle 自動進 X 型，Unlock mode 時 idle 保持目前角度。
             joystickCmd.execute();
 
             // 更新 subsystem
@@ -160,6 +189,9 @@ public class Swerve_Control extends LinearOpMode {
 
             // 顯示精簡的必要資訊
             dashboardTelemetry.addData("Mode", fieldOriented ? "Field-Oriented" : "Robot-Oriented");
+            dashboardTelemetry.addData("Y-Lock Mode", yLockModeEnabled ? "LOCK (idle -> X)" : "UNLOCK (idle hold angle)");
+            dashboardTelemetry.addData("Sticks", sticksIdle ? "IDLE" : "ACTIVE");
+            dashboardTelemetry.addData("X-Lock Active", xLockActiveNow ? "YES" : "NO");
             dashboardTelemetry.addData("Heading", "%.1f°", swerveSubsystem.getHeading());
 
             com.arcrobotics.ftclib.geometry.Pose2d currentPose = swerveSubsystem.getPose();
@@ -202,7 +234,16 @@ public class Swerve_Control extends LinearOpMode {
             dashboardTelemetry.update();
         }
 
-        swerveSubsystem.stopModules();
+        // 結束前短暫反覆下達 X 鎖，讓轉向 PID 有時間收斂到位。
+        long xLockDeadline = System.currentTimeMillis() + 600;
+        while (System.currentTimeMillis() < xLockDeadline) {
+            swerveSubsystem.setXLockPoseTurningOnly();
+            swerveSubsystem.periodic();
+            idle();
+        }
+
+        // 停止驅動輪，保留最後一次轉向輸出避免立刻鬆掉角度。
+        swerveSubsystem.stopDriveMotorsOnly();
     }
 
     private void configureButtonBindings(){

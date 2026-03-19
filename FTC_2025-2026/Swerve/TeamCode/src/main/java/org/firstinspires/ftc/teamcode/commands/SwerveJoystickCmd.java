@@ -19,6 +19,7 @@ public class SwerveJoystickCmd extends CommandBase {
     private final SwerveSubsystem swerveSubsystem;
     private final Supplier<Double> xSpdFunction, ySpdFunction, turningSpdFunction;
     private final Supplier<Boolean> fieldOrientedFunction;
+    private final Supplier<Boolean> idleXLockEnabledFunction;
     private final SlewRateLimiter xLimiter, yLimiter, turningLimiter;
     private static final double kStopTransSpeedMps = DriveConstants.kTeleDriveMaxSpeedMetersPerSecond * 0.02; // ~2% of max
     private static final double kStopAngularSpeedRad = DriveConstants.kTeleDriveMaxAngularSpeedRadiansPerSecond * 0.02;
@@ -26,12 +27,14 @@ public class SwerveJoystickCmd extends CommandBase {
 
     public SwerveJoystickCmd(SwerveSubsystem swerveSubsystem,
                              Supplier<Double> xSpdFunction, Supplier<Double> ySpdFunction, Supplier<Double> turningSpdFunction,
-                             Supplier<Boolean> fieldOrientedFunction) {
+                             Supplier<Boolean> fieldOrientedFunction,
+                             Supplier<Boolean> idleXLockEnabledFunction) {
         this.swerveSubsystem = swerveSubsystem;
         this.xSpdFunction = xSpdFunction;
         this.ySpdFunction = ySpdFunction;
         this.turningSpdFunction = turningSpdFunction;
         this.fieldOrientedFunction = fieldOrientedFunction;
+        this.idleXLockEnabledFunction = idleXLockEnabledFunction;
         this.xLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel());
         this.yLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAccel());
         this.turningLimiter = new SlewRateLimiter(TuningConfig.teleDriveMaxAngularAccel());
@@ -66,6 +69,12 @@ public class SwerveJoystickCmd extends CommandBase {
             turningSpeed = 0;
         }
 
+        // 只有在 Lock mode 下，搖桿 idle 才進入 X 型鎖輪。
+        if (xSpeed == 0 && ySpeed == 0 && turningSpeed == 0 && idleXLockEnabledFunction.get()) {
+            swerveSubsystem.setXLockPoseTurningOnly();
+            return;
+        }
+
         // 4. Construct desired chassis speeds
         ChassisSpeeds chassisSpeeds;
         if (fieldOrientedFunction.get()) {
@@ -86,7 +95,14 @@ public class SwerveJoystickCmd extends CommandBase {
 
     @Override
     public void end(boolean interrupted) {
-        swerveSubsystem.stopModules();
+        if (idleXLockEnabledFunction.get()) {
+            // Lock mode：保留 X 型姿態，不直接關閉轉向輸出。
+            swerveSubsystem.setXLockPoseTurningOnly();
+            swerveSubsystem.stopDriveMotorsOnly();
+        } else {
+            // Unlock mode：不進 X 型，直接停模組。
+            swerveSubsystem.stopModules();
+        }
     }
 
     @Override

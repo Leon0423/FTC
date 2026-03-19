@@ -308,6 +308,13 @@ public class SwerveSubsystem extends SubsystemBase {
         backRight.stop();
     }
 
+    public void stopDriveMotorsOnly() {
+        frontLeft.setDriveMotorPowerDirect(0);
+        frontRight.setDriveMotorPowerDirect(0);
+        backLeft.setDriveMotorPowerDirect(0);
+        backRight.setDriveMotorPowerDirect(0);
+    }
+
     /**
      * Swerve 驅動（無 Drive PID，直接功率控制）
      * 用於調試或手動控制時繞過 PID
@@ -363,6 +370,41 @@ public class SwerveSubsystem extends SubsystemBase {
         frontRight.setDesiredState(new SwerveModuleState(0, frontRight.getState().angle));
         backLeft.setDesiredState(new SwerveModuleState(0, backLeft.getState().angle));
         backRight.setDesiredState(new SwerveModuleState(0, backRight.getState().angle));
+    }
+
+    // 在不驅動車輪的情況下，讓四顆模組對齊到同一角度（弧度）。
+    public void alignAllModulesTurningOnly(double targetAngleRad) {
+        frontLeft.setDriveMotorPowerDirect(0);
+        frontRight.setDriveMotorPowerDirect(0);
+        backLeft.setDriveMotorPowerDirect(0);
+        backRight.setDriveMotorPowerDirect(0);
+
+        frontLeft.alignTurningOnly(targetAngleRad);
+        frontRight.alignTurningOnly(targetAngleRad);
+        backLeft.alignTurningOnly(targetAngleRad);
+        backRight.alignTurningOnly(targetAngleRad);
+    }
+
+    // Init 時可呼叫：全部輪角對齊車頭 0 度。
+    public void alignAllModulesToZero() {
+        alignAllModulesTurningOnly(0.0);
+    }
+
+    // 停機鎖輪：輪角擺成 X 型，增加外力推動阻力。
+    public void setXLockPose() {
+        frontLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
+        frontRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
+        backLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
+        backRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
+    }
+
+    // 僅轉向到 X 型，不觸發 speed=0 的狀態分支，方便在結束前持續收斂角度。
+    public void setXLockPoseTurningOnly() {
+        stopDriveMotorsOnly();
+        frontLeft.alignTurningOnly(Math.toRadians(-45));
+        frontRight.alignTurningOnly(Math.toRadians(45));
+        backLeft.alignTurningOnly(Math.toRadians(45));
+        backRight.alignTurningOnly(Math.toRadians(-45));
     }
 
     private void addModuleTurningTelemetry(String name, SwerveModule module, Telemetry telemetry) {
