@@ -52,9 +52,9 @@ public class Swerve_Control extends LinearOpMode {
         // 創建指令一次即可
         SwerveJoystickCmd joystickCmd = new SwerveJoystickCmd(
                 swerveSubsystem,
-                () -> -driverGamepad.getLeftY()  * speedMultiplier,
-                () -> -driverGamepad.getLeftX()  * speedMultiplier,
-                () -> -driverGamepad.getRightX() * turningMultiplier,
+                () -> driverGamepad.getLeftY()  * speedMultiplier,
+                () -> driverGamepad.getLeftX()  * speedMultiplier,
+                () -> driverGamepad.getRightX() * turningMultiplier,
                 () -> fieldOriented
         );
 
@@ -114,8 +114,8 @@ public class Swerve_Control extends LinearOpMode {
             lastTime = now;
 
             // 取得搖桿輸入
-            double rawX = driverGamepad.getLeftY();   // 前進為正（推上）
-            double rawY = driverGamepad.getLeftX();  // 右為正
+            double rawX = -driverGamepad.getLeftY();   // 前進為正（推上）
+            double rawY = -driverGamepad.getLeftX();   // 右為正
             double rawTurn = -driverGamepad.getRightX(); // 順時針為正（推右）
 
             // deadband
