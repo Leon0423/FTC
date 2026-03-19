@@ -63,14 +63,10 @@ public class Swerve_Control extends LinearOpMode {
         dashboardTelemetry.addData("Status", "Initialized");
         dashboardTelemetry.update();
 
-        // * 輪子已經在 0° → 現在才重置追蹤基準
-        swerveSubsystem.resetAllModuleTracking();
-
         waitForStart();
-
-        // * 重置航向
+        // 重建所有模組的角度追蹤狀態，避免開機時沿用舊的 delta
+        swerveSubsystem.resetAllModuleTracking();
         swerveSubsystem.zeroHeading();
-        targetHeadingDeg = 0;
 
         lastTime = getRuntime();
 
@@ -89,6 +85,8 @@ public class Swerve_Control extends LinearOpMode {
             // A 鍵：重置航向
             boolean a = driverGamepad.getButton(GamepadKeys.Button.A);
             if (a && !lastA) {
+                // A：重置航向並重建模組角度追蹤
+                swerveSubsystem.resetAllModuleTracking();
                 swerveSubsystem.zeroHeading();
                 targetHeadingDeg = 0;
             }
@@ -181,6 +179,21 @@ public class Swerve_Control extends LinearOpMode {
                     Math.toDegrees(swerveSubsystem.getFrontRight().getTurningPosition()),
                     Math.toDegrees(swerveSubsystem.getBackLeft().getTurningPosition()),
                     Math.toDegrees(swerveSubsystem.getBackRight().getTurningPosition()));
+
+            // 連續累積輪角（不包角），用於驗證跨 0/360 的追蹤是否連續。
+            dashboardTelemetry.addData("Accum Wheel Angle (deg)", "FL:%.1f FR:%.1f BL:%.1f BR:%.1f",
+                    Math.toDegrees(swerveSubsystem.getFrontLeft().getAccumulatedWheelAngleRad()),
+                    Math.toDegrees(swerveSubsystem.getFrontRight().getAccumulatedWheelAngleRad()),
+                    Math.toDegrees(swerveSubsystem.getBackLeft().getAccumulatedWheelAngleRad()),
+                    Math.toDegrees(swerveSubsystem.getBackRight().getAccumulatedWheelAngleRad()));
+
+            // 原始絕對編碼器與 offset 監看，協助判斷是否因偏移導致回彈
+            dashboardTelemetry.addData("Abs/Offset/Raw (deg)",
+                    "FL %.2f/%.1f/%.1f  FR %.2f/%.1f/%.1f  BL %.2f/%.1f/%.1f  BR %.2f/%.1f/%.1f",
+                    swerveSubsystem.getFrontLeft().getAbsoluteEncoderVoltage(),  Math.toDegrees(swerveSubsystem.getFrontLeft().getActiveOffsetRad()),  Math.toDegrees(swerveSubsystem.getFrontLeft().getRawServoRadians()),
+                    swerveSubsystem.getFrontRight().getAbsoluteEncoderVoltage(), Math.toDegrees(swerveSubsystem.getFrontRight().getActiveOffsetRad()), Math.toDegrees(swerveSubsystem.getFrontRight().getRawServoRadians()),
+                    swerveSubsystem.getBackLeft().getAbsoluteEncoderVoltage(),   Math.toDegrees(swerveSubsystem.getBackLeft().getActiveOffsetRad()),   Math.toDegrees(swerveSubsystem.getBackLeft().getRawServoRadians()),
+                    swerveSubsystem.getBackRight().getAbsoluteEncoderVoltage(),  Math.toDegrees(swerveSubsystem.getBackRight().getActiveOffsetRad()), Math.toDegrees(swerveSubsystem.getBackRight().getRawServoRadians()));
 
             dashboardTelemetry.addData("Speed",   "%.0f%%  (DPAD↑↓)", speedMultiplier   * 100);
             dashboardTelemetry.addData("Turning", "%.0f%%  (DPAD←→)", turningMultiplier * 100);

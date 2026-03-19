@@ -21,7 +21,9 @@ public final class Constants {
         // === 機械參數 ===
         public static final double kWheelDiameterMeters = 0.058; // TODO 輪子直徑(公尺) - 調整輪子直徑(單位: m)
         public static final double kDriveMotorGearRatio = 0.113636;    // TODO 驅動馬達齒輪比 - 調整驅動馬達轉速比
-        public static final double kTurningMotorGearRatio = 0.4; // TODO 轉向馬達齒輪比 - 調整轉向馬達轉速比
+        // CRServo 轉 2.5 圈 = 輪角 360°，因此輪角/servo角 比例為 1/2.5。
+        public static final double kServoTurnsPerWheelTurn = 2.5;
+        public static final double kTurningMotorGearRatio = 1.0 / kServoTurnsPerWheelTurn;
 
         // === 編碼器換算係數 ===
         // 將馬達旋轉數轉換為線性距離的係數
@@ -65,8 +67,8 @@ public final class Constants {
      */
     public static final class DriveConstants {
         // === 機器人幾何參數 ===
-        public static final double kTrackWidth = 0.21;  // TODO 左右輪距 (公尺)
-        public static final double kWheelBase = 0.21;   // TODO 前後輪距 (公尺)
+        public static final double kTrackWidth = 0.22;  // TODO 左右輪距 (公尺)
+        public static final double kWheelBase = 0.22;   // TODO 前後輪距 (公尺)
 
         // 飛輪驅動運動學計算，定義各輪子相對於機器人中心的位置
         // 順序：前左、前右、後左、後右

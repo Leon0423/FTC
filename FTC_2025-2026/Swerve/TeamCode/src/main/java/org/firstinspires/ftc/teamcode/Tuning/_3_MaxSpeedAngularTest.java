@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.Tuning;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
@@ -16,7 +13,6 @@ import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Constants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveModule;
@@ -37,7 +33,7 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
  *   Start  │ 自動跑 testDurationSec 秒後停止
  *   結束   │ telemetry 顯示建議填入 Constants 的數值
  *
- * 注意：此程式不會污染 SharedPreferences
+ * 注意：此程式不會寫入任何持久化資料
  *       結束時自動清除累積角度記憶
  */
 @Config
@@ -63,11 +59,6 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
         imu    = hardwareMap.get(IMU.class, "imu");
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
-        // ★ 防止測試期間的角度寫入污染 Swerve_Control
-        swerve.getFrontLeft().disableSaving();
-        swerve.getFrontRight().disableSaving();
-        swerve.getBackLeft().disableSaving();
-        swerve.getBackRight().disableSaving();
 
         // ══════════════════════════════
         //  Init 階段：選擇模式 / 調功率
@@ -259,7 +250,7 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
         swerve.getBackLeft().setDriveMotorPowerDirect(0);
         swerve.getBackRight().setDriveMotorPowerDirect(0);
 
-        // 對齊回 0°，等到全部 < 5° 才存
+        // 對齊回 0°，等到全部 < 5° 後結束
         long alignStart = System.currentTimeMillis();
         while (System.currentTimeMillis() - alignStart < 2000 && opModeIsActive()) {
             swerve.getFrontLeft().alignTurningOnly(0);
@@ -276,11 +267,6 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
                     && Math.abs(blDeg) < 5 && Math.abs(brDeg) < 5) break;
         }
 
-        // 全部對齊後才存
-        swerve.getFrontLeft().enableSaving();
-        swerve.getFrontRight().enableSaving();
-        swerve.getBackLeft().enableSaving();
-        swerve.getBackRight().enableSaving();
         swerve.stopModules();
 
         // 顯示結果
@@ -295,7 +281,7 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
                 telemetry.addData("kPhysicalMaxSpeedMetersPerSecond", "%.3f", maxVelMps);
             }
             telemetry.addLine("");
-            telemetry.addLine("角度記憶已清除，可直接跑 Swerve_Control");
+            telemetry.addLine("已停止馬達，可直接跑 Swerve_Control");
             telemetry.update();
             sleep(100);
         }

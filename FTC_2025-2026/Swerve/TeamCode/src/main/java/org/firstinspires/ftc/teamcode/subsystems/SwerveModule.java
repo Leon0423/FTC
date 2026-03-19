@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.arcrobotics.ftclib.controller.PIDController;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
@@ -10,12 +13,10 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.teamcode.Tuning.TuningConfig;
-import android.content.Context;
-import android.content.SharedPreferences;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 public class SwerveModule {
 
@@ -27,7 +28,6 @@ public class SwerveModule {
     private final PIDController turningPidController;
     private final PIDController drivePidController;  // 新增：Drive PID Controller
 
-    private final String turningServoName;
     private final boolean absoluteEncoderReversed;
     private final double absoluteEncoderOffsetRad;
 
@@ -49,18 +49,26 @@ public class SwerveModule {
     private double accumulatedAngle = 0;      // 累積的輪子角度（弧度）
     private double lastRawServoRad = 0;       // 上一次伺服原始角度
     private boolean turningInitialized = false;
-    private final SharedPreferences prefs;
-    private final String prefKey; // 每個模組用不同的 key
 
     private double cachedTurningPosition = 0;
     private long lastUpdateTime = -1;
-
-    private boolean enableSaving = true;
 
     private final double powerScale;
 
     private double filteredVelocity = 0;
     private static final double VELOCITY_FILTER_ALPHA = 0.2;
+
+    private static final String MODULE_PREFS_NAME = "SwerveModulePersistentAngles";
+    private static final String OFFSET_PREFS_NAME = "SwerveOffsetPrefs";
+    private static final int SAVE_EVERY_N_UPDATES = 25;
+
+    private final SharedPreferences modulePrefs;
+    private final SharedPreferences offsetPrefs;
+    private final String prefAccumulatedAngleKey;
+    private final String prefLastRawKey;
+    private final String prefOffsetKey;
+    private boolean enableSaving = true;
+    private int saveCounter = 0;
 
     /**
      * SwerveModule 建構函式
@@ -84,11 +92,11 @@ public class SwerveModule {
                         double powerScale){
 
         this.powerScale = powerScale;
-        this.turningServoName = turningServoName;
-        // ★ 每個模組用 turningServoName 當 key，確保四個模組互不干擾
-        prefKey = "swerve_angle_" + turningServoName;
-        prefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
+        this.prefAccumulatedAngleKey = "accum_angle_" + turningServoName;
+        this.prefLastRawKey = "last_raw_" + turningServoName;
+        this.prefOffsetKey = "offset_" + turningServoName;
+        modulePrefs = AppUtil.getDefContext().getSharedPreferences(MODULE_PREFS_NAME, Context.MODE_PRIVATE);
+        offsetPrefs = AppUtil.getDefContext().getSharedPreferences(OFFSET_PREFS_NAME, Context.MODE_PRIVATE);
 
         // absoluteEncoder 的參數設定
         this.absoluteEncoderOffsetRad = absoluteEncoderOffset;
@@ -155,8 +163,8 @@ public class SwerveModule {
 
         if (enableSaving) {
             saveCounter++;
-            if (saveCounter >= 50) {
-                saveAccumulatedAngle();
+            if (saveCounter >= SAVE_EVERY_N_UPDATES) {
+                saveTrackingState();
                 saveCounter = 0;
             }
         }
@@ -168,11 +176,30 @@ public class SwerveModule {
         cachedTurningPosition = normalized;
         return cachedTurningPosition;
     }
-    private int saveCounter = 0;
 
-    // ===== 強制清除儲存的角度（重新校正時用）=====
     public void clearSavedAngle() {
-        prefs.edit().remove(prefKey).apply();
+        modulePrefs.edit()
+                .remove(prefAccumulatedAngleKey)
+                .remove(prefLastRawKey)
+                .apply();
+    }
+
+    // Legacy API: kept for call-site compatibility after removing persistent storage.
+    public void clearSavedOffset() {
+        offsetPrefs.edit().remove(prefOffsetKey).apply();
+    }
+
+    public double getActiveOffsetRad() {
+        return loadOffsetRad();
+    }
+
+    public double getRawServoRadians() {
+        return getRawServoRad();
+    }
+
+    // 連續角度（不包到 [-pi, pi]），可用於觀察跨圈累積效果。
+    public double getAccumulatedWheelAngleRad() {
+        return accumulatedAngle;
     }
 
     /**
@@ -206,60 +233,46 @@ public class SwerveModule {
         return (absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage()) * 2.0 * Math.PI;
     }
 
-    // ===== 儲存：同時存 accumulatedAngle 和 rawServoRad =====
-    private void saveAccumulatedAngle() {
-        prefs.edit()
-                .putFloat(prefKey, (float) accumulatedAngle)
-                .putFloat(prefKey + "_raw", (float) lastRawServoRad)
-                .apply();
-    }
-
-    // ===== 讀取 =====
-    private double loadAccumulatedAngle() {
-        return prefs.getFloat(prefKey, Float.MAX_VALUE);
-    }
-
-    private double loadRawServoRad() {
-        return prefs.getFloat(prefKey + "_raw", Float.MAX_VALUE);
-    }
-
-    // ===== initTurningTracking()：開機後用 delta 修正 =====
+    // ===== initTurningTracking()：以絕對編碼器直接定義當前角度，避免 offset/gear 比例反覆疊加 =====
     public void initTurningTracking() {
         double currentRaw = getRawServoRad();
-        lastRawServoRad = currentRaw;
+        double initAngle;
 
-        double savedAngle = loadAccumulatedAngle();
-        double savedRaw   = loadRawServoRad();
-
-        if (savedAngle == Float.MAX_VALUE || savedRaw == Float.MAX_VALUE) {
-            double initAngle = currentRaw;
-            initAngle *= ModuleConstants.kTurningMotorGearRatio;
-            initAngle -= loadOffset();          // ← 改這行，原本是 absoluteEncoderOffsetRad
-            while (initAngle >  Math.PI) initAngle -= 2 * Math.PI;
-            while (initAngle < -Math.PI) initAngle += 2 * Math.PI;
-            accumulatedAngle = initAngle;
-        } else {
+        if (enableSaving && modulePrefs.contains(prefAccumulatedAngleKey) && modulePrefs.contains(prefLastRawKey)) {
+            // 從上次追蹤狀態續接，並先做一次跨 0/360 的增量補償。
+            double savedAccumulated = modulePrefs.getFloat(prefAccumulatedAngleKey, 0f);
+            double savedRaw = modulePrefs.getFloat(prefLastRawKey, (float) currentRaw);
             double delta = currentRaw - savedRaw;
-            if (delta >  Math.PI) delta -= 2 * Math.PI;
+            if (delta > Math.PI) delta -= 2 * Math.PI;
             if (delta < -Math.PI) delta += 2 * Math.PI;
-            accumulatedAngle = savedAngle + delta * ModuleConstants.kTurningMotorGearRatio;
+            initAngle = savedAccumulated + delta * ModuleConstants.kTurningMotorGearRatio;
+        } else {
+            // 無持久化資料時，以絕對編碼器 + offset 建立初始角度。
+            initAngle = currentRaw * ModuleConstants.kTurningMotorGearRatio - loadOffsetRad();
         }
 
-        turningInitialized = true;
-    }
+        lastRawServoRad = currentRaw;
+        accumulatedAngle = initAngle;
 
-    private double loadOffset() {
-        SharedPreferences offsetPrefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveOffsetPrefs", Context.MODE_PRIVATE);
-        float saved = offsetPrefs.getFloat("offset_" + turningServoName, Float.MAX_VALUE);
-        if (saved != Float.MAX_VALUE) return saved;    // 用 1c 寫入的動態 offset
-        return absoluteEncoderOffsetRad;               // fallback 到 Constants
+        double wrapped = initAngle;
+        while (wrapped > Math.PI) wrapped -= 2 * Math.PI;
+        while (wrapped < -Math.PI) wrapped += 2 * Math.PI;
+
+        cachedTurningPosition = wrapped;
+        targetAngle = wrapped;   // PID 目標對齊實際位置，不會開機亂轉
+
+        turningInitialized = true;
+
+        if (enableSaving) {
+            saveTrackingState();
+            saveCounter = 0;
+        }
     }
 
     public double getAbsoluteEncoderRad() {
         double angle = absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage();
         angle *= 2.0 * Math.PI;
-        angle -= loadOffset();          // ← 改這行
+        angle -= loadOffsetRad();
         if (absoluteEncoderReversed) angle = -angle;
         while (angle >  Math.PI) angle -= 2.0 * Math.PI;
         while (angle < -Math.PI) angle += 2.0 * Math.PI;
@@ -271,14 +284,32 @@ public class SwerveModule {
     }
 
     public void resetEncoders() {
+        resetEncoders(false);
+    }
+
+    public void resetEncoders(boolean clearSavedAngle) {
         driveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         driveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        previousAngle = getTurningPosition();
-        previousTime = System.currentTimeMillis();
+        if (clearSavedAngle) {
+            clearSavedAngle();
+        }
+        resetTurningTracking(clearSavedAngle);
+    }
 
-        // ★ 改用 delta 追蹤
+    /**
+     * Reset turning tracking state so delta accumulation restarts from the current absolute encoder angle.
+     */
+    public void resetTurningTracking(boolean clearSavedAngle) {
+        turningInitialized = false;
+        accumulatedAngle = 0;
+        cachedTurningPosition = 0;
+        lastUpdateTime = -1;
+
         initTurningTracking();
+
+        previousAngle = cachedTurningPosition;
+        previousTime = System.currentTimeMillis();
     }
 
     public SwerveModuleState getState() {
@@ -289,8 +320,8 @@ public class SwerveModule {
         // 如果速度接近零，只停止驅動馬達，但繼續維持轉向角度
         if (Math.abs(state.speedMetersPerSecond) < 0.001) {
             driveMotor.setPower(0);
-            // 不 return，繼續執行轉向 PID 來維持角度
-            // 但不更新 targetAngle，保持在上一個目標角度
+            // 零速時也要更新目標角，避免沿用舊 targetAngle 導致開場亂偏。
+            targetAngle = state.angle.getRadians();
             maintainTurningAngle();
             return;
         }
@@ -327,7 +358,7 @@ public class SwerveModule {
             driveMotor.setPower(driveOutput);
         } else {
             // 簡單的開環控制（原本的方式）
-            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;;
+            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;
             driveError = 0;
             driveMotor.setPower(driveOutput);
         }
@@ -344,7 +375,10 @@ public class SwerveModule {
     public void stop() {
         driveMotor.setPower(0);
         turningMotor.setPower(0);
-        if (enableSaving) saveAccumulatedAngle(); // ← 加這行
+
+        if (enableSaving) {
+            saveTrackingState();
+        }
     }
 
     /**
@@ -356,6 +390,7 @@ public class SwerveModule {
         // 如果速度接近零，停止驅動但維持轉向
         if (Math.abs(state.speedMetersPerSecond) < 0.001) {
             driveMotor.setPower(0);
+            targetAngle = state.angle.getRadians();
             maintainTurningAngle();
             return;
         }
@@ -364,7 +399,7 @@ public class SwerveModule {
         state = SwerveModuleState.optimize(state, getState().angle);
 
         // ===== Drive Motor 控制（無 PID，直接功率）=====
-        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;;
+        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;
         driveMotor.setPower(drivePower);
 
         // ===== Turning Motor 控制（仍使用 PID）=====
@@ -456,6 +491,7 @@ public class SwerveModule {
     }
 
     public void disableSaving() { enableSaving = false; }
+
     public void enableSaving()  { enableSaving = true; }
 
     public void alignTurningOnly(double targetRad) {
@@ -505,5 +541,19 @@ public class SwerveModule {
 
     public double getRawDriveVelocity() {
         return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
+    }
+
+    private void saveTrackingState() {
+        modulePrefs.edit()
+                .putFloat(prefAccumulatedAngleKey, (float) accumulatedAngle)
+                .putFloat(prefLastRawKey, (float) lastRawServoRad)
+                .apply();
+    }
+
+    private double loadOffsetRad() {
+        if (offsetPrefs.contains(prefOffsetKey)) {
+            return offsetPrefs.getFloat(prefOffsetKey, (float) absoluteEncoderOffsetRad);
+        }
+        return absoluteEncoderOffsetRad;
     }
 }

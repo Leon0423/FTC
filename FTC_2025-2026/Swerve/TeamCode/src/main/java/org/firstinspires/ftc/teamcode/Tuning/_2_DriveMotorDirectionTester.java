@@ -4,22 +4,9 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.arcrobotics.ftclib.controller.PIDController;
-import com.arcrobotics.ftclib.geometry.Rotation2d;
-import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.AnalogInput;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import android.content.Context;
-import android.content.SharedPreferences;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
-import org.firstinspires.ftc.teamcode.Constants;
-import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 /**
@@ -43,7 +30,7 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
  *   A        = 全部前進（主要測試）
  *   B        = 全部後退（驗證用）
  *   X        = 左側前進（FL + BL）
- *   Y        = 右側前進（FR + BR）
+ *   Y        = 套用目前方向結論（僅本次執行期，不存檔）
  *   DPAD ↑   = 只有 FL
  *   DPAD →   = 只有 FR
  *   DPAD ←   = 只有 BL
@@ -132,7 +119,6 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             lastRb = rb; lastLb = lb;
 
             // 持續維持轉向對齊
-            SwerveModuleState forward = new SwerveModuleState(0.001, new Rotation2d(0));
             swerve.getFrontLeft().alignTurningOnly(0);
             swerve.getFrontRight().alignTurningOnly(0);
             swerve.getBackLeft().alignTurningOnly(0);
@@ -178,13 +164,15 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
             boolean allConfirmed = flConfirmed && frConfirmed && blConfirmed && brConfirmed;
 
             boolean y = gamepad1.y;
-            // Y 鍵：確認無誤後存入
+            // Y 鍵：確認無誤後套用到目前執行期（不寫入 Control Hub）
             if (y && !lastY && allConfirmed){
-                saveDriveReverse();
-                telemetry.addLine("✅ 已存入 Control Hub！");
+                applyDriveReverseRuntimeOnly();
+                telemetry.addLine("✅ 已套用於目前執行期（未寫入 Control Hub）");
+                telemetry.addLine("請把結果手動更新到 Constants.java 的 k*DriveEncoderReversed");
                 telemetry.update();
                 sleep(1500);
             }
+            lastY = y;
 
             // Telemetry
             telemetry.addLine("════ Drive Motor Direction Tester ════");
@@ -206,13 +194,13 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
                     Math.toDegrees(swerve.getBackLeft().getTurningPosition()),
                     Math.toDegrees(swerve.getBackRight().getTurningPosition()));
 
-            telemetry.addLine(allConfirmed ? "✅ 全部確認，按 Y 存入 Control Hub" : "⏳ 請測試所有輪子");
+            telemetry.addLine(allConfirmed ? "✅ 全部確認，按 Y 套用目前執行期" : "⏳ 請測試所有輪子");
             telemetry.addLine("");
 
             telemetry.addLine("── 按鍵說明 ──");
             telemetry.addLine("A=全部前進  B=全部後退  X=左側");
             telemetry.addLine("↑=FL  →=FR  ←=BL  ↓=BR");
-            telemetry.addLine("LB/RB=調功率  Y=存入(需全部確認)");
+            telemetry.addLine("LB/RB=調功率  Y=套用(不存檔)");
             telemetry.update();
         }
 
@@ -232,10 +220,6 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
 
     private void initHardware() {
         swerve = new SwerveSubsystem(hardwareMap);
-        swerve.getFrontLeft().disableSaving();
-        swerve.getFrontRight().disableSaving();
-        swerve.getBackLeft().disableSaving();
-        swerve.getBackRight().disableSaving();
     }
 
     private void sendDashboardAngles(double fl, double fr, double bl, double br) {
@@ -254,26 +238,12 @@ public class _2_DriveMotorDirectionTester extends LinearOpMode {
     }
 
     private void stopAll() {
-        // ★ 重新開啟儲存，讓 stop() 把目前 0° 的角度存進去
-        swerve.getFrontLeft().enableSaving();
-        swerve.getFrontRight().enableSaving();
-        swerve.getBackLeft().enableSaving();
-        swerve.getBackRight().enableSaving();
 
-        swerve.stopModules();  // 內部呼叫 saveAccumulatedAngle()
+        swerve.stopModules();
     }
 
-    private void saveDriveReverse() {
-        SharedPreferences prefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveDrivePrefs", Context.MODE_PRIVATE);
-        prefs.edit()
-                .putBoolean("drive_reverse_" + DriveConstants.kFrontLeftTurningMotorName,  flReverse)
-                .putBoolean("drive_reverse_" + DriveConstants.kFrontRightTurningMotorName, frReverse)
-                .putBoolean("drive_reverse_" + DriveConstants.kBackLeftTurningMotorName,   blReverse)
-                .putBoolean("drive_reverse_" + DriveConstants.kBackRightTurningMotorName,  brReverse)
-                .apply();
-
-        // 立刻套用到 swerve
+    private void applyDriveReverseRuntimeOnly() {
+        // 只在本次 OpMode 中套用，不做任何持久化。
         swerve.getFrontLeft().setDriveDirection(flReverse);
         swerve.getFrontRight().setDriveDirection(frReverse);
         swerve.getBackLeft().setDriveDirection(blReverse);

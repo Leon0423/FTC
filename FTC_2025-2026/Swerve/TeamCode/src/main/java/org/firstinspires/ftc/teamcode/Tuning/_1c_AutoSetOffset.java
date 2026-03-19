@@ -11,55 +11,32 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
-import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 /**
- * 自動設定 Offset 並寫入 SharedPreferences
+ * Offset 校正輔助（寫入 Control Hub）
  *
  * 使用步驟：
  * 1. 手動把四個輪子轉到朝向正前方
- * 2. 確認第3層 Final 接近 0° 後按 A
- * 3. Offset 自動寫入 SharedPreferences
- * 4. 重新啟動 Swerve_Control 即可
+ * 2. 按 A 將四輪 offset 寫入 Control Hub
+ * 3. 同時把四輪累積角追蹤歸零（當下視為輪角 0°）
+ * 4. 重新啟動 Swerve_Control 驗證 Final 是否接近 0°
  *
- * 注意：此程式會覆蓋 SharedPreferences 的 offset，
- *       但不會修改 Constants.java，兩者獨立。
+ * 注意：此程式會覆蓋 Control Hub 上既有 offset/tracking 記錄。
  */
 @TeleOp(name = "1c. Auto Set Offset", group = "Tuning")
 public class _1c_AutoSetOffset extends LinearOpMode {
 
     private CRServo flServo, frServo, blServo, brServo;
     private AnalogInput flEncoder, frEncoder, blEncoder, brEncoder;
-
     private SharedPreferences offsetPrefs;
-    private SharedPreferences anglePrefs;
+    private SharedPreferences trackingPrefs;
 
     private boolean lastA = false;
-    private boolean lastB = false;
 
     @Override
     public void runOpMode() {
-        offsetPrefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveOffsetPrefs", Context.MODE_PRIVATE);
-        anglePrefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
-
-        // ★ 啟動時立刻清除所有累積角度記憶
-        for (String name : new String[]{
-                DriveConstants.kFrontLeftTurningMotorName,
-                DriveConstants.kFrontRightTurningMotorName,
-                DriveConstants.kBackLeftTurningMotorName,
-                DriveConstants.kBackRightTurningMotorName}) {
-            anglePrefs.edit()
-                    .remove("swerve_angle_" + name)
-                    .remove("swerve_angle_" + name + "_raw")
-                    .apply();
-        }
-
-        offsetPrefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveOffsetPrefs", Context.MODE_PRIVATE);
-        anglePrefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveModulePrefs", Context.MODE_PRIVATE);
+        offsetPrefs = AppUtil.getDefContext().getSharedPreferences("SwerveOffsetPrefs", Context.MODE_PRIVATE);
+        trackingPrefs = AppUtil.getDefContext().getSharedPreferences("SwerveModulePersistentAngles", Context.MODE_PRIVATE);
 
         // ===== 初始化硬體 =====
         boolean ok = true;
@@ -113,8 +90,8 @@ public class _1c_AutoSetOffset extends LinearOpMode {
             // ===== Telemetry =====
             telemetry.addLine("════ 步驟說明 ════");
             telemetry.addLine("1. 手動把四個輪子轉到朝向正前方");
-            telemetry.addLine("2. 確認 Final 接近 0° 後按 A 寫入");
-            telemetry.addLine("3. 按 B 可清除所有 SharedPreferences");
+            telemetry.addLine("2. 按 A 寫入 Control Hub offset");
+            telemetry.addLine("3. 同步重設累積角=0（當下即輪角0°）");
             telemetry.addLine("");
 
             telemetry.addLine("── 第2層 Geared（這就是要填入的 Offset）──");
@@ -131,62 +108,34 @@ public class _1c_AutoSetOffset extends LinearOpMode {
             telemetry.addData("BR", "%.2f°  %s", brFinal, Math.abs(brFinal) < 5 ? "✅" : "❌");
             telemetry.addLine("");
 
-            // SharedPreferences 現有值
-            telemetry.addLine("── SharedPreferences 目前儲存值 ──");
-            telemetry.addData("FL offset", "%.2f°", Math.toDegrees(offsetPrefs.getFloat(
-                    "offset_" + DriveConstants.kFrontLeftTurningMotorName, Float.MAX_VALUE)));
-            telemetry.addData("FR offset", "%.2f°", Math.toDegrees(offsetPrefs.getFloat(
-                    "offset_" + DriveConstants.kFrontRightTurningMotorName, Float.MAX_VALUE)));
-            telemetry.addData("BL offset", "%.2f°", Math.toDegrees(offsetPrefs.getFloat(
-                    "offset_" + DriveConstants.kBackLeftTurningMotorName, Float.MAX_VALUE)));
-            telemetry.addData("BR offset", "%.2f°", Math.toDegrees(offsetPrefs.getFloat(
-                    "offset_" + DriveConstants.kBackRightTurningMotorName, Float.MAX_VALUE)));
+            telemetry.addLine("── Control Hub 目前 offset（度）──");
+            telemetry.addData("FL offset", "%.2f°", Math.toDegrees(loadOffsetRad(DriveConstants.kFrontLeftTurningMotorName, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetRad)));
+            telemetry.addData("FR offset", "%.2f°", Math.toDegrees(loadOffsetRad(DriveConstants.kFrontRightTurningMotorName, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetRad)));
+            telemetry.addData("BL offset", "%.2f°", Math.toDegrees(loadOffsetRad(DriveConstants.kBackLeftTurningMotorName, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetRad)));
+            telemetry.addData("BR offset", "%.2f°", Math.toDegrees(loadOffsetRad(DriveConstants.kBackRightTurningMotorName, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetRad)));
             telemetry.addLine("");
 
             if (allNearZero) {
-                telemetry.addLine("✅ 全部對齊，可以按 A 寫入");
+                telemetry.addLine("✅ 全部對齊，Constants 可維持不變");
             } else {
                 telemetry.addLine("⏳ 繼續調整輪子方向...");
             }
 
-            // ===== A 鍵：寫入 Offset =====
+            // ===== A 鍵：寫入 offset + 重置累積角 =====
             boolean a = gamepad1.a;
             if (a && !lastA) {
-                saveOffset(DriveConstants.kFrontLeftTurningMotorName,  getGearedRad(flEncoder));
-                saveOffset(DriveConstants.kFrontRightTurningMotorName, getGearedRad(frEncoder));
-                saveOffset(DriveConstants.kBackLeftTurningMotorName,   getGearedRad(blEncoder));
-                saveOffset(DriveConstants.kBackRightTurningMotorName,  getGearedRad(brEncoder));
+                saveOffsetAndZeroTracking(DriveConstants.kFrontLeftTurningMotorName, flEncoder);
+                saveOffsetAndZeroTracking(DriveConstants.kFrontRightTurningMotorName, frEncoder);
+                saveOffsetAndZeroTracking(DriveConstants.kBackLeftTurningMotorName, blEncoder);
+                saveOffsetAndZeroTracking(DriveConstants.kBackRightTurningMotorName, brEncoder);
 
-                // 清除角度記憶，讓下次啟動以 0° 為基準重新開始
-                clearAngle(DriveConstants.kFrontLeftTurningMotorName);
-                clearAngle(DriveConstants.kFrontRightTurningMotorName);
-                clearAngle(DriveConstants.kBackLeftTurningMotorName);
-                clearAngle(DriveConstants.kBackRightTurningMotorName);
-
-                telemetry.addLine("✅ Offset 已寫入 SharedPreferences！");
-                telemetry.addLine("請重新啟動 Swerve_Control");
+                telemetry.addLine("✅ 已寫入 Control Hub offset");
+                telemetry.addLine("✅ 已重設四輪累積角追蹤為 0");
+                telemetry.addLine("請重新啟動 Swerve_Control 生效");
                 telemetry.update();
-                sleep(2000);
-                return;
+                sleep(1500);
             }
             lastA = a;
-
-            // ===== B 鍵：清除所有 SharedPreferences =====
-            boolean b = gamepad1.b;
-            if (b && !lastB) {
-                clearOffset(DriveConstants.kFrontLeftTurningMotorName);
-                clearOffset(DriveConstants.kFrontRightTurningMotorName);
-                clearOffset(DriveConstants.kBackLeftTurningMotorName);
-                clearOffset(DriveConstants.kBackRightTurningMotorName);
-                clearAngle(DriveConstants.kFrontLeftTurningMotorName);
-                clearAngle(DriveConstants.kFrontRightTurningMotorName);
-                clearAngle(DriveConstants.kBackLeftTurningMotorName);
-                clearAngle(DriveConstants.kBackRightTurningMotorName);
-                telemetry.addLine("🗑 所有 SharedPreferences 已清除");
-                telemetry.update();
-                sleep(1000);
-            }
-            lastB = b;
 
             telemetry.update();
         }
@@ -198,52 +147,48 @@ public class _1c_AutoSetOffset extends LinearOpMode {
         return (enc.getVoltage() / enc.getMaxVoltage()) * 360.0 * ModuleConstants.kTurningMotorGearRatio;
     }
 
-    private double getGearedRad(AnalogInput enc) {
-        if (enc == null) return 0;
-        return (enc.getVoltage() / enc.getMaxVoltage()) * 2 * Math.PI * ModuleConstants.kTurningMotorGearRatio;
-    }
-
-    // 套用目前 SharedPreferences 的 offset 計算 Final
     private double getFinalDeg(AnalogInput enc) {
         if (enc == null) return 0;
-        double angle = (enc.getVoltage() / enc.getMaxVoltage()) * 2 * Math.PI;
-        angle *= ModuleConstants.kTurningMotorGearRatio;
-
-        // 優先用 SharedPreferences 的 offset，沒有才用 Constants
-        // 這裡簡化直接用 getGearedRad 當 offset（即套用目前的輪子位置）
-        // 實際 Final = Geared - savedOffset
-        float savedOffset = offsetPrefs.getFloat(
-                "offset_" + getServoName(enc), Float.MAX_VALUE);
-        if (savedOffset != Float.MAX_VALUE) {
-            angle -= savedOffset;
-        } else {
-            angle -= DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetRad; // fallback
-        }
+        double angle = Math.toRadians(getGearedDeg(enc));
+        angle -= getActiveOffsetRadForEncoder(enc);
         while (angle >  Math.PI) angle -= 2 * Math.PI;
         while (angle < -Math.PI) angle += 2 * Math.PI;
         return Math.toDegrees(angle);
     }
 
-    // ===== SharedPreferences 操作 =====
-    private void saveOffset(String servoName, double rad) {
-        offsetPrefs.edit().putFloat("offset_" + servoName, (float) rad).apply();
+    private double getActiveOffsetRadForEncoder(AnalogInput enc) {
+        if (enc == flEncoder) {
+            return loadOffsetRad(DriveConstants.kFrontLeftTurningMotorName, DriveConstants.kFrontLeftDriveAbsoluteEncoderOffsetRad);
+        }
+        if (enc == frEncoder) {
+            return loadOffsetRad(DriveConstants.kFrontRightTurningMotorName, DriveConstants.kFrontRightDriveAbsoluteEncoderOffsetRad);
+        }
+        if (enc == blEncoder) {
+            return loadOffsetRad(DriveConstants.kBackLeftTurningMotorName, DriveConstants.kBackLeftDriveAbsoluteEncoderOffsetRad);
+        }
+        return loadOffsetRad(DriveConstants.kBackRightTurningMotorName, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetRad);
     }
 
-    private void clearOffset(String servoName) {
-        offsetPrefs.edit().remove("offset_" + servoName).apply();
-    }
+    private void saveOffsetAndZeroTracking(String servoName, AnalogInput encoder) {
+        double rawServoRad = getRawServoRad(encoder);
+        double wheelOffsetRad = rawServoRad * ModuleConstants.kTurningMotorGearRatio;
 
-    private void clearAngle(String servoName) {
-        anglePrefs.edit()
-                .remove("swerve_angle_" + servoName)
-                .remove("swerve_angle_" + servoName + "_raw")
+        offsetPrefs.edit()
+                .putFloat("offset_" + servoName, (float) wheelOffsetRad)
+                .apply();
+
+        trackingPrefs.edit()
+                .putFloat("accum_angle_" + servoName, 0f)
+                .putFloat("last_raw_" + servoName, (float) rawServoRad)
                 .apply();
     }
 
-    private String getServoName(AnalogInput enc) {
-        if (enc == flEncoder) return DriveConstants.kFrontLeftTurningMotorName;
-        if (enc == frEncoder) return DriveConstants.kFrontRightTurningMotorName;
-        if (enc == blEncoder) return DriveConstants.kBackLeftTurningMotorName;
-        return DriveConstants.kBackRightTurningMotorName;
+    private double loadOffsetRad(String servoName, double fallback) {
+        return offsetPrefs.getFloat("offset_" + servoName, (float) fallback);
+    }
+
+    private double getRawServoRad(AnalogInput enc) {
+        if (enc == null) return 0;
+        return (enc.getVoltage() / enc.getMaxVoltage()) * 2.0 * Math.PI;
     }
 }

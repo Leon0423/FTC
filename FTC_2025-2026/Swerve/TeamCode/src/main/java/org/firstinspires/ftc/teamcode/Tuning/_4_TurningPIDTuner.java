@@ -17,10 +17,10 @@ import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 /**
  * Turning CRServo PID 調整 OpMode - 四輪同時測試
  *
- * ★ 保證不改變 offset 值 ★
- *   - 整個 opmode 期間 disableSaving() 保持開啟
- *   - 測試期間轉向軌跡不會儲存，不會改變已校正的 offset
- *   - 直接停止馬達即可，不對齊也不儲存
+ * ★ 不會改變 offset 值 ★
+ *   - 本專案已移除 Control Hub 持久化角度邏輯
+ *   - 測試期間只影響當前執行期，不會覆寫 Constants 偏移
+ *   - 直接停止馬達即可
  *
  * ★ 驅動馬達完全靜止 ★
  *   - 只呼叫 setTurningPower()，不碰 driveMotor
@@ -58,13 +58,6 @@ public class _4_TurningPIDTuner extends LinearOpMode {
         swerve   = new SwerveSubsystem(hardwareMap);
         dashboard = FtcDashboard.getInstance();
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
-
-        // ★ 清除所有儲存的角度記憶，強制從絕對編碼器重新初始化
-        // ★ 這樣測試期間的 getTurningPosition() 累積錯誤就無法被存儲
-        clearAllSavedAngles();
-
-        // ★ 關閉儲存，此後任何路徑都不會意外寫入 angle prefs
-        disableSavingAll();
 
         // ★ 重新初始化轉向追蹤，用絕對編碼器值
         swerve.getFrontLeft() .initTurningTracking();
@@ -163,9 +156,6 @@ public class _4_TurningPIDTuner extends LinearOpMode {
             // ★ 無論如何都執行：停止所有馬達
             stopDriveMotors();
             stopTurningMotors();
-
-            // ★ 保持 disableSaving() 狀態，不儲存任何測試期間的角度變化
-            // ★ 直接停止，不呼叫 enableSavingAll() / swerve.stopModules()
         }
     }
 
@@ -208,25 +198,6 @@ public class _4_TurningPIDTuner extends LinearOpMode {
         swerve.getFrontRight().setTurningPower(0);
         swerve.getBackLeft()  .setTurningPower(0);
         swerve.getBackRight() .setTurningPower(0);
-    }
-
-    private void disableSavingAll() {
-        swerve.getFrontLeft() .disableSaving();
-        swerve.getFrontRight().disableSaving();
-        swerve.getBackLeft()  .disableSaving();
-        swerve.getBackRight() .disableSaving();
-    }
-
-    /**
-     * 清除所有儲存的角度記憶
-     * 強制下一次 initTurningTracking() 從絕對編碼器重新初始化
-     * 確保測試期間的累積誤差不會被保存
-     */
-    private void clearAllSavedAngles() {
-        swerve.getFrontLeft() .clearSavedAngle();
-        swerve.getFrontRight().clearSavedAngle();
-        swerve.getBackLeft()  .clearSavedAngle();
-        swerve.getBackRight() .clearSavedAngle();
     }
 
 

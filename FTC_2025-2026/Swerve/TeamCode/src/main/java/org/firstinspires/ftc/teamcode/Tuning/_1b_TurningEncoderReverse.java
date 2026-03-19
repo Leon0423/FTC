@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
-import org.firstinspires.ftc.teamcode.subsystems.SwerveSubsystem;
 
 @TeleOp(name = "1b. Turning Encoder Reverse", group = "Tuning")
 public class _1b_TurningEncoderReverse extends LinearOpMode {
@@ -31,8 +30,6 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
     private String frVerdict = "---";
     private String blVerdict = "---";
     private String brVerdict = "---";
-
-    private SwerveSubsystem swerve;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -62,10 +59,6 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
                 DriveConstants.kBackRightTurningEncoderReversed ?
                         DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
 
-        swerve.getFrontLeft().disableSaving();
-        swerve.getFrontRight().disableSaving();
-        swerve.getBackLeft().disableSaving();
-        swerve.getBackRight().disableSaving();
 
         waitForStart();
         pulseTimer.reset();

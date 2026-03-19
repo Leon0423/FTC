@@ -54,11 +54,6 @@ public class _5_DrivePIDTuner extends LinearOpMode {
         dashboard = FtcDashboard.getInstance();
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
 
-        swerve.getFrontLeft().disableSaving();
-        swerve.getFrontRight().disableSaving();
-        swerve.getBackLeft().disableSaving();
-        swerve.getBackRight().disableSaving();
-
         // ══════════════════════════════
         //  Init 階段
         // ══════════════════════════════
@@ -222,10 +217,6 @@ public class _5_DrivePIDTuner extends LinearOpMode {
             swerve.getBackRight().alignTurningOnly(0);
         }
 
-        swerve.getFrontLeft().enableSaving();
-        swerve.getFrontRight().enableSaving();
-        swerve.getBackLeft().enableSaving();
-        swerve.getBackRight().enableSaving();
         swerve.stopModules();
     }
 

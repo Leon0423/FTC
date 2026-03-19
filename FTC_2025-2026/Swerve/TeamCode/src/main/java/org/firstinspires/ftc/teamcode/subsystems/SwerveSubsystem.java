@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.canvas.Canvas;
@@ -21,7 +19,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -377,27 +374,14 @@ public class SwerveSubsystem extends SubsystemBase {
     }
 
     public void resetAllModuleTracking() {
-        frontLeft.resetEncoders();
-        frontRight.resetEncoders();
-        backLeft.resetEncoders();
-        backRight.resetEncoders();
+        resetAllModuleTracking(false);
     }
 
-    private void applyDriveReverseFromPrefs() {
-        SharedPreferences prefs = AppUtil.getInstance().getRootActivity()
-                .getSharedPreferences("SwerveDrivePrefs", Context.MODE_PRIVATE);
-
-        // 如果有存過，覆蓋 Constants 的設定
-        applyReverse(frontLeft,  DriveConstants.kFrontLeftTurningMotorName,  prefs);
-        applyReverse(frontRight, DriveConstants.kFrontRightTurningMotorName, prefs);
-        applyReverse(backLeft,   DriveConstants.kBackLeftTurningMotorName,   prefs);
-        applyReverse(backRight,  DriveConstants.kBackRightTurningMotorName,  prefs);
+    public void resetAllModuleTracking(boolean clearSavedAngles) {
+        frontLeft.resetEncoders(clearSavedAngles);
+        frontRight.resetEncoders(clearSavedAngles);
+        backLeft.resetEncoders(clearSavedAngles);
+        backRight.resetEncoders(clearSavedAngles);
     }
 
-    private void applyReverse(SwerveModule module, String name, SharedPreferences prefs) {
-        if (prefs.contains("drive_reverse_" + name)) {
-            boolean reversed = prefs.getBoolean("drive_reverse_" + name, false);
-            module.setDriveDirection(reversed);
-        }
-    }
 }
