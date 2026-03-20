@@ -44,6 +44,9 @@ public class SwerveSubsystem extends SubsystemBase {
     private static final double kStopSpeedMps = DriveConstants.kPhysicalMaxSpeedMetersPerSecond * 0.005; // ~0.5% of max
 
     private double headingOffset = 0;
+    private double cachedHeading = 0;
+    private long lastHeadingUpdateMs = 0;
+    private static final long HEADING_CACHE_MS = 20; // 50Hz
 
     public SwerveSubsystem(HardwareMap hardwareMap) {
 
@@ -156,6 +159,8 @@ public class SwerveSubsystem extends SubsystemBase {
         } else {
             headingOffset = Math.IEEEremainder(
                     imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
+            cachedHeading = 0;           // ← 加這行
+            lastHeadingUpdateMs = 0;     // ← 加這行，強制下次立即更新
         }
     }
 
@@ -164,9 +169,14 @@ public class SwerveSubsystem extends SubsystemBase {
         if (usingPinpoint && pinpoint != null) {
             return Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
         } else {
+            long now = System.currentTimeMillis();
+            if (now - lastHeadingUpdateMs < HEADING_CACHE_MS) return cachedHeading;
+            lastHeadingUpdateMs = now;
+
             double raw = Math.IEEEremainder(
                     imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
-            return Math.IEEEremainder(raw - headingOffset, 360);
+            cachedHeading = Math.IEEEremainder(raw - headingOffset, 360);
+            return cachedHeading;
         }
     }
 
@@ -334,6 +344,11 @@ public class SwerveSubsystem extends SubsystemBase {
 
         SwerveModuleState[] moduleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(chassisSpeeds);
 
+        moduleStates[0].speedMetersPerSecond /= DriveConstants.kFrontLeftDrivePowerScale;
+        moduleStates[1].speedMetersPerSecond /= DriveConstants.kFrontRightDrivePowerScale;
+        moduleStates[2].speedMetersPerSecond /= DriveConstants.kBackLeftDrivePowerScale;
+        moduleStates[3].speedMetersPerSecond /= DriveConstants.kBackRightDrivePowerScale;
+
         // 歸一化輪速
         SwerveDriveKinematics.normalizeWheelSpeeds(moduleStates, DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
 
@@ -345,7 +360,6 @@ public class SwerveSubsystem extends SubsystemBase {
     }
 
     public void setModuleStates(SwerveModuleState[] desiredStates) {
-        // If commanded speeds are tiny, hold current angles and stop drive motors
         boolean allStopped = true;
         for (SwerveModuleState s : desiredStates) {
             if (Math.abs(s.speedMetersPerSecond) > kStopSpeedMps) {
@@ -358,7 +372,15 @@ public class SwerveSubsystem extends SubsystemBase {
             return;
         }
 
-        SwerveDriveKinematics.normalizeWheelSpeeds(desiredStates, DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
+        // ★ 先除以 powerScale，讓 normalize 看到正確的功率需求比例
+        desiredStates[0].speedMetersPerSecond /= DriveConstants.kFrontLeftDrivePowerScale;
+        desiredStates[1].speedMetersPerSecond /= DriveConstants.kFrontRightDrivePowerScale;
+        desiredStates[2].speedMetersPerSecond /= DriveConstants.kBackLeftDrivePowerScale;
+        desiredStates[3].speedMetersPerSecond /= DriveConstants.kBackRightDrivePowerScale;
+
+        SwerveDriveKinematics.normalizeWheelSpeeds(desiredStates,
+                DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
+
         frontLeft.setDesiredState(desiredStates[0]);
         frontRight.setDesiredState(desiredStates[1]);
         backLeft.setDesiredState(desiredStates[2]);

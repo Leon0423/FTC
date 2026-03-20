@@ -358,7 +358,7 @@ public class SwerveModule {
             driveMotor.setPower(driveOutput);
         } else {
             // 簡單的開環控制（原本的方式）
-            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;
+            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
             driveError = 0;
             driveMotor.setPower(driveOutput);
         }
@@ -399,7 +399,7 @@ public class SwerveModule {
         state = SwerveModuleState.optimize(state, getState().angle);
 
         // ===== Drive Motor 控制（無 PID，直接功率）=====
-        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond * powerScale;
+        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
         driveMotor.setPower(drivePower);
 
         // ===== Turning Motor 控制（仍使用 PID）=====
