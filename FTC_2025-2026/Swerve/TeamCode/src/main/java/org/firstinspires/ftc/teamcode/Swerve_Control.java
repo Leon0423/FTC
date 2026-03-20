@@ -20,7 +20,7 @@ public class Swerve_Control extends LinearOpMode {
     private boolean fieldOriented = true;
     private boolean lastA = false;
     private boolean lastLB = false;
-    private boolean yLockModeEnabled = true;
+    private boolean yLockModeEnabled = false;
     private boolean lastY = false;
 
     // 用於整合搖桿成目標位置 (綠點)
