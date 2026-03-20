@@ -30,10 +30,6 @@ public final class Constants {
         public static final double kDriveEncoderRot2Meter = kDriveMotorGearRatio * Math.PI * kWheelDiameterMeters;
         // 將轉向馬達旋轉數轉換為弧度的係數
         public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2 * Math.PI;
-        // 將驅動馬達RPM轉換為每秒公尺的係數
-        public static final double kDriveEncoderRPM2MeterPerSec = kDriveEncoderRot2Meter / 60;
-        // 將轉向馬達RPM轉換為每秒弧度的係數
-        public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60;
 
         // === 轉向 PID 控制器參數 ===
         // 調整於 2026-03-19：解決邊直走邊轉時轉向滯後的問題
@@ -45,12 +41,10 @@ public final class Constants {
         // 轉向輸出與感測穩定化
         // 調整於 2026-03-16：改善馬達同步精度、解決1j6g4馬達轉不動問題
         // 調整於 2026-03-19：減小死區以加快轉向響應
-        public static final double kTurningDeadbandDeg = 0.0;     // 減至 0.5 度以提高轉向敏銳度
-        public static final double kTurningMaxJumpDeg = 45.0;     // 單次允許的角度跳變上限 (度)
-        public static final double kTurningMaxTransitionOutput = 0.7; // 過渡期間最大輸出
+        public static final double kTurningDeadbandDeg = 0.0;     // 減至 0.0 度以提高轉向敏銳度
 
         // === 驅動 PID 控制器參數 ===
-        // 調整於 2026-03-16：解決1j6g4馬達力矩過大轉不動問題
+        // 調整於 2026-03-16：解決馬達力矩過大轉不動問題
         // 啟用PID以提供速度反饋控制，加強低速時的扭矩以克服卡住
         public static final double kPDrive = 0.0;  // TODO P 係數：降低以減少過度響應，防止抖動
         public static final double kIDrive = 0.0;  // TODO I 係數：增加至 0.01 以穩定低速轉動
@@ -90,18 +84,18 @@ public final class Constants {
         public static final String kFrontRightTurningMotorName = "BLTurn";  // 前右轉向馬達
         public static final String kBackRightTurningMotorName = "FLTurn";   // 後右轉向馬達
 
-        // === 轉向編碼器方向設定 ===
-        public static final boolean kFrontLeftTurningEncoderReversed = true;   // TODO 前左轉向編碼器反向
-        public static final boolean kFrontRightTurningEncoderReversed = true;  // TODO 前右轉向編碼器反向
-        public static final boolean kBackLeftTurningEncoderReversed = true;    // TODO 後左轉向編碼器反向
-        public static final boolean kBackRightTurningEncoderReversed = true;   // TODO 後右轉向編碼器反向
-
         // === 驅動編碼器方向設定 ===
         public static final boolean kFrontLeftDriveEncoderReversed = true;   // TODO 前左驅動編碼器反向
         public static final boolean kFrontRightDriveEncoderReversed = false;  // TODO 前右驅動編碼器反向
 
         public static final boolean kBackLeftDriveEncoderReversed = true;    // TODO 後左驅動編碼器反向
         public static final boolean kBackRightDriveEncoderReversed = false;   // TODO 後右驅動編碼器反向
+
+        // === 轉向編碼器方向設定 ===
+        public static final boolean kFrontLeftTurningEncoderReversed = true;   // TODO 前左轉向編碼器反向
+        public static final boolean kFrontRightTurningEncoderReversed = true;  // TODO 前右轉向編碼器反向
+        public static final boolean kBackLeftTurningEncoderReversed = true;    // TODO 後左轉向編碼器反向
+        public static final boolean kBackRightTurningEncoderReversed = true;   // TODO 後右轉向編碼器反向
 
         // === 絕對編碼器硬體名稱 ===
         // 使用與 servo 相同的命名方式，便於硬體配置管理
@@ -118,10 +112,10 @@ public final class Constants {
 
         // === 絕對編碼器偏移角度 (度數) ===
         // 用於校正輪子的初始方向，使用 SwerveModuleTuner 測量正確的偏移值
-        public static final double kFrontLeftDriveAbsoluteEncoderOffsetDeg = 118.00;  // TODO 前左輪偏移角度
-        public static final double kFrontRightDriveAbsoluteEncoderOffsetDeg = 0.39; // TODO 前右輪偏移角度
-        public static final double kBackLeftDriveAbsoluteEncoderOffsetDeg = 16.06;   // TODO 後左輪偏移角度
-        public static final double kBackRightDriveAbsoluteEncoderOffsetDeg = 33.60;    // TODO 後右輪偏移角度
+        public static final double kFrontLeftDriveAbsoluteEncoderOffsetDeg = 0.0;  // TODO 前左輪偏移角度
+        public static final double kFrontRightDriveAbsoluteEncoderOffsetDeg = 0.0; // TODO 前右輪偏移角度
+        public static final double kBackLeftDriveAbsoluteEncoderOffsetDeg = 0.0;   // TODO 後左輪偏移角度
+        public static final double kBackRightDriveAbsoluteEncoderOffsetDeg = 0.0;    // TODO 後右輪偏移角度
 
         // === 絕對編碼器偏移角度 (弧度) - 自動計算 ===
         public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = Math.toRadians(kFrontLeftDriveAbsoluteEncoderOffsetDeg);
