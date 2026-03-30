@@ -69,10 +69,6 @@ public class SwerveModule {
     private final String prefOffsetKey;
     private boolean enableSaving = true;
     private int saveCounter = 0;
-
-    private long stillStartMs = 0;
-    private static final long STILL_THRESHOLD_MS = 500;
-
     /**
      * SwerveModule 建構函式
      * @param hardwareMap 硬體映射物件
@@ -164,28 +160,17 @@ public class SwerveModule {
         accumulatedAngle += delta * ModuleConstants.kTurningMotorGearRatio;
         lastRawServoRad = currentRaw;
 
+        if (enableSaving) {
+            saveCounter++;
+            if (saveCounter >= SAVE_EVERY_N_UPDATES) {
+                saveTrackingState();
+                saveCounter = 0;
+            }
+        }
+
         double normalized = accumulatedAngle;
         while (normalized >  Math.PI) normalized -= 2 * Math.PI;
         while (normalized < -Math.PI) normalized += 2 * Math.PI;
-
-        if (enableSaving) {
-            if (Math.abs(delta) < 0.002) {
-                if (stillStartMs == 0) stillStartMs = now;
-                if (now - stillStartMs > STILL_THRESHOLD_MS) {
-                    double absAngle = getAbsoluteEncoderRad();
-                    double blendDiff = normalizeAngle(absAngle - normalized);
-                    if (Math.abs(Math.toDegrees(blendDiff)) < 10) {
-                        accumulatedAngle += blendDiff;
-                        normalized = accumulatedAngle;
-                        while (normalized >  Math.PI) normalized -= 2 * Math.PI;
-                        while (normalized < -Math.PI) normalized += 2 * Math.PI;
-                    }
-                    stillStartMs = 0;
-                }
-            } else {
-                stillStartMs = 0;
-            }
-        }
 
         cachedTurningPosition = normalized;
         return cachedTurningPosition;
