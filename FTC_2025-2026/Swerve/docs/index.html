@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTC Swerve Drive 程式使用手冊</title>
+<style>
+/* ── RESET & VARS ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #f0f4f8;
+  --surface:  #ffffff;
+  --primary:  #0d1b2a;
+  --primary2: #162840;
+  --accent:   #ff6b35;
+  --accent2:  #4ecdc4;
+  --text:     #1a202c;
+  --muted:    #64748b;
+  --border:   #e2e8f0;
+  --code-bg:  #161e2e;
+  --green:    #22c55e;
+  --yellow:   #f59e0b;
+  --blue:     #3b82f6;
+  --red:      #ef4444;
+  --teal:     #14b8a6;
+  --purple:   #a855f7;
+  --r: 10px;
+  --sh: 0 1px 8px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+  --shl: 0 4px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.05);
+}
+html { scroll-behavior: smooth; font-size: 15px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC',
+       'Microsoft JhengHei', sans-serif; background: var(--bg); color: var(--text);
+       line-height: 1.7; }
+
+/* ── PROGRESS BAR ── */
+#progress { position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  z-index: 999; transition: width .1s linear; border-radius: 0 2px 2px 0; }
+
+/* ── NAV ── */
+.nav { position: sticky; top: 0; z-index: 100;
+  background: rgba(13,27,42,.96); backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; height: 50px; padding: 0 28px; gap: 16px; }
+.nav-logo { color: #fff; font-weight: 700; font-size: .88rem;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }
+.nav-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%;
+  animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.nav-links { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-link { color: rgba(255,255,255,.5); text-decoration: none; font-size: .76rem;
+  padding: 4px 10px; border-radius: 6px; transition: all .15s; white-space: nowrap; }
+.nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,.1); }
+.nav-link.active { color: var(--accent); }
+
+/* ── HERO ── */
+.hero { position: relative; height: 500px; display: flex; align-items: flex-end;
+  overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 30%; }
+.hero-overlay { position: absolute; inset: 0;
+  background: linear-gradient(160deg,
+    rgba(13,27,42,.3) 0%,
+    rgba(13,27,42,.7) 50%,
+    rgba(13,27,42,.97) 100%); }
+.hero-body { position: relative; z-index: 2; padding: 48px 56px; width: 100%; }
+.hero-season { display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,107,53,.15); border: 1px solid rgba(255,107,53,.3);
+  padding: 4px 14px; border-radius: 50px; font-size: .75rem;
+  color: rgba(255,255,255,.85); margin-bottom: 16px; }
+.hero-season strong { color: var(--accent); }
+.hero h1 { font-size: clamp(1.9rem, 4vw, 3.2rem); font-weight: 800; color: #fff;
+  line-height: 1.15; letter-spacing: -.02em; margin-bottom: 16px;
+  text-shadow: 0 2px 24px rgba(0,0,0,.4); }
+.hero-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.htag { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16);
+  padding: 5px 14px; border-radius: 50px; font-size: .78rem;
+  color: rgba(255,255,255,.78); backdrop-filter: blur(4px); }
+.htag-btn { background: var(--accent); border-color: var(--accent); color: #fff;
+  font-weight: 700; text-decoration: none; transition: all .2s; }
+.htag-btn:hover { background: #e8602e; transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255,107,53,.4); }
+
+/* ── QUICK START ── */
+.qs { background: linear-gradient(135deg, #0f2744 0%, #0d1b2a 100%);
+  border-top: 3px solid var(--accent); padding: 48px 56px; }
+.qs-head { color: #fff; font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+.qs-sub { color: rgba(255,255,255,.5); font-size: .84rem; margin-bottom: 24px; }
+.qs-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.qs-card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+  border-radius: var(--r); padding: 20px; transition: all .2s; }
+.qs-card:hover { background: rgba(255,255,255,.09); border-color: rgba(255,107,53,.5);
+  transform: translateY(-2px); }
+.qs-n { font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1;
+  margin-bottom: 8px; }
+.qs-card h3 { font-size: .88rem; color: #fff; margin-bottom: 4px; }
+.qs-card p { font-size: .76rem; color: rgba(255,255,255,.45); }
+.qs-ref { font-size: .7rem; color: rgba(255,107,53,.65); margin-top: 6px; }
+
+/* ── LAYOUT ── */
+.w { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+.sec { padding: 56px 0; }
+.sec-dark { background: var(--surface); }
+.sec-title { font-size: 1.55rem; font-weight: 700; color: var(--primary);
+  margin-bottom: 22px; display: flex; align-items: center; gap: 12px; }
+.sec-title::after { content: ''; flex: 1; height: 2px;
+  background: linear-gradient(to right, var(--accent), transparent); }
+h3.sub { font-size: 1rem; font-weight: 700; color: var(--primary);
+  margin: 24px 0 12px; padding-left: 10px;
+  border-left: 3px solid var(--accent); }
+
+/* ── TOC ── */
+.toc-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
+.toc-card { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 16px; display: flex; align-items: center;
+  gap: 11px; text-decoration: none; color: var(--text); transition: all .18s;
+  box-shadow: var(--sh); }
+.toc-card:hover { border-color: var(--accent); transform: translateY(-2px);
+  box-shadow: var(--shl); }
+.toc-n { background: var(--primary); color: #fff; min-width: 28px; height: 28px;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .75rem; flex-shrink: 0; }
+.toc-h { font-size: .84rem; font-weight: 600; margin-bottom: 1px; }
+.toc-p { font-size: .69rem; color: var(--muted); }
+
+/* ── HW CARDS ── */
+.hw-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+.hw-card { background: var(--surface); border-radius: var(--r); padding: 16px;
+  box-shadow: var(--sh); border-left: 3px solid var(--accent); transition: box-shadow .18s; }
+.hw-card:hover { box-shadow: var(--shl); }
+.hw-l { font-size: .66rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: 3px; }
+.hw-v { font-size: .9rem; font-weight: 700; color: var(--primary); }
+.hw-s { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+
+/* ── FILE TREE ── */
+.ftree { background: var(--code-bg); color: #cbd5e1; padding: 24px 28px;
+  border-radius: var(--r); font-family: 'Consolas','Fira Code',monospace;
+  font-size: .83rem; line-height: 2; box-shadow: var(--shl);
+  border: 1px solid rgba(255,255,255,.06); }
+.ft-hi { color: #fbbf24; font-weight: 600; }
+.ft-cm { color: #4b5563; }
+.ft-dir { color: #93c5fd; }
+
+/* ── TABLES ── */
+.tw { overflow-x: auto; border-radius: var(--r); box-shadow: var(--sh); margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+thead tr { background: var(--primary); color: #fff; }
+thead th { padding: 10px 15px; text-align: left; font-weight: 600;
+  font-size: .8rem; letter-spacing: .03em; }
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: 9px 15px; font-size: .83rem; }
+code { background: rgba(13,27,42,.07); padding: 2px 6px; border-radius: 4px;
+  font-family: 'Consolas','Fira Code',monospace; font-size: .82em; color: #c0392b; }
+
+/* ── CODE BLOCKS ── */
+.code-wrap { position: relative; margin: 14px 0; }
+.code-lang { position: absolute; top: 10px; left: 16px; font-size: .65rem;
+  color: #4b5563; font-family: 'Consolas',monospace; text-transform: uppercase;
+  letter-spacing: .08em; }
+.copy-btn { position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.55);
+  padding: 3px 10px; border-radius: 5px; font-size: .72rem; cursor: pointer;
+  transition: all .18s; font-family: inherit; }
+.copy-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+pre { background: var(--code-bg); color: #e2e8f0; padding: 36px 20px 20px;
+  border-radius: var(--r); overflow-x: auto;
+  font-family: 'Consolas','Fira Code',monospace; font-size: .83rem;
+  line-height: 1.65; border: 1px solid rgba(255,255,255,.06); }
+pre code { background: none; padding: 0; color: inherit; font-size: 100%; }
+
+/* ── CALLOUTS ── */
+.co { display: flex; gap: 10px; padding: 12px 16px; border-radius: 8px;
+  border-left: 3px solid; margin: 13px 0; font-size: .86rem; align-items: flex-start; }
+.co-ic { flex-shrink: 0; font-size: .95rem; margin-top: 2px; }
+.co-w { background: #fffbeb; border-color: var(--yellow); color: #78350f; }
+.co-i { background: #eff6ff; border-color: var(--blue);  color: #1e3a5f; }
+.co-s { background: #f0fdf4; border-color: var(--green); color: #14532d; }
+.co-t { background: #faf5ff; border-color: var(--purple);color: #4c1d95; }
+.co-r { background: #fff1f2; border-color: var(--red);   color: #7f1d1d; }
+
+/* ── TUNING TIMELINE ── */
+.tl { position: relative; padding-left: 44px; }
+.tl::before { content: ''; position: absolute; left: 14px; top: 0; bottom: 0;
+  width: 2px; background: linear-gradient(to bottom, var(--accent), var(--accent2)); }
+.tl-step { margin-bottom: 20px; position: relative; }
+.tl-dot { position: absolute; left: -44px; top: 18px; width: 30px; height: 30px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: .68rem; font-weight: 800; color: #fff;
+  border: 3px solid var(--bg); box-shadow: 0 0 0 2px var(--accent); }
+.tl-dot-main { background: var(--accent); }
+.tl-dot-gray { background: #94a3b8; box-shadow: 0 0 0 2px #94a3b8; }
+
+/* ACCORDION */
+.accordion { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; box-shadow: var(--sh);
+  transition: box-shadow .18s; }
+.accordion:hover { box-shadow: var(--shl); }
+.acc-head { display: flex; align-items: center; gap: 10px; padding: 13px 18px;
+  cursor: pointer; user-select: none; background: linear-gradient(135deg,var(--primary),#1e3a5c);
+  color: #fff; font-weight: 600; font-size: .88rem; transition: background .18s; }
+.acc-head:hover { background: linear-gradient(135deg,#162840,#254d7a); }
+.acc-badge { padding: 2px 10px; border-radius: 20px; font-size: .7rem; font-weight: 700; flex-shrink: 0; }
+.acc-badge-o { background: var(--accent); }
+.acc-badge-g { background: #64748b; }
+.acc-arrow { margin-left: auto; transition: transform .25s; font-size: .75rem;
+  color: rgba(255,255,255,.5); }
+.acc-head.open .acc-arrow { transform: rotate(180deg); }
+.acc-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+.acc-body.open { max-height: 2000px; }
+.acc-inner { padding: 20px; }
+
+/* ── MODES ── */
+.mode-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 18px 0; }
+.mode-card { background: var(--surface); border-radius: var(--r); padding: 20px;
+  box-shadow: var(--sh); text-align: center; border-top: 3px solid; transition: all .2s; }
+.mode-card:hover { transform: translateY(-2px); box-shadow: var(--shl); }
+.mode-card:nth-child(1) { border-color: var(--blue); }
+.mode-card:nth-child(2) { border-color: var(--green); }
+.mode-card:nth-child(3) { border-color: var(--yellow); }
+.mode-icon { font-size: 2rem; margin-bottom: 8px; }
+.mode-title { font-weight: 700; margin-bottom: 5px; font-size: .92rem; }
+.mode-desc { font-size: .79rem; color: var(--muted); }
+
+/* ── CONTROLLER ── */
+.ctrl-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin: 14px 0; }
+.ctrl-card { background: var(--surface); border-radius: 9px; padding: 12px 15px;
+  box-shadow: var(--sh); display: flex; align-items: center; gap: 12px; transition: box-shadow .18s; }
+.ctrl-card:hover { box-shadow: var(--shl); }
+.ctrl-ic { font-size: 1.1rem; width: 36px; height: 36px; background: var(--bg);
+  border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ctrl-k { font-weight: 700; font-size: .84rem; }
+.ctrl-f { font-size: .76rem; color: var(--muted); }
+
+/* ── PROTECT CARDS ── */
+.pro-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin: 18px 0; }
+.pro-card { background: var(--surface); border-radius: var(--r); padding: 16px;
+  box-shadow: var(--sh); border-top: 3px solid var(--teal); transition: all .2s; }
+.pro-card:hover { transform: translateY(-2px); box-shadow: var(--shl); }
+.pro-title { font-weight: 700; margin-bottom: 5px; font-size: .88rem; color: var(--primary); }
+.pro-desc { font-size: .79rem; color: var(--muted); }
+
+/* ── FAQ ── */
+.faq { display: flex; flex-direction: column; gap: 7px; margin-top: 22px; }
+.faq-item { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; box-shadow: var(--sh);
+  transition: box-shadow .18s; }
+.faq-item:hover { box-shadow: var(--shl); }
+.faq-q { padding: 13px 18px; font-weight: 600; display: flex; align-items: center;
+  gap: 11px; font-size: .88rem; }
+.faq-qn { background: var(--primary); color: #fff; min-width: 28px; height: 28px;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: .76rem; flex-shrink: 0; }
+.faq-a { padding: 13px 18px; border-top: 1px solid var(--border);
+  background: #f8fafc; font-size: .84rem; }
+
+/* ── STATUS BADGES ── */
+.bdg { padding: 2px 8px; border-radius: 10px; font-size: .72rem; font-weight: 600; }
+.bdg-r { background: #fee2e2; color: #991b1b; }
+.bdg-y { background: #fef3c7; color: #92400e; }
+.bdg-g { background: #dcfce7; color: #14532d; }
+
+/* ── DASHBOARD BOX ── */
+.dash-box { background: linear-gradient(135deg,var(--primary),#1e3a5c);
+  border-radius: var(--r); padding: 18px 24px; display: flex; align-items: center;
+  gap: 18px; margin-bottom: 18px; color: #fff; }
+.dash-url { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+  border-radius: 7px; padding: 7px 14px; font-family: 'Consolas',monospace;
+  font-size: .88rem; color: #fbbf24; flex: 1; }
+
+/* ── BACK TO TOP ── */
+#btt { position: fixed; bottom: 28px; right: 28px; width: 40px; height: 40px;
+  background: var(--primary); color: #fff; border: none; border-radius: 50%;
+  cursor: pointer; font-size: 1rem; display: flex; align-items: center;
+  justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  opacity: 0; transform: translateY(8px); transition: all .25s; z-index: 99; }
+#btt.show { opacity: 1; transform: translateY(0); }
+#btt:hover { background: var(--accent); }
+
+/* ── FOOTER ── */
+footer { background: var(--primary); color: rgba(255,255,255,.4); text-align: center;
+  padding: 32px; font-size: .8rem; border-top: 2px solid var(--accent); }
+footer strong { color: rgba(255,255,255,.8); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .qs-grid, .hw-grid { grid-template-columns: repeat(2,1fr); }
+  .toc-grid { grid-template-columns: repeat(2,1fr); }
+  .mode-grid, .ctrl-grid, .pro-grid { grid-template-columns: 1fr; }
+  .hero-body, .qs { padding-left: 28px; padding-right: 28px; }
+}
+@media (max-width: 600px) {
+  .qs-grid, .hw-grid, .toc-grid { grid-template-columns: 1fr; }
+  .hero { height: 420px; }
+}
+p { margin-bottom: 9px; }
+ol, ul { padding-left: 20px; }
+li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo"><div class="nav-dot"></div>Swerve 手冊</div>
+  <div class="nav-links">
+    <a href="#qs"     class="nav-link" data-sec="qs">快速開始</a>
+    <a href="#hw"     class="nav-link" data-sec="hw">硬體</a>
+    <a href="#struct" class="nav-link" data-sec="struct">檔案結構</a>
+    <a href="#const"  class="nav-link" data-sec="const">Constants</a>
+    <a href="#tuning" class="nav-link" data-sec="tuning">Tuning</a>
+    <a href="#ctrl"   class="nav-link" data-sec="ctrl">操作</a>
+    <a href="#autopid"class="nav-link" data-sec="autopid">Auto PID</a>
+    <a href="#dash"   class="nav-link" data-sec="dash">Dashboard</a>
+    <a href="#tcfg"   class="nav-link" data-sec="tcfg">TuningConfig</a>
+    <a href="#track"  class="nav-link" data-sec="track">角度追蹤</a>
+    <a href="#faq"    class="nav-link" data-sec="faq">排查</a>
+    <a href="#todo"   class="nav-link" data-sec="todo">待辦</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <img class="hero-bg" src="robot.png" alt="FTC Swerve Drive Robot">
+  <div class="hero-overlay"></div>
+  <div class="hero-body">
+    <div class="hero-season"><strong>FTC 2025–2026</strong> ｜ Java / FTCLib ｜ REV Control Hub</div>
+    <h1>Swerve Drive<br>程式使用手冊</h1>
+    <div class="hero-tags">
+      <span class="htag">⚙️ 全向驅動底盤</span>
+      <span class="htag">📡 BNO055 IMU</span>
+      <span class="htag">🎯 Field-Oriented Control</span>
+      <a href="#qs" class="htag htag-btn">開始使用 →</a>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK START -->
+<div id="qs" class="qs">
+  <div class="qs-head">🚀 快速開始</div>
+  <div class="qs-sub">第一次上車？照這四步走就對了！</div>
+  <div class="qs-grid">
+    <div class="qs-card"><div class="qs-n">01</div><h3>硬體命名</h3><p>完成 Driver Station 硬體命名</p><div class="qs-ref">→ 見 §1 硬體架構</div></div>
+    <div class="qs-card"><div class="qs-n">02</div><h3>執行 Tuning</h3><p>依序執行所有 Tuning 流程</p><div class="qs-ref">→ 見 §4，順序不可跳過</div></div>
+    <div class="qs-card"><div class="qs-n">03</div><h3>實際駕駛</h3><p>用 Swerve_Control 上場操作</p><div class="qs-ref">→ 見 §5</div></div>
+    <div class="qs-card"><div class="qs-n">04</div><h3>問題排查</h3><p>遇到問題先查常見問題</p><div class="qs-ref">→ 見 §10</div></div>
+  </div>
+</div>
+
+<!-- TOC -->
+<section class="sec sec-dark">
+  <div class="w">
+    <h2 class="sec-title">📋 文件目錄</h2>
+    <div class="toc-grid">
+      <a href="#hw"     class="toc-card"><div class="toc-n">1</div><div><div class="toc-h">硬體架構</div><div class="toc-p">元件規格、hardwareMap 命名表</div></div></a>
+      <a href="#struct" class="toc-card"><div class="toc-n">2</div><div><div class="toc-h">首次安裝與硬體配置</div><div class="toc-p">Driver Station 設定、專案結構</div></div></a>
+      <a href="#const"  class="toc-card"><div class="toc-n">3</div><div><div class="toc-h">Constants.java 參數說明</div><div class="toc-p">ModuleConstants、DriveConstants</div></div></a>
+      <a href="#tuning" class="toc-card"><div class="toc-n">4</div><div><div class="toc-h">Tuning 程式流程</div><div class="toc-p">1a → 1b → 1c → 2 → 3 → 4 → 5</div></div></a>
+      <a href="#ctrl"   class="toc-card"><div class="toc-n">5</div><div><div class="toc-h">正式操作：Swerve_Control</div><div class="toc-p">搖桿配置、控制模式</div></div></a>
+      <a href="#autopid"class="toc-card"><div class="toc-n">6</div><div><div class="toc-h">Auto PID Tuner</div><div class="toc-p">自動 PID 定點校正</div></div></a>
+      <a href="#dash"   class="toc-card"><div class="toc-n">7</div><div><div class="toc-h">FTC Dashboard</div><div class="toc-p">連線方式、頁籤說明</div></div></a>
+      <a href="#tcfg"   class="toc-card"><div class="toc-n">8</div><div><div class="toc-h">TuningConfig 即時調參</div><div class="toc-p">Dashboard 可修改的參數列表</div></div></a>
+      <a href="#track"  class="toc-card"><div class="toc-n">9</div><div><div class="toc-h">角度追蹤系統原理</div><div class="toc-p">Delta 累積追蹤、四大保護機制</div></div></a>
+      <a href="#faq"    class="toc-card"><div class="toc-n">10</div><div><div class="toc-h">常見問題排查</div><div class="toc-p">Q1–Q7 故障排解</div></div></a>
+      <a href="#todo"   class="toc-card"><div class="toc-n">11</div><div><div class="toc-h">待辦與已知限制</div><div class="toc-p">目前未解決的問題與計畫</div></div></a>
+    </div>
+  </div>
+</section>
+
+<!-- HARDWARE -->
+<section id="hw" class="sec">
+  <div class="w">
+    <h2 class="sec-title">⚡ 硬體架構</h2>
+    <div class="co co-w"><span class="co-ic">⚠️</span><span>數值或許相近，但絕對不會完全一致，請記得要改</span></div>
+    <div class="hw-grid" style="margin-top:18px">
+      <div class="hw-card"><div class="hw-l">DC Motor</div><div class="hw-v">goBILDA DcMotorEx</div><div class="hw-s">28 ticks/rev</div></div>
+      <div class="hw-card"><div class="hw-l">轉向 Servo</div><div class="hw-v">AXON CRServo</div><div class="hw-s">CRServo Mode</div></div>
+      <div class="hw-card"><div class="hw-l">轉向編碼器</div><div class="hw-v">AXON 絕對編碼器</div><div class="hw-s">AnalogInput 0~3.3 V</div></div>
+      <div class="hw-card"><div class="hw-l">齒輪比（轉向）</div><div class="hw-v">0.4</div><div class="hw-s">Servo 2.5圈 = 輪子1圈</div></div>
+      <div class="hw-card"><div class="hw-l">最大線速度</div><div class="hw-v">0.764 m/s</div><div class="hw-s">實測，100% 功率</div></div>
+      <div class="hw-card"><div class="hw-l">最大角速度</div><div class="hw-v">10.879 rad/s</div><div class="hw-s">實測，100% 功率</div></div>
+      <div class="hw-card"><div class="hw-l">主控</div><div class="hw-v">REV Control Hub</div><div class="hw-s">—</div></div>
+      <div class="hw-card"><div class="hw-l">IMU</div><div class="hw-v">BNO055（內建）</div><div class="hw-s">可切換 GoBILDA Pinpoint</div></div>
+    </div>
+    <h3 class="sub">hardwareMap 命名表</h3>
+    <div class="co co-w"><span class="co-ic">⚠️</span><span>命名對應車頭位置，請同步修改 Driver Station 中的馬達名稱</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>類型</th><th>前左 FL</th><th>前右 FR</th><th>後左 BL</th><th>後右 BR</th></tr></thead>
+      <tbody>
+        <tr><td>驅動馬達 (DcMotorEx)</td><td><code>FL</code></td><td><code>FR</code></td><td><code>BL</code></td><td><code>BR</code></td></tr>
+        <tr><td>轉向伺服 (CRServo)</td><td><code>FLTurn</code></td><td><code>FRTurn</code></td><td><code>BLTurn</code></td><td><code>BRTurn</code></td></tr>
+        <tr><td>絕對編碼器 (AnalogInput)</td><td><code>FLEncoder</code></td><td><code>FREncoder</code></td><td><code>BLEncoder</code></td><td><code>BREncoder</code></td></tr>
+        <tr><td>IMU</td><td><code>imu</code></td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- FILE STRUCTURE -->
+<section id="struct" class="sec sec-dark">
+  <div class="w">
+    <h2 class="sec-title">📁 專案檔案結構</h2>
+    <div class="ftree">
+<span class="ft-dir">teamcode/</span>
+├── <span class="ft-hi">Constants.java</span>               <span class="ft-cm">← 所有常數集中在這裡</span>
+├── <span class="ft-hi">Swerve_Control.java</span>          <span class="ft-cm">← 正式 TeleOp</span>
+├── <span class="ft-hi">AutoPIDTuner.java</span>            <span class="ft-cm">← 自動路徑 PID 調整程式</span>
+├── <span class="ft-dir">commands/</span>
+│   └── SwerveJoystickCmd.java   <span class="ft-cm">← 搖桿指令</span>
+├── <span class="ft-dir">subsystems/</span>
+│   ├── SwerveModule.java        <span class="ft-cm">← 單輪邏輯（轉向追蹤、PID）</span>
+│   └── SwerveSubsystem.java     <span class="ft-cm">← 四輪整合、里程計、IMU</span>
+└── <span class="ft-dir">Tuning/</span>
+    ├── TuningConfig.java
+    ├── _1a_EncoderOffsetReader.java
+    ├── _1b_TurningEncoderReverse.java
+    ├── _1c_AutoSetOffset.java
+    ├── _1c_ClearSwervePrefs.java
+    ├── _2_DriveMotorDirectionTester.java
+    ├── _3_MaxSpeedAngularTest.java
+    ├── _4_TurningPIDTuner.java
+    └── _5_DrivePIDTuner.java</div>
+  </div>
+</section>
+
+<!-- CONSTANTS -->
+<section id="const" class="sec">
+  <div class="w">
+    <h2 class="sec-title">⚙️ Constants.java 參數說明</h2>
+    <h3 class="sub">ModuleConstants（單輪參數）</h3>
+    <div class="tw"><table>
+      <thead><tr><th>參數</th><th>說明</th><th>預設值</th></tr></thead>
+      <tbody>
+        <tr><td><code>kWheelDiameterMeters</code></td><td>輪子直徑（公尺）</td><td><code>0.058</code></td></tr>
+        <tr><td><code>kDriveMotorGearRatio</code></td><td>驅動馬達齒輪比</td><td><code>0.113636</code></td></tr>
+        <tr><td><code>kServoTurnsPerWheelTurn</code></td><td>Servo 轉幾圈對應輪子轉 1 圈</td><td><code>2.5</code></td></tr>
+        <tr><td><code>kPTurning</code></td><td>轉向 PID — P 係數</td><td><code>0.5</code></td></tr>
+        <tr><td><code>kITurning</code></td><td>轉向 PID — I 係數</td><td><code>0.02</code></td></tr>
+        <tr><td><code>kDTurning</code></td><td>轉向 PID — D 係數</td><td><code>0.00</code></td></tr>
+        <tr><td><code>kTurningDeadbandDeg</code></td><td>轉向死區（度）</td><td><code>0.0</code></td></tr>
+        <tr><td><code>kPDrive / kIDrive / kDDrive / kFDrive</code></td><td>驅動 PID 各係數</td><td>全 <code>0.0</code></td></tr>
+        <tr><td><code>kEnableDrivePID</code></td><td>是否啟用驅動 PID</td><td><code>false</code></td></tr>
+      </tbody>
+    </table></div>
+    <h3 class="sub">DriveConstants（整車參數）</h3>
+    <div class="tw"><table>
+      <thead><tr><th>參數</th><th>說明</th><th>預設值</th></tr></thead>
+      <tbody>
+        <tr><td><code>kTrackWidth</code></td><td>左右輪距（公尺）</td><td><code>0.22</code></td></tr>
+        <tr><td><code>kWheelBase</code></td><td>前後輪距（公尺）</td><td><code>0.22</code></td></tr>
+        <tr><td><code>kPhysicalMaxSpeedMetersPerSecond</code></td><td>實測最大線速度</td><td><code>0.764</code></td></tr>
+        <tr><td><code>kPhysicalMaxAngularSpeedRadiansPerSecond</code></td><td>實測最大角速度</td><td><code>10.879</code></td></tr>
+        <tr><td><code>kFrontLeftDrivePowerScale</code> 等</td><td>各輪功率補償</td><td>全 <code>1.00</code></td></tr>
+        <tr><td><code>kImuLogoFacingDirection</code></td><td>Control Hub Logo 朝向</td><td><code>UP</code></td></tr>
+        <tr><td><code>kImuUsbFacingDirection</code></td><td>Control Hub USB 朝向</td><td><code>BACKWARD</code></td></tr>
+        <tr><td><code>USING_PINPOINT</code></td><td>切換 GoBILDA Pinpoint 定位</td><td><code>false</code></td></tr>
+      </tbody>
+    </table></div>
+    <h3 class="sub">AutoConstants（自動 PID 參數）</h3>
+    <div class="co co-i"><span class="co-ic">ℹ️</span><span>所有 PID 初始值皆為 <code>0.0</code>，需透過 AutoPIDTuner 調整後填入。</span></div>
+  </div>
+</section>
+
+<!-- TUNING -->
+<section id="tuning" class="sec sec-dark">
+  <div class="w">
+    <h2 class="sec-title">🔧 Tuning 程式流程</h2>
+    <div class="co co-r"><span class="co-ic">🚨</span><span><strong>重要：</strong>務必照 <strong>1a → 1b → 1c → 2 → 3 → 4 → 5</strong> 的順序執行，不可跳過</span></div>
+    <div class="tw" style="margin-bottom:28px"><table>
+      <thead><tr><th>流程</th><th>程式</th><th>目的</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1a</strong></td><td>Encoder Offset Reader</td><td>確認編碼器讀值與接線正常</td></tr>
+        <tr><td><strong>1b</strong></td><td>Turning Encoder Reverse</td><td>確認轉向正功率方向</td></tr>
+        <tr><td><strong>1c</strong></td><td>Auto Set Offset / Clear Swerve Prefs</td><td>寫入或清除 Offset 與追蹤記憶</td></tr>
+        <tr><td><strong>2</strong></td><td>Drive Motor Direction Tester</td><td>確認驅動馬達方向設定</td></tr>
+        <tr><td><strong>3</strong></td><td>Max Speed &amp; Angular Test</td><td>取得整車最大線速度與角速度</td></tr>
+        <tr><td><strong>4</strong></td><td>Turning PID Tuner</td><td>調整轉向 PID</td></tr>
+        <tr><td><strong>5</strong></td><td>Drive PID Tuner</td><td>調整驅動速度控制</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="tl">
+      <!-- 1a -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">1a</div>
+        <div class="accordion">
+          <div class="acc-head open" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 1a</span>Encoder Offset Reader
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body open"><div class="acc-inner">
+            <p><strong>目的：</strong>監看絕對編碼器三層數值，確認硬體接線正常</p>
+            <p><strong>操作：</strong>開啟程式（不需按 Start），手動轉動輪子觀察數值</p>
+            <div class="tw"><table>
+              <thead><tr><th>層次</th><th>說明</th></tr></thead>
+              <tbody>
+                <tr><td><strong>第 1 層 Raw</strong></td><td>編碼器電壓換算成 0~360°，無任何處理</td></tr>
+                <tr><td><strong>第 2 層 Geared</strong></td><td>Raw × 齒輪比，輪子實際轉角（未扣 Offset）</td></tr>
+                <tr><td><strong>第 3 層 Final</strong></td><td>扣掉 Offset 後，SwerveModule 實際使用的值</td></tr>
+              </tbody>
+            </table></div>
+            <div class="co co-s"><span class="co-ic">✅</span><span><strong>合格標準：</strong>轉動時數值連續變化，無突然跳動</span></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 1b -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">1b</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 1b</span>Turning Encoder Reverse
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>確認 CRServo 正功率時編碼器角度是否增加</p>
+            <p><strong>操作：</strong>按 Start → 按 A 發送 Pulse（300ms），觀察角度變化</p>
+            <div class="tw"><table>
+              <thead><tr><th>結果</th><th>設定</th></tr></thead>
+              <tbody>
+                <tr><td>角度增加 ↑</td><td><code>kXXXTurningEncoderReversed = false</code></td></tr>
+                <tr><td>角度減少 ↓</td><td><code>kXXXTurningEncoderReversed = true</code></td></tr>
+              </tbody>
+            </table></div>
+            <p style="margin-top:10px;font-size:.82rem;color:var(--muted)">按鍵：<code>A</code> 發送 Pulse ｜ <code>LB/RB</code> 調整功率 ±10%</p>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 1c auto -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">1c</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 1c</span>Auto Set Offset
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>手動對齊輪子朝前後，一鍵寫入 Offset</p>
+            <ol style="margin:10px 0"><li>手動將四個輪子全部轉到朝向正前方</li><li>按 Start → 觀察第 3 層 Final 是否接近 0°</li><li>全部 &lt; ±5° 後按 <strong>A</strong> 寫入</li></ol>
+            <div class="co co-t"><span class="co-ic">💡</span><span>按 <code>A</code> 會同時清除累積角追蹤記憶，並覆蓋既有 Offset</span></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 1c clear -->
+      <div class="tl-step"><div class="tl-dot tl-dot-gray">1c</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-g">Step 1c</span>Clear Swerve Prefs（重置用）
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>清除 Control Hub 所有持久化角度與 Offset 記錄</p>
+            <p><strong>使用時機：</strong>角度追蹤嚴重跑掉、換裝零件、記憶被汙染</p>
+            <p><strong>操作：</strong>按 Start 即立即清除，再重新執行 Auto Set Offset</p>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">2</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 2</span>Drive Motor Direction Tester
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>確認四顆驅動馬達前進時 Encoder 數值增加</p>
+            <p><strong>Init 階段：</strong>程式自動對齊四輪到 0°，等待「✅ 全部對齊」後按 Start</p>
+            <div class="tw"><table>
+              <thead><tr><th>Encoder 變化</th><th>結論</th></tr></thead>
+              <tbody>
+                <tr><td>數值增加（↑）</td><td><code>kXXXDriveEncoderReversed = false</code></td></tr>
+                <tr><td>數值減少（↓）</td><td><code>kXXXDriveEncoderReversed = true</code></td></tr>
+              </tbody>
+            </table></div>
+            <div class="tw" style="margin-top:10px"><table>
+              <thead><tr><th>按鍵</th><th>功能</th></tr></thead>
+              <tbody>
+                <tr><td><code>A</code></td><td>全部前進</td></tr>
+                <tr><td><code>B</code></td><td>全部後退</td></tr>
+                <tr><td><code>DPAD ↑ → ← ↓</code></td><td>FL / FR / BL / BR 單獨</td></tr>
+                <tr><td><code>LB / RB</code></td><td>調整功率 ±10%</td></tr>
+                <tr><td><code>Y</code></td><td>套用結論到本次執行期</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">3</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 3</span>Max Speed &amp; Angular Test
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>實測最大線速度與角速度，填入 Constants.java</p>
+            <div class="code-wrap">
+              <span class="code-lang">java</span>
+              <button class="copy-btn" onclick="copyCode(this)">複製</button>
+              <pre><code>public static final double kPhysicalMaxSpeedMetersPerSecond = [實測值];
+public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = [實測值];</code></pre>
+            </div>
+            <div class="co co-r"><span class="co-ic">⚠️</span><span><strong>重要：</strong>兩個值必須在<strong>相同功率（100%）</strong>下測量，否則 Field-Oriented 角速度比例失準</span></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">4</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 4</span>Turning PID Tuner
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>調整轉向 CRServo PID，使輪角快速穩定跟上正弦波目標</p>
+            <ol style="margin:10px 0"><li>連接 Dashboard，按 Start</li><li>在 Graph 觀察 <code>target_deg</code> 與各輪角度曲線</li><li>在 Config → <code>_4_TurningPIDTuner</code> 即時調整</li></ol>
+            <p><strong>建議順序：</strong>先調 P（0.3 起）→ 加 D 減震盪 → 有穩態誤差才加 I</p>
+            <div class="tw"><table>
+              <thead><tr><th>參數</th><th>說明</th></tr></thead>
+              <tbody>
+                <tr><td><code>_1a/b/c_turningP/I/D</code></td><td>PID 係數</td></tr>
+                <tr><td><code>_1d_outputScale</code></td><td>輸出縮放（通常 1.0）</td></tr>
+                <tr><td><code>_1e_deadbandDeg</code></td><td>死區（建議 0）</td></tr>
+                <tr><td><code>_2a_testPeriodSec</code></td><td>正弦波週期（秒）</td></tr>
+                <tr><td><code>_2b_testAmplitudeDeg</code></td><td>正弦波振幅（度）</td></tr>
+              </tbody>
+            </table></div>
+            <div class="co co-s" style="margin-top:12px"><span class="co-ic">✅</span><span>完成後將值填入 <code>Constants.java</code> 的 <code>kPTurning / kITurning / kDTurning</code></span></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="tl-step"><div class="tl-dot tl-dot-main">5</div>
+        <div class="accordion">
+          <div class="acc-head" onclick="toggleAcc(this)">
+            <span class="acc-badge acc-badge-o">Step 5</span>Drive PID Tuner
+            <span class="acc-arrow">▼</span>
+          </div>
+          <div class="acc-body"><div class="acc-inner">
+            <p><strong>目的：</strong>調整驅動馬達速度控制，使實際速度跟上方波目標</p>
+            <p><strong>Init 選擇：</strong><code>A</code> = 全部，<code>DPAD ↑→←↓</code> = FL/FR/BL/BR 單獨</p>
+            <div class="code-wrap">
+              <button class="copy-btn" onclick="copyCode(this)">複製</button>
+              <pre><code>1. fOnlyMode = true，調 manualF 讓速度大致正確
+2. 需精準控制時關閉 fOnlyMode，依序加 F → P → D → I
+3. 始終震盪則維持 F-Only，保持 kEnableDrivePID = false</code></pre>
+            </div>
+            <div class="tw"><table>
+              <thead><tr><th>按鍵</th><th>功能</th></tr></thead>
+              <tbody>
+                <tr><td><code>X</code></td><td>暫停 / 繼續</td></tr>
+                <tr><td><code>LB / RB</code></td><td>調整測試最大速度 ±0.05 m/s</td></tr>
+              </tbody>
+            </table></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTROL -->
+<section id="ctrl" class="sec">
+  <div class="w">
+    <h2 class="sec-title">🕹️ 正式操作：Swerve_Control</h2>
+    <h3 class="sub">控制模式</h3>
+    <div class="mode-grid">
+      <div class="mode-card"><div class="mode-icon">🌐</div><div class="mode-title">Field-Oriented</div><div class="mode-desc">以場地為基準，推上搖桿永遠往場地正前方。<strong>預設，適合比賽。</strong></div></div>
+      <div class="mode-card"><div class="mode-icon">🤖</div><div class="mode-title">Robot-Oriented</div><div class="mode-desc">以機器人車頭為基準。適合調試與開發。</div></div>
+      <div class="mode-card"><div class="mode-icon">🔒</div><div class="mode-title">Lock Mode</div><div class="mode-desc">閒置時輪子擺成 X 型（±45°），增加防滑阻力。</div></div>
+    </div>
+    <h3 class="sub">搖桿配置</h3>
+    <div class="ctrl-grid">
+      <div class="ctrl-card"><div class="ctrl-ic">⬆️</div><div><div class="ctrl-k">左搖桿 上/下</div><div class="ctrl-f">前進 / 後退</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">↔️</div><div><div class="ctrl-k">左搖桿 左/右</div><div class="ctrl-f">左移 / 右移（側移）</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">🔄</div><div><div class="ctrl-k">右搖桿 左/右</div><div class="ctrl-f">逆時針 / 順時針旋轉</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">🔀</div><div><div class="ctrl-k">LB</div><div class="ctrl-f">切換 Field-Oriented ↔ Robot-Oriented</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">🔁</div><div><div class="ctrl-k">A</div><div class="ctrl-f">重置 Heading 並重建角度追蹤</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">🔒</div><div><div class="ctrl-k">Y</div><div class="ctrl-f">切換 Lock Mode</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">🚀</div><div><div class="ctrl-k">DPAD ↑ / ↓</div><div class="ctrl-f">直走速度倍率 ±10%（10%~100%）</div></div></div>
+      <div class="ctrl-card"><div class="ctrl-ic">↩️</div><div><div class="ctrl-k">DPAD → / ←</div><div class="ctrl-f">轉動速度倍率 ±10%</div></div></div>
+    </div>
+    <h3 class="sub">Dashboard 監看資訊</h3>
+    <div class="tw"><table>
+      <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>Mode</code></td><td>控制模式</td></tr>
+        <tr><td><code>Heading</code></td><td>當前航向（度）</td></tr>
+        <tr><td><code>Position X/Y</code></td><td>里程計估計位置（公尺）</td></tr>
+        <tr><td><code>Drive RPM</code></td><td>各輪 RPM</td></tr>
+        <tr><td><code>Turning Angle</code></td><td>各輪轉向角（度）</td></tr>
+        <tr><td><code>Accum Wheel Angle</code></td><td>各輪累積角（驗證追蹤連續性）</td></tr>
+        <tr><td><code>Speed / Turning</code></td><td>目前速度 / 轉動倍率</td></tr>
+      </tbody>
+    </table></div>
+    <div class="co co-i"><span class="co-ic">ℹ️</span><span><strong>結束程式：</strong>按 Stop 後執行 600ms X 型鎖輪收斂 → 停止驅動馬達</span></div>
+  </div>
+</section>
+
+<!-- AUTO PID -->
+<section id="autopid" class="sec sec-dark">
+  <div class="w">
+    <h2 class="sec-title">🔄 Auto PID Tuner</h2>
+    <p><strong>目的：</strong>調整自動模式 X / Y / Theta 位置 PID，使機器人被推離後能自動回正</p>
+    <div class="tw" style="margin-top:14px"><table>
+      <thead><tr><th>模式值</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>0</code></td><td>只測 X 軸（前後）</td></tr>
+        <tr><td><code>1</code></td><td>只測 Y 軸（左右）</td></tr>
+        <tr><td><code>2</code></td><td>只測 Theta（旋轉）</td></tr>
+        <tr><td><code>3</code></td><td>三軸全部</td></tr>
+      </tbody>
+    </table></div>
+    <p style="font-size:.84rem;color:var(--muted)">按 Start → 用手推機器人觀察回正效果 → Dashboard 即時調整 → 填入 <code>Constants.java</code> 的 <code>AutoConstants</code></p>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dash" class="sec">
+  <div class="w">
+    <h2 class="sec-title">🌐 FTC Dashboard</h2>
+    <div class="dash-box">
+      <span style="font-size:1.8rem">📡</span>
+      <div>
+        <div style="font-size:.74rem;color:rgba(255,255,255,.45);margin-bottom:6px">手機/筆電連到 Control Hub Wi-Fi，瀏覽器輸入：</div>
+        <div class="dash-url">http://192.168.43.1:8080/dash</div>
+      </div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>頁籤</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Graph</strong></td><td>即時折線圖（<code>packet.put()</code> 的數值）</td></tr>
+        <tr><td><strong>Config</strong></td><td>即時調整 <code>@Config</code> 標注的 <code>public static</code> 參數</td></tr>
+        <tr><td><strong>Field</strong></td><td>場地俯視圖（藍色 = 當前，綠色 = 目標）</td></tr>
+        <tr><td><strong>Telemetry</strong></td><td>Driver Station telemetry 內容</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- TUNING CONFIG -->
+<section id="tcfg" class="sec sec-dark">
+  <div class="w">
+    <h2 class="sec-title">🎛️ TuningConfig 即時調參</h2>
+    <div class="co co-t"><span class="co-ic">💡</span><span>Dashboard → Config → <code>TuningConfig</code> 可即時修改，無需重新部署</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>參數</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>_1a/b/c_turningP/I/D</code></td><td>轉向 PID 係數</td></tr>
+        <tr><td><code>_1d_turningOutputScale</code></td><td>轉向輸出縮放</td></tr>
+        <tr><td><code>_2a_deadbandDeg</code></td><td>轉向死區（度）</td></tr>
+        <tr><td><code>_3a/b/c/d_driveP/I/D/F</code></td><td>驅動 PID 各係數</td></tr>
+        <tr><td><code>_3e_driveOutputScale</code></td><td>驅動輸出縮放</td></tr>
+        <tr><td><code>_4a_enableDrivePID</code></td><td>啟用 / 停用驅動 PID</td></tr>
+        <tr><td><code>_5a_teleDriveMaxAccel</code></td><td>TeleOp 最大線性加速度</td></tr>
+        <tr><td><code>_5b_teleDriveMaxAngularAccel</code></td><td>TeleOp 最大角加速度</td></tr>
+      </tbody>
+    </table></div>
+    <div class="co co-w"><span class="co-ic">⚠️</span><span>Dashboard 調整只在本次執行期有效，滿意後請手動更新 <code>Constants.java</code></span></div>
+  </div>
+</section>
+
+<!-- ANGLE TRACKING -->
+<section id="track" class="sec">
+  <div class="w">
+    <h2 class="sec-title">🧠 角度追蹤系統原理</h2>
+    <h3 class="sub">為什麼不能直接用絕對編碼器？</h3>
+    <p>Servo 每轉一圈編碼器歸零，但輪子每轉一圈需要 Servo 轉 <strong>2.5 圈</strong>。同一個編碼器讀數對應<strong>三個不同輪子位置</strong>（0°、144°、288°），無法唯一定位。</p>
+    <h3 class="sub">Delta 累積追蹤</h3>
+    <div class="code-wrap">
+      <span class="code-lang">java</span>
+      <button class="copy-btn" onclick="copyCode(this)">複製</button>
+      <pre><code>// 每個迴圈：
+delta = 當前 Servo 角度 - 上次 Servo 角度（處理跨 0 邊界）
+accumulatedAngle += delta × 齒輪比（0.4）</code></pre>
+    </div>
+    <h3 class="sub">四大保護機制</h3>
+    <div class="pro-grid">
+      <div class="pro-card"><div class="pro-title">⚡ 毫秒快取</div><div class="pro-desc">同一毫秒多次呼叫直接回傳快取值，防止 delta 重複累積</div></div>
+      <div class="pro-card"><div class="pro-title">💾 持久化儲存</div><div class="pro-desc">關機時將累積角存入 SharedPreferences，下次開機續接</div></div>
+      <div class="pro-card"><div class="pro-title">📐 靜止校正</div><div class="pro-desc">靜止 &gt; 500ms 且差距 &lt; 10° 時一次性修正累積誤差</div></div>
+      <div class="pro-card"><div class="pro-title">🔍 啟動合理性檢查</div><div class="pro-desc">差 &lt; 10° 信任；10~30° 加權混合；&gt; 30° 退回絕對編碼器</div></div>
+    </div>
+    <h3 class="sub">IMU 航向追蹤</h3>
+    <div class="code-wrap">
+      <span class="code-lang">java</span>
+      <button class="copy-btn" onclick="copyCode(this)">複製</button>
+      <pre><code>// zeroHeading() 記錄基準值
+headingOffset = raw;
+// getHeading() 回傳差值
+return raw - headingOffset;</code></pre>
+    </div>
+    <div class="co co-i"><span class="co-ic">ℹ️</span><span>另有 20ms 快取（50Hz）防止頻繁 I2C 讀取</span></div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="sec sec-dark">
+  <div class="w">
+    <h2 class="sec-title">🐛 常見問題排查</h2>
+    <div class="faq">
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q1</div>啟動後輪子跑到奇怪方向</div><div class="faq-a">執行 <code>1c. ClearSwervePrefs</code> 清除記憶，再重新執行 <code>1c. Auto Set Offset</code></div></div>
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q2</div>直走時機器人偏向某一側</div><div class="faq-a"><p><strong>原因 A：</strong>某顆馬達轉速不足 → 調整 <code>kXXXDrivePowerScale</code>（&gt; 1.0 加大補償）</p><p style="margin-top:6px"><strong>原因 B：</strong>Physical Max 常數測量功率不一致 → 用相同功率（100%）重測兩個值</p></div></div>
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q3</div>轉 90° 後前後顛倒</div><div class="faq-a">確認 <code>SwerveSubsystem.java</code> 中有負號：<div class="code-wrap" style="margin-top:10px"><button class="copy-btn" onclick="copyCode(this)">複製</button><pre><code>public Rotation2d getRotation2d() {
+    return Rotation2d.fromDegrees(-getHeading());  // 必須有負號
+}</code></pre></div></div></div>
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q4</div>speedMultiplier 調整後車速沒有變化</div><div class="faq-a">確認 Lambda 直接引用成員變數：<div class="code-wrap" style="margin-top:10px"><button class="copy-btn" onclick="copyCode(this)">複製</button><pre><code>() -> -driverGamepad.getLeftY() * speedMultiplier</code></pre></div><p style="margin-top:6px">Lambda 自動捕捉外部成員變數，不需重建 <code>joystickCmd</code></p></div></div>
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q5</div>長時間運行後輪角漂移</div><div class="faq-a">靜止校正機制會自動修正小誤差；根本解法：啟用 GoBILDA Pinpoint（<code>USING_PINPOINT = true</code>）</div></div>
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q6</div>Tuning 程式污染角度記憶</div><div class="faq-a">執行 <code>1c. ClearSwervePrefs</code>，或重新執行 <code>1c. Auto Set Offset</code></div></div>
+      <div class="faq-item"><div class="faq-q"><div class="faq-qn">Q7</div>機器人閒置時輪子持續微動</div><div class="faq-a">降低 <code>_1a_turningP</code>（在 TuningConfig 即時調整）；確認 <code>STILL_THRESHOLD_MS = 500</code> 未被設太短</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TODO -->
+<section id="todo" class="sec">
+  <div class="w">
+    <h2 class="sec-title">⏳ 待辦與已知限制</h2>
+    <div class="tw"><table>
+      <thead><tr><th>問題</th><th>當前狀態</th><th>計畫</th></tr></thead>
+      <tbody>
+        <tr><td>FL 馬達比其他慢約 20%</td><td><span class="bdg bdg-y">暫時補償</span> <code>kFrontLeftDrivePowerScale</code></td><td>比賽後拆機確認機構問題</td></tr>
+        <tr><td>IMU 長時間漂移</td><td><span class="bdg bdg-y">已緩解</span> 20ms 快取</td><td>啟用 GoBILDA Pinpoint</td></tr>
+        <tr><td>2.5 圈絕對定位限制</td><td><span class="bdg bdg-g">已繞過</span> Delta 追蹤 + 持久化</td><td>換多圈絕對編碼器</td></tr>
+        <tr><td>電壓降幅偏大</td><td><span class="bdg bdg-r">未解決</span></td><td>確認電池老化或接頭接觸不良</td></tr>
+        <tr><td>Auto PID 未調整</td><td><span class="bdg bdg-r">待調整</span> 全設為 0.0</td><td>使用 AutoPIDTuner 調整後填入</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<footer>
+  <strong>FTC Swerve Drive 程式使用手冊</strong><br>
+  <span>2025–2026 賽季 ｜ 最後更新：2026-03</span>
+</footer>
+
+<button id="btt" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到頂部">↑</button>
+
+<script>
+// Progress bar
+const prog = document.getElementById('progress');
+const btt  = document.getElementById('btt');
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+  prog.style.width = pct + '%';
+  btt.classList.toggle('show', window.scrollY > 400);
+});
+
+// Active nav on scroll
+const sections = document.querySelectorAll('section[id], div[id]');
+const navLinks  = document.querySelectorAll('.nav-link[data-sec]');
+const observer  = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.nav-link[data-sec="${e.target.id}"]`);
+      if (active) {
+        active.classList.add('active');
+        active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  });
+}, { rootMargin: '-40% 0px -55% 0px' });
+sections.forEach(s => observer.observe(s));
+
+// Accordion
+function toggleAcc(head) {
+  const body = head.nextElementSibling;
+  const open = body.classList.toggle('open');
+  head.classList.toggle('open', open);
+}
+
+// Copy code
+function copyCode(btn) {
+  const code = btn.closest('.code-wrap').querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '已複製！';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '複製'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+</body>
+</html>
