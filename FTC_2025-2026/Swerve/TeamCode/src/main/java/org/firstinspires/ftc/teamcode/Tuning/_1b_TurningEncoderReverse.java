@@ -31,7 +31,6 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
     private String blVerdict = "---";
     private String brVerdict = "---";
 
-    
     @Override
     public void runOpMode() throws InterruptedException {
         frontLeftTurn  = hardwareMap.get(CRServo.class, DriveConstants.kFrontLeftTurningMotorName);

@@ -35,7 +35,7 @@ public final class Constants {
         // 調整於 2026-03-19：解決邊直走邊轉時轉向滯後的問題
         public static final double kPTurning = 0.5;  // 提升至 0.8 以加快初期反應速度
         public static final double kITurning = 0.02; // 改為 0.01 以消除穩態誤差
-        public static final double kDTurning = 0.00; // 改為 0.05 以減少超調
+        public static final double kDTurning = 0.02; // 改為 0.05 以減少超調
         public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
 
         // 轉向輸出與感測穩定化
