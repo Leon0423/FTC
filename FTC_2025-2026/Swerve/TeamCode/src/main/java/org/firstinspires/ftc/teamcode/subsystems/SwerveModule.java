@@ -53,6 +53,15 @@ public class SwerveModule {
     private double cachedTurningPosition = 0;
     private long lastUpdateTime = -1;
 
+    // CRServo 最大轉速約 120 RPM = 4π rad/s。
+    // 在 40ms（含 Android GC 最差情況）內最多轉 4π × 0.04 ≈ 0.5 rad。
+    // 設 0.75π 作為合理上限：超過代表讀值發生跳變，不累積此次 delta 以防方向誤判。
+    private static final double MAX_DELTA_RAD_PER_LOOP = 0.75 * Math.PI;
+
+    // true  → 轉向 PID 直接以絕對編碼器算誤差（最短路徑，零累積誤差，但跨圈位置追蹤失效）
+    // false → 使用 delta 累積值（預設，兼容 getState() 的 odometry 輸出）
+    private boolean useAbsoluteForPID = false;
+
     private final double powerScale;
 
     private double filteredVelocity = 0;
@@ -156,6 +165,13 @@ public class SwerveModule {
         double delta = currentRaw - lastRawServoRad;
         if (delta >  Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
+
+        // 超過物理極限：可能是 GC 停頓導致讀值跳變。
+        // 更新 lastRaw（重設基準點）但不累積，避免方向誤判。
+        if (Math.abs(delta) > MAX_DELTA_RAD_PER_LOOP) {
+            lastRawServoRad = currentRaw;
+            return cachedTurningPosition;
+        }
 
         accumulatedAngle += delta * ModuleConstants.kTurningMotorGearRatio;
         lastRawServoRad = currentRaw;
@@ -362,8 +378,11 @@ public class SwerveModule {
             driveMotor.setPower(driveOutput);
         }
 
-        // ===== Turning Motor 控制 (與 TurningPIDTuner 相同) =====
-        currentAngle = getTurningPosition();
+        // ===== Turning Motor 控制 =====
+        // useAbsoluteForPID=true：直接讀絕對編碼器（最短路徑，零累積誤差）
+        // useAbsoluteForPID=false：使用 delta 累積值（預設，兼容 odometry）
+        // normalizeAngle() 將誤差包到 [-π, π]，即最短路徑方向。
+        currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
@@ -402,7 +421,7 @@ public class SwerveModule {
         driveMotor.setPower(drivePower);
 
         // ===== Turning Motor 控制（仍使用 PID）=====
-        currentAngle = getTurningPosition();
+        currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
@@ -414,7 +433,7 @@ public class SwerveModule {
      * 維持當前的目標轉向角度（用於速度為零時保持輪子方向）
      */
     private void maintainTurningAngle() {
-        currentAngle = getTurningPosition();
+        currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
 
         Error = normalizeAngle(targetAngle - currentAngle);
         Output = computeTurningOutput(Error);
@@ -493,8 +512,14 @@ public class SwerveModule {
 
     public void enableSaving()  { enableSaving = true; }
 
+    /** 切換到最短路徑絕對模式：PID 直接讀絕對編碼器，消除累積誤差。 */
+    public void useAbsolutePIDMode()    { useAbsoluteForPID = true; }
+
+    /** 切換回 delta 累積模式（預設）。 */
+    public void useDeltaAccumPIDMode()  { useAbsoluteForPID = false; }
+
     public void alignTurningOnly(double targetRad) {
-        currentAngle = getTurningPosition();
+        currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
         targetAngle = targetRad;
 
         Error = normalizeAngle(targetAngle - currentAngle);

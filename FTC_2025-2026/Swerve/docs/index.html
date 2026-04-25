@@ -1058,6 +1058,217 @@ pre code { background: none; padding: 0; color: inherit; font-size: 100%; border
 .footer strong { color: var(--text-soft); }
 
 /* ══════════════════════════════════════════════════════════
+   SWERVE KINEMATICS WIDGET (scoped)
+   ══════════════════════════════════════════════════════════ */
+#swerve-kinematics-widget {
+  --swk-hl: #e94560;
+  --swk-fl: #4ade80;
+  --swk-fr: #60a5fa;
+  --swk-bl: #fb923c;
+  --swk-br: #c084fc;
+  margin-top: 14px;
+}
+#swerve-kinematics-widget .swk-card {
+  background: color-mix(in srgb, var(--surface) 70%, var(--cyber-soft));
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+#swerve-kinematics-widget .swk-title {
+  font-size: .9rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+#swerve-kinematics-widget .swk-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+#swerve-kinematics-widget .swk-group label {
+  display: block;
+  font-size: .78rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+#swerve-kinematics-widget .swk-group input[type=range] { width: 100%; accent-color: var(--swk-hl); }
+#swerve-kinematics-widget .swk-frame-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, var(--cyber) 28%);
+  border-radius: 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 88%, var(--surface-2)) 0%, var(--bg) 100%);
+  padding: 3px;
+  gap: 3px;
+  overflow: hidden;
+}
+#swerve-kinematics-widget .swk-frame-toggle::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc((100% - 9px) / 2);
+  height: calc(100% - 6px);
+  border-radius: 7px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--swk-hl) 90%, #ff7b8f) 0%, var(--swk-hl) 100%);
+  box-shadow: 0 4px 10px -6px color-mix(in srgb, var(--swk-hl) 62%, transparent);
+  transform: translateX(0);
+  transition: transform .2s ease;
+  pointer-events: none;
+}
+#swerve-kinematics-widget .swk-frame-toggle[data-mode="robot"]::before {
+  transform: translateX(calc(100% + 3px));
+}
+#swerve-kinematics-widget .swk-frame-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .14s ease;
+}
+#swerve-kinematics-widget .swk-frame-btn:hover:not(.active) {
+  color: var(--text-soft);
+  background: color-mix(in srgb, var(--hover) 82%, transparent);
+}
+#swerve-kinematics-widget .swk-frame-btn:active:not(.active) {
+  transform: scale(0.98);
+}
+#swerve-kinematics-widget .swk-frame-btn.active {
+  color: #fff;
+  background: transparent;
+}
+#swerve-kinematics-widget .swk-frame-btn.active:hover,
+#swerve-kinematics-widget .swk-frame-btn.active:active {
+  color: #fff;
+  background: transparent;
+}
+#swerve-kinematics-widget .swk-frame-btn:focus-visible {
+  outline: 2px solid var(--cyber);
+  outline-offset: 1px;
+}
+#swerve-kinematics-widget #swk-frame-val {
+  margin-top: 6px;
+  font-size: .74rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--cyber) 70%, var(--text-soft));
+}
+#swerve-kinematics-widget .swk-val {
+  font-size: .84rem;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 2px;
+}
+#swerve-kinematics-widget .swk-canvas-wrap { display: flex; justify-content: center; }
+#swerve-kinematics-widget .swk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+#swerve-kinematics-widget .swk-action {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-soft);
+  padding: 6px 10px;
+  font-size: .78rem;
+  cursor: pointer;
+}
+#swerve-kinematics-widget .swk-action:hover {
+  background: var(--hover);
+}
+#swerve-kinematics-widget .swk-action.reset {
+  border-color: color-mix(in srgb, var(--swk-hl) 40%, var(--border));
+  color: var(--swk-hl);
+}
+#swerve-kinematics-widget canvas {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border-radius: 8px;
+  background: #0b1220;
+}
+#swerve-kinematics-widget .swk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+#swerve-kinematics-widget .swk-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+#swerve-kinematics-widget .swk-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+#swerve-kinematics-widget .swk-fl { color: var(--swk-fl); }
+#swerve-kinematics-widget .swk-fr { color: var(--swk-fr); }
+#swerve-kinematics-widget .swk-bl { color: var(--swk-bl); }
+#swerve-kinematics-widget .swk-br { color: var(--swk-br); }
+#swerve-kinematics-widget .swk-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+#swerve-kinematics-widget .swk-tab {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-soft);
+  padding: 6px 12px;
+  font-size: .78rem;
+  cursor: pointer;
+}
+#swerve-kinematics-widget .swk-tab:focus-visible,
+#swerve-kinematics-widget .swk-action:focus-visible {
+  outline: 2px solid var(--cyber);
+  outline-offset: 2px;
+}
+#swerve-kinematics-widget .swk-tab.active {
+  background: var(--swk-hl);
+  border-color: var(--swk-hl);
+  color: #fff;
+}
+#swerve-kinematics-widget .swk-panel { display: none; }
+#swerve-kinematics-widget .swk-panel.active { display: block; }
+#swerve-kinematics-widget .swk-step { margin-bottom: 8px; font-size: .86rem; color: var(--text-soft); }
+#swerve-kinematics-widget .swk-formula {
+  background: color-mix(in srgb, var(--swk-hl) 14%, transparent);
+  border-left: 3px solid var(--swk-hl);
+  border-radius: 0 6px 6px 0;
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: .75rem;
+  white-space: pre;
+  overflow-x: auto;
+}
+#swerve-kinematics-widget .swk-body {
+  font-size: .86rem;
+  color: var(--text-soft);
+}
+#swerve-kinematics-widget .swk-body code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 4px;
+  font-size: .78rem;
+}
+
+
+/* ══════════════════════════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
@@ -1089,6 +1300,7 @@ pre code { background: none; padding: 0; color: inherit; font-size: 100%; border
   .hw-grid { grid-template-columns: repeat(2, 1fr); }
   .gallery { grid-template-columns: 1fr; }
   .header { padding: 0 20px; }
+  #swerve-kinematics-widget .swk-controls { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
   .qs-grid, .hw-grid { grid-template-columns: 1fr; }
@@ -1215,6 +1427,10 @@ pre code { background: none; padding: 0; color: inherit; font-size: 100%; border
         <a href="#track" class="sb-link" data-sec="track">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M21 12a9 9 0 0 0-9-9v9z"/></svg>
           角度追蹤原理
+        </a>
+        <a href="#kinematics" class="sb-link" data-sec="kinematics">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 5 7 7-7 7"/><path d="m14 5 7 7-7 7"/></svg>
+          逆運動學互動教學
         </a>
         <a href="#faq" class="sb-link" data-sec="faq">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
@@ -1875,6 +2091,129 @@ return raw - headingOffset;</code></pre>
         </div>
       </section>
 
+      <!-- ════════════ KINEMATICS EXPLAINER ════════════ -->
+      <section id="kinematics">
+        <div class="sec-kicker">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 5 7 7-7 7"/><path d="m14 5 7 7-7 7"/></svg>
+          Reference
+        </div>
+        <h2 class="sec-title">Swerve 逆運動學互動教學</h2>
+        <p class="sec-desc">直接在文件中調整 <code>Vx / Vy / omega</code>，即時觀察四輪速度與角度變化。</p>
+
+        <div id="swerve-kinematics-widget">
+          <div class="swk-card">
+            <div class="swk-title">Chassis Speeds（底盤速度輸入）</div>
+            <div class="swk-controls">
+              <div class="swk-group">
+                <label for="swk-vx">Vx（前進）m/s</label>
+                <input type="range" id="swk-vx" min="-0.76" max="0.76" step="0.01" value="0.30">
+                <div class="swk-val" id="swk-vx-val">0.30</div>
+              </div>
+              <div class="swk-group">
+                <label for="swk-vy">Vy（平移）m/s</label>
+                <input type="range" id="swk-vy" min="-0.76" max="0.76" step="0.01" value="0.00">
+                <div class="swk-val" id="swk-vy-val">0.00</div>
+              </div>
+              <div class="swk-group">
+                <label for="swk-omega">omega（旋轉）rad/s</label>
+                <input type="range" id="swk-omega" min="-5" max="5" step="0.1" value="0.00">
+                <div class="swk-val" id="swk-omega-val">0.00</div>
+              </div>
+              <div class="swk-group">
+                <label>座標模式</label>
+                <div class="swk-frame-toggle" role="group" aria-label="座標模式切換" data-mode="field">
+                  <button class="swk-frame-btn active" type="button" data-frame="field" aria-pressed="true">Field-Oriented</button>
+                  <button class="swk-frame-btn" type="button" data-frame="robot" aria-pressed="false">Robot-Oriented</button>
+                </div>
+                <div class="swk-val" id="swk-frame-val">Field-Oriented</div>
+              </div>
+              <div class="swk-group">
+                <label for="swk-pos-x">位置 X（px）</label>
+                <input type="range" id="swk-pos-x" min="-120" max="120" step="1" value="0">
+                <div class="swk-val" id="swk-pos-x-val">+0</div>
+              </div>
+              <div class="swk-group">
+                <label for="swk-pos-y">位置 Y（px）</label>
+                <input type="range" id="swk-pos-y" min="-120" max="120" step="1" value="0">
+                <div class="swk-val" id="swk-pos-y-val">+0</div>
+              </div>
+              <div class="swk-group">
+                <label for="swk-heading">車身角度 theta（deg）</label>
+                <input type="range" id="swk-heading" min="-180" max="180" step="1" value="0">
+                <div class="swk-val" id="swk-heading-val">0.0</div>
+              </div>
+            </div>
+            <div class="swk-actions">
+              <button class="swk-action" type="button" data-preset="stop">靜止</button>
+              <button class="swk-action" type="button" data-preset="forward">直走</button>
+              <button class="swk-action" type="button" data-preset="strafe">側移</button>
+              <button class="swk-action" type="button" data-preset="spin-cw">原地順時針</button>
+              <button class="swk-action" type="button" data-preset="spin-ccw">原地逆時針</button>
+              <button class="swk-action reset" id="swk-reset" type="button">重置全部</button>
+            </div>
+          </div>
+
+          <div class="swk-card">
+            <div class="swk-canvas-wrap"><canvas id="swk-cv" width="400" height="400"></canvas></div>
+          </div>
+
+          <div class="swk-card">
+            <div class="swk-title">各模組計算結果</div>
+            <div class="tw" style="margin-top:8px"><table class="swk-table">
+              <thead><tr><th>模組</th><th>Vx_i</th><th>Vy_i</th><th>Speed (m/s)</th><th>Angle (deg)</th></tr></thead>
+              <tbody id="swk-tbl"></tbody>
+            </table></div>
+          </div>
+
+          <div class="swk-card swk-body">
+            <div class="swk-tabs" role="tablist" aria-label="Swerve 逆運動學教學分頁">
+              <button class="swk-tab active" type="button" data-tab="0" role="tab" aria-selected="true">模型概述</button>
+              <button class="swk-tab" type="button" data-tab="1" role="tab" aria-selected="false" tabindex="-1">逆運動學推導</button>
+              <button class="swk-tab" type="button" data-tab="2" role="tab" aria-selected="false" tabindex="-1">Normalize &amp; Optimize</button>
+              <button class="swk-tab" type="button" data-tab="3" role="tab" aria-selected="false" tabindex="-1">程式碼對應</button>
+            </div>
+
+            <div class="swk-panel active" data-panel="0" role="tabpanel">
+              <div class="swk-step">1. Swerve Drive 使用剛體逆運動學（Inverse Kinematics）模型。</div>
+              <div class="swk-step">2. 將底盤運動 <code>(Vx, Vy, omega)</code> 分解為每個輪子的速度與角度。</div>
+              <div class="swk-step">3. 每個輪速向量 = 底盤平移速度 + 該輪繞中心旋轉的切線速度。</div>
+              <div class="swk-step">4. 透過 normalize 限制輪速上限，確保輸出可執行。</div>
+            </div>
+
+            <div class="swk-panel" data-panel="1" role="tabpanel" hidden>
+              <p>設輪子 i 相對底盤中心位置為 <code>(x_i, y_i)</code>：</p>
+              <div class="swk-formula">Vx_i = Vx - omega * y_i
+Vy_i = Vy + omega * x_i</div>
+              <p>由剛體運動學得知：任一點速度 = 質心平移 + 角速度與位置向量叉積。</p>
+              <div class="swk-formula">speed_i = sqrt(Vx_i^2 + Vy_i^2)
+angle_i = atan2(Vy_i, Vx_i)</div>
+            </div>
+
+            <div class="swk-panel" data-panel="2" role="tabpanel" hidden>
+              <div class="swk-step"><strong>Normalize:</strong> 若任一輪超過最大速度，全部輪速等比例縮放。</div>
+              <div class="swk-formula">if max(speed_i) > maxSpeed:
+    scale = maxSpeed / max(speed_i)
+    speed_i *= scale</div>
+              <div class="swk-step"><strong>Optimize:</strong> 若目標角和當前角差超過 90 deg，可翻轉 180 deg 並反向速度。</div>
+              <div class="swk-formula">delta = target - current
+if abs(delta) > 90deg:
+    target += 180deg
+    speed = -speed</div>
+            </div>
+
+            <div class="swk-panel" data-panel="3" role="tabpanel" hidden>
+              <div class="swk-step">1. <code>SwerveJoystickCmd.execute()</code>: 搖桿輸入 -> deadband -> SlewRateLimiter -> <code>ChassisSpeeds</code></div>
+              <div class="swk-step">2. <code>kDriveKinematics.toSwerveModuleStates(...)</code>: 轉成四輪速度向量</div>
+              <div class="swk-step">3. <code>setModuleStates()</code>: powerScale 補償 -> <code>normalizeWheelSpeeds()</code></div>
+              <div class="swk-step">4. <code>SwerveModule.setDesiredState()</code>: <code>optimize()</code> -> Drive 輸出 + Turning PID</div>
+              <div class="swk-formula">FL: (+0.11, -0.11)    FR: (+0.11, +0.11)
+BL: (-0.11, -0.11)    BR: (-0.11, +0.11)</div>
+              <p style="margin-top:8px">Field-Oriented 下，<code>ChassisSpeeds.fromFieldRelativeSpeeds()</code> 會先把輸入向量旋轉 <code>-theta</code>（theta = 機器人朝向），再做逆運動學。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ════════════ FAQ ════════════ -->
       <section id="faq">
         <div class="sec-kicker">
@@ -2036,7 +2375,7 @@ const titleMap = {
   top: 'Overview', qs: '快速開始', hw: '硬體架構', struct: '檔案結構',
   const: 'Constants 參數', tuning: 'Tuning 流程', ctrl: 'Swerve_Control',
   autopid: 'Auto PID Tuner', dash: 'FTC Dashboard', tcfg: 'TuningConfig',
-  track: '角度追蹤原理', faq: '常見問題排查', todo: '待辦與限制'
+  track: '角度追蹤原理', kinematics: '逆運動學互動教學', faq: '常見問題排查', todo: '待辦與限制'
 };
 
 let scrollTicking = false;
@@ -2064,6 +2403,333 @@ const obs = new IntersectionObserver(entries => {
   });
 }, { rootMargin: '-25% 0px -60% 0px' });
 sections.forEach(s => obs.observe(s));
+
+/* ════════════════════════════════════════════════════════
+   SWERVE KINEMATICS WIDGET
+   ════════════════════════════════════════════════════════ */
+(function () {
+  const root = document.getElementById('swerve-kinematics-widget');
+  if (!root) return;
+
+  const HALF_TRACK = 0.11;
+  const HALF_BASE = 0.11;
+  const MAX_SPEED = 0.764;
+  const modules = [
+    { name: 'FL', x: HALF_BASE, y: -HALF_TRACK, color: '#4ade80', cls: 'swk-fl' },
+    { name: 'FR', x: HALF_BASE, y: HALF_TRACK, color: '#60a5fa', cls: 'swk-fr' },
+    { name: 'BL', x: -HALF_BASE, y: -HALF_TRACK, color: '#fb923c', cls: 'swk-bl' },
+    { name: 'BR', x: -HALF_BASE, y: HALF_TRACK, color: '#c084fc', cls: 'swk-br' }
+  ];
+
+  const sliders = {
+    vx: root.querySelector('#swk-vx'),
+    vy: root.querySelector('#swk-vy'),
+    omega: root.querySelector('#swk-omega'),
+    posX: root.querySelector('#swk-pos-x'),
+    posY: root.querySelector('#swk-pos-y'),
+    heading: root.querySelector('#swk-heading')
+  };
+  const values = {
+    vx: root.querySelector('#swk-vx-val'),
+    vy: root.querySelector('#swk-vy-val'),
+    omega: root.querySelector('#swk-omega-val'),
+    posX: root.querySelector('#swk-pos-x-val'),
+    posY: root.querySelector('#swk-pos-y-val'),
+    heading: root.querySelector('#swk-heading-val'),
+    frame: root.querySelector('#swk-frame-val')
+  };
+  const tableBody = root.querySelector('#swk-tbl');
+  const canvas = root.querySelector('#swk-cv');
+  const ctx = canvas.getContext('2d');
+  const frameToggle = root.querySelector('.swk-frame-toggle');
+  const frameButtons = Array.from(root.querySelectorAll('.swk-frame-btn'));
+  const resetBtn = root.querySelector('#swk-reset');
+  const presetBtns = root.querySelectorAll('.swk-action[data-preset]');
+
+  const defaults = {
+    vx: 0.3,
+    vy: 0,
+    omega: 0,
+    posX: 0,
+    posY: 0,
+    heading: 0,
+    frame: 'field',
+    tab: 0
+  };
+
+  const setSliderValue = (key, val) => {
+    if (!sliders[key]) return;
+    sliders[key].value = String(val);
+  };
+
+  const getFrameModeValue = () => {
+    const active = frameButtons.find(btn => btn.classList.contains('active'));
+    return active ? active.getAttribute('data-frame') : 'field';
+  };
+
+  const setFrameModeValue = (mode) => {
+    if (frameToggle) frameToggle.setAttribute('data-mode', mode);
+    frameButtons.forEach(btn => {
+      const active = btn.getAttribute('data-frame') === mode;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  };
+
+  const computeModuleStates = (vx, vy, omega) => modules.map(m => {
+    const vxi = vx - omega * m.y;
+    const vyi = vy + omega * m.x;
+    return {
+      ...m,
+      vxi,
+      vyi,
+      speed: Math.hypot(vxi, vyi),
+      angle: Math.atan2(vyi, vxi)
+    };
+  });
+
+  const normalizeWheelSpeeds = (states) => {
+    const maxWheelSpeed = Math.max(...states.map(s => s.speed));
+    if (maxWheelSpeed <= MAX_SPEED) return states;
+    const scale = MAX_SPEED / maxWheelSpeed;
+    return states.map(s => ({ ...s, speed: s.speed * scale }));
+  };
+
+  const drawArrow = (x1, y1, x2, y2, color, width) => {
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    if (len < 2) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    const hs = 8;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - hs * Math.cos(angle - 0.4), y2 - hs * Math.sin(angle - 0.4));
+    ctx.lineTo(x2 - hs * Math.cos(angle + 0.4), y2 - hs * Math.sin(angle + 0.4));
+    ctx.fill();
+  };
+
+  // Rotate canvas-space vectors around robot center; positive angle is clockwise on screen.
+  const rotateVec = (dx, dy, angleRad) => ({
+    x: dx * Math.cos(angleRad) - dy * Math.sin(angleRad),
+    y: dx * Math.sin(angleRad) + dy * Math.cos(angleRad)
+  });
+
+  const draw = () => {
+    const vx = +sliders.vx.value;
+    const vy = +sliders.vy.value;
+    const omega = +sliders.omega.value;
+    const posX = +sliders.posX.value;
+    const posY = +sliders.posY.value;
+    const headingDeg = +sliders.heading.value;
+    const headingRad = headingDeg * Math.PI / 180;
+    const mode = getFrameModeValue();
+    values.vx.textContent = vx.toFixed(2);
+    values.vy.textContent = vy.toFixed(2);
+    values.omega.textContent = omega.toFixed(2);
+    values.posX.textContent = `${posX >= 0 ? '+' : ''}${posX}`;
+    values.posY.textContent = `${posY >= 0 ? '+' : ''}${posY}`;
+    values.heading.textContent = headingDeg.toFixed(1);
+    values.frame.textContent = mode === 'field' ? 'Field-Oriented' : 'Robot-Oriented';
+
+    // Field-Oriented: chassis input is in field frame, convert by -theta to robot frame first.
+    const c = Math.cos(headingRad);
+    const s = Math.sin(headingRad);
+    const vxRobot = mode === 'field' ? (vx * c + vy * s) : vx;
+    const vyRobot = mode === 'field' ? (-vx * s + vy * c) : vy;
+
+    const states = normalizeWheelSpeeds(computeModuleStates(vxRobot, vyRobot, omega));
+    const w = canvas.width;
+    const h = canvas.height;
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    const centerPad = 70;
+    const cx = clamp(w / 2 + posX, centerPad, w - centerPad);
+    const cy = clamp(h / 2 - posY, centerPad, h - centerPad);
+    const robotScale = 130;
+    const vecScale = 180;
+
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < w; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
+    for (let i = 0; i < h; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke(); }
+
+    const corners = modules.map(m => {
+      const v = rotateVec(m.y * robotScale, -m.x * robotScale, headingRad);
+      return [cx + v.x, cy + v.y];
+    });
+    const order = [0, 1, 3, 2];
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(corners[order[0]][0], corners[order[0]][1]);
+    for (let i = 1; i <= 4; i++) ctx.lineTo(corners[order[i % 4]][0], corners[order[i % 4]][1]);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8); ctx.stroke();
+
+    if (Math.hypot(vx, vy) > 0.01) {
+      const v = mode === 'field'
+        ? { x: vy * vecScale, y: -vx * vecScale }
+        : rotateVec(vy * vecScale, -vx * vecScale, headingRad);
+      drawArrow(cx, cy, cx + v.x, cy + v.y, 'rgba(255,255,255,0.45)', 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '11px system-ui';
+      ctx.fillText(mode === 'field' ? 'V_field' : 'V_robot', cx + v.x * 0.5 + 5, cy + v.y * 0.5 - 5);
+    }
+
+    if (Math.abs(omega) > 0.05) {
+      const startA = -Math.PI / 2;
+      const endA = startA + Math.sign(omega) * Math.min(Math.abs(omega) / 5 * Math.PI, Math.PI * 0.8);
+      ctx.strokeStyle = 'rgba(233,69,96,0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, startA, endA, omega < 0);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(233,69,96,0.75)';
+      ctx.beginPath();
+      ctx.arc(cx + 18 * Math.cos(endA), cy + 18 * Math.sin(endA), 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    states.forEach((s, i) => {
+      const moduleOffset = rotateVec(s.y * robotScale, -s.x * robotScale, headingRad);
+      const px = cx + moduleOffset.x;
+      const py = cy + moduleOffset.y;
+
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (s.speed > 0.005) {
+        const wheelVec = rotateVec(s.vyi * vecScale, -s.vxi * vecScale, headingRad);
+        drawArrow(px, py, px + wheelVec.x, py + wheelVec.y, s.color, 2.5);
+      }
+
+      ctx.fillStyle = s.color;
+      ctx.font = 'bold 12px system-ui';
+      const lx = i % 2 === 0 ? px - 22 : px + 10;
+      const ly = i < 2 ? py - 12 : py + 18;
+      ctx.fillText(s.name, lx, ly);
+    });
+
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'center';
+    const frontOffset = rotateVec(0, -HALF_BASE * robotScale - 14, headingRad);
+    ctx.fillText('▲ 前方', cx + frontOffset.x, cy + frontOffset.y);
+    ctx.textAlign = 'start';
+
+    tableBody.innerHTML = states.map(s =>
+      `<tr><td class="${s.cls}">● ${s.name}</td><td>${s.vxi.toFixed(3)}</td><td>${s.vyi.toFixed(3)}</td><td>${s.speed.toFixed(3)}</td><td>${(s.angle * 180 / Math.PI).toFixed(1)}</td></tr>`
+    ).join('');
+  };
+
+  const tabs = Array.from(root.querySelectorAll('.swk-tab'));
+  const panels = Array.from(root.querySelectorAll('.swk-panel'));
+
+  tabs.forEach((tab, index) => {
+    const panel = panels[index];
+    if (!panel) return;
+    const tabId = `swk-tab-${index}`;
+    const panelId = `swk-panel-${index}`;
+    tab.id = tabId;
+    tab.setAttribute('aria-controls', panelId);
+    panel.id = panelId;
+    panel.setAttribute('aria-labelledby', tabId);
+  });
+
+  const setActiveTab = (index, focusTab = false) => {
+    tabs.forEach((tab, i) => {
+      const active = i === index;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+      if (active && focusTab) tab.focus();
+    });
+    panels.forEach((panel, i) => {
+      const active = i === index;
+      panel.classList.toggle('active', active);
+      panel.hidden = !active;
+    });
+  };
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => setActiveTab(index));
+    tab.addEventListener('keydown', (e) => {
+      let next = null;
+      if (e.key === 'ArrowRight') next = (index + 1) % tabs.length;
+      if (e.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+      if (e.key === 'Home') next = 0;
+      if (e.key === 'End') next = tabs.length - 1;
+      if (next !== null) {
+        e.preventDefault();
+        setActiveTab(next, true);
+      }
+    });
+  });
+
+  const applyPreset = (name) => {
+    if (name === 'stop') {
+      setSliderValue('vx', 0); setSliderValue('vy', 0); setSliderValue('omega', 0);
+    } else if (name === 'forward') {
+      setSliderValue('vx', 0.55); setSliderValue('vy', 0); setSliderValue('omega', 0);
+    } else if (name === 'strafe') {
+      setSliderValue('vx', 0); setSliderValue('vy', 0.55); setSliderValue('omega', 0);
+    } else if (name === 'spin-cw') {
+      setSliderValue('vx', 0); setSliderValue('vy', 0); setSliderValue('omega', 3.0);
+    } else if (name === 'spin-ccw') {
+      setSliderValue('vx', 0); setSliderValue('vy', 0); setSliderValue('omega', -3.0);
+    }
+    draw();
+  };
+
+  const resetWidget = () => {
+    Object.entries(defaults).forEach(([k, v]) => {
+      if (k === 'tab') return;
+      if (k === 'frame') setFrameModeValue(v);
+      else setSliderValue(k, v);
+    });
+    setActiveTab(defaults.tab);
+    draw();
+  };
+
+  presetBtns.forEach(btn => btn.addEventListener('click', () => applyPreset(btn.getAttribute('data-preset'))));
+  if (resetBtn) resetBtn.addEventListener('click', resetWidget);
+  frameButtons.forEach((btn, index) => {
+    btn.addEventListener('click', () => {
+      setFrameModeValue(btn.getAttribute('data-frame'));
+      draw();
+    });
+    btn.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const next = e.key === 'ArrowRight'
+        ? (index + 1) % frameButtons.length
+        : (index - 1 + frameButtons.length) % frameButtons.length;
+      const nextBtn = frameButtons[next];
+      if (!nextBtn) return;
+      setFrameModeValue(nextBtn.getAttribute('data-frame'));
+      nextBtn.focus();
+      draw();
+    });
+  });
+
+  Object.values(sliders).forEach(s => s.addEventListener('input', draw));
+  setFrameModeValue(getFrameModeValue());
+  setActiveTab(defaults.tab);
+  draw();
+})();
 
 /* ════════════════════════════════════════════════════════
    ACCORDION & FAQ

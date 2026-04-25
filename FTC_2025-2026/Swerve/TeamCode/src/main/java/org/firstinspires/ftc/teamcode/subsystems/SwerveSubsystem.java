@@ -44,6 +44,7 @@ public class SwerveSubsystem extends SubsystemBase {
     private static final double kStopSpeedMps = DriveConstants.kPhysicalMaxSpeedMetersPerSecond * 0.005; // ~0.5% of max
 
     private double headingOffset = 0;
+    private double pinpointHeadingOffset = 0;
     private double cachedHeading = 0;
     private long lastHeadingUpdateMs = 0;
     private static final long HEADING_CACHE_MS = 20; // 50Hz
@@ -150,12 +151,16 @@ public class SwerveSubsystem extends SubsystemBase {
 
         // 重置位置和 IMU
         pinpoint.resetPosAndIMU();
+        pinpointHeadingOffset = 0;
     }
 
     // 修改 zeroHeading()
     public void zeroHeading() {
         if (usingPinpoint && pinpoint != null) {
-            pinpoint.resetPosAndIMU();
+            // Keep x/y intact: this API should only zero heading.
+            pinpointHeadingOffset = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
+            cachedHeading = 0;
+            lastHeadingUpdateMs = 0;
         } else {
             headingOffset = Math.IEEEremainder(
                     imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
@@ -167,7 +172,8 @@ public class SwerveSubsystem extends SubsystemBase {
     // 修改 getHeading()
     public double getHeading() {
         if (usingPinpoint && pinpoint != null) {
-            return Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
+            double rawHeading = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
+            return Math.IEEEremainder(rawHeading - pinpointHeadingOffset, 360);
         } else {
             long now = System.currentTimeMillis();
             if (now - lastHeadingUpdateMs < HEADING_CACHE_MS) return cachedHeading;
@@ -190,7 +196,7 @@ public class SwerveSubsystem extends SubsystemBase {
             return new Pose2d(
                     pose.getX(DistanceUnit.METER),
                     pose.getY(DistanceUnit.METER),
-                    Rotation2d.fromDegrees(pose.getHeading(AngleUnit.DEGREES))
+                    Rotation2d.fromDegrees(Math.IEEEremainder(pose.getHeading(AngleUnit.DEGREES) - pinpointHeadingOffset, 360))
             );
         } else {
             return odometer.getPoseMeters();
@@ -206,6 +212,7 @@ public class SwerveSubsystem extends SubsystemBase {
                     AngleUnit.DEGREES,
                     pose.getRotation().getDegrees()
             ));
+            pinpointHeadingOffset = 0;
         } else {
             odometer.resetPosition(pose, getRotation2d());
         }
@@ -373,18 +380,21 @@ public class SwerveSubsystem extends SubsystemBase {
         }
 
         // ★ 先除以 powerScale，讓 normalize 看到正確的功率需求比例
-        desiredStates[0].speedMetersPerSecond /= DriveConstants.kFrontLeftDrivePowerScale;
-        desiredStates[1].speedMetersPerSecond /= DriveConstants.kFrontRightDrivePowerScale;
-        desiredStates[2].speedMetersPerSecond /= DriveConstants.kBackLeftDrivePowerScale;
-        desiredStates[3].speedMetersPerSecond /= DriveConstants.kBackRightDrivePowerScale;
+        // 用新 array 避免修改呼叫方傳入的物件
+        SwerveModuleState[] scaled = new SwerveModuleState[] {
+            new SwerveModuleState(desiredStates[0].speedMetersPerSecond / DriveConstants.kFrontLeftDrivePowerScale,  desiredStates[0].angle),
+            new SwerveModuleState(desiredStates[1].speedMetersPerSecond / DriveConstants.kFrontRightDrivePowerScale, desiredStates[1].angle),
+            new SwerveModuleState(desiredStates[2].speedMetersPerSecond / DriveConstants.kBackLeftDrivePowerScale,   desiredStates[2].angle),
+            new SwerveModuleState(desiredStates[3].speedMetersPerSecond / DriveConstants.kBackRightDrivePowerScale,  desiredStates[3].angle),
+        };
 
-        SwerveDriveKinematics.normalizeWheelSpeeds(desiredStates,
+        SwerveDriveKinematics.normalizeWheelSpeeds(scaled,
                 DriveConstants.kPhysicalMaxSpeedMetersPerSecond);
 
-        frontLeft.setDesiredState(desiredStates[0]);
-        frontRight.setDesiredState(desiredStates[1]);
-        backLeft.setDesiredState(desiredStates[2]);
-        backRight.setDesiredState(desiredStates[3]);
+        frontLeft.setDesiredState(scaled[0]);
+        frontRight.setDesiredState(scaled[1]);
+        backLeft.setDesiredState(scaled[2]);
+        backRight.setDesiredState(scaled[3]);
     }
 
     private void holdAngles() {

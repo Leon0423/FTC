@@ -150,7 +150,7 @@ public final class Constants {
 
         // === GoBILDA Pinpoint 配置 ===
         // 設定為 true 使用 Pinpoint 進行定位，false 使用原本的 SwerveDriveOdometry + IMU
-        public static final boolean USING_PINPOINT = false;
+        public static final boolean USING_PINPOINT = true;
         public static final String kPinpointName = "pinpoint";  // Pinpoint 在 hardwareMap 中的名稱
 
         // Pinpoint Odometry Pod 偏移量 (相對於機器人中心，單位：公釐)
@@ -160,8 +160,10 @@ public final class Constants {
         public static final double kPinpointYPodOffsetMM = 0.0;   // TODO: 調整為實際值
 
         // Pinpoint 編碼器方向
+        // X: 前進為正，符合本專案座標定義
+        // Y: Pinpoint 原廠預設左移為正，本專案慣例右移為正，故反向
         public static final boolean kPinpointXEncoderReversed = false;
-        public static final boolean kPinpointYEncoderReversed = false;
+        public static final boolean kPinpointYEncoderReversed = true;
     }
 
     public static final class AutoConstants {
