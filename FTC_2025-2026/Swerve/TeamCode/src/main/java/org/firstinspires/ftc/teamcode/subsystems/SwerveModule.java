@@ -222,11 +222,10 @@ public class SwerveModule {
      * @return 馬達轉速 (rotations per minute)
      */
     public double getDriveRPM() {
-        // getVelocity() 回傳 ticks per second
-        // goBILDA 馬達: 28 ticks/revolution
-        // RPM = (ticks/sec) / (ticks/rev) * 60
-        double ticksPerSec = driveMotor.getVelocity();
-        return (ticksPerSec / 28.0) * 60.0;
+        // 從 getDriveVelocity() 推導，確保與 PID 速度回授完全一致。
+        // wheel_RPM = (m/s) / circumference * 60
+        double rawMps = driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
+        return rawMps / (Math.PI * ModuleConstants.kWheelDiameterMeters) * 60.0;
     }
 
     public double getTurningVelocity() {
@@ -565,6 +564,11 @@ public class SwerveModule {
 
     public double getRawDriveVelocity() {
         return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
+    }
+
+    /** 回傳馬達編碼器原始 ticks/sec，用於診斷 kDriveEncoderTicksPerRev 是否正確。 */
+    public double getRawTicksPerSec() {
+        return driveMotor.getVelocity();
     }
 
     private void saveTrackingState() {

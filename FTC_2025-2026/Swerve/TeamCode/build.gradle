@@ -26,6 +26,14 @@ android {
     packagingOptions {
         jniLibs.useLegacyPackaging true
     }
+
+    sourceSets {
+        main {
+            java {
+                exclude '.claude/**'
+            }
+        }
+    }
 }
 
 dependencies {

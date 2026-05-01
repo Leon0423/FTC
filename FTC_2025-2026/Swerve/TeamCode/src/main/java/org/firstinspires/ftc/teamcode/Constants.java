@@ -19,15 +19,26 @@ public final class Constants {
      */
     public static final class ModuleConstants{
         // === 機械參數 ===
-        public static final double kWheelDiameterMeters = 0.058; // TODO 輪子直徑(公尺) - 調整輪子直徑(單位: m)
-        public static final double kDriveMotorGearRatio = 0.113636;    // TODO 驅動馬達齒輪比 - 調整驅動馬達轉速比
+        public static final double kWheelDiameterMeters = 0.058; // TODO 輪子直徑(公尺)
+
+        // 驅動馬達外部齒輪減速比：輪子每轉一圈，馬達輸出軸需轉幾圈。
+        // 例：外部 1:8.8 減速 → kDriveMotorGearRatio = 1.0 / 8.8 ≈ 0.113636
+        public static final double kDriveMotorGearRatio = 0.113636; // TODO 確認外部齒輪比
+
+        // 驅動馬達編碼器每轉脈衝數（ticks per revolution，在馬達輸出軸量）
+        // 使用馬達：goBILDA 5000-0002-4008（直驅，無內部行星齒輪箱）
+        // 規格：Encoder Countable Events Per Revolution (Output Shaft) = 28
+        // FTC SDK getVelocity() 回傳 ticks/sec，除以此值得到輸出軸轉速（rev/sec）。
+        public static final double kDriveEncoderTicksPerRev = 28.0;
+
         // CRServo 轉 2.5 圈 = 輪角 360°，因此輪角/servo角 比例為 1/2.5。
         public static final double kServoTurnsPerWheelTurn = 2.5;
         public static final double kTurningMotorGearRatio = 1.0 / kServoTurnsPerWheelTurn;
 
-        // === 編碼器換算係數 ===
-        // 將馬達旋轉數轉換為線性距離的係數
-        public static final double kDriveEncoderRot2Meter = kDriveMotorGearRatio * Math.PI * kWheelDiameterMeters;
+        // === 編碼器換算係數（自動計算，勿手動改） ===
+        // ticks/sec ÷ ticks/rev × 齒輪比 × 周長 = 輪速 m/s
+        public static final double kDriveEncoderRot2Meter =
+                (kDriveMotorGearRatio / kDriveEncoderTicksPerRev) * Math.PI * kWheelDiameterMeters;
         // 將轉向馬達旋轉數轉換為弧度的係數
         public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2 * Math.PI;
 
@@ -124,7 +135,9 @@ public final class Constants {
         public static final double kBackRightDriveAbsoluteEncoderOffsetRad = Math.toRadians(kBackRightDriveAbsoluteEncoderOffsetDeg);
 
         // === 機器人物理性能極限 ===
-        public static final double kPhysicalMaxSpeedMetersPerSecond = 0.764;                       // TODO 機器人最大線速度 (公尺/秒)
+        // 理論值：5800 RPM × (1/8.8) × π × 0.058m ≈ 2.00 m/s（空載）
+        // 實際負載下通常為理論值的 70~85%，建議執行 3. MaxSpeedAngularTest 量測後更新。
+        public static final double kPhysicalMaxSpeedMetersPerSecond = 1.5;  // TODO 執行 _3_MaxSpeedAngularTest 量測後更新
         public static final double kPhysicalMaxAngularSpeedRadiansPerSecond = 10.879;    // TODO 機器人最大角速度 (弧度/秒)
 
         // === 手動控制性能限制 ===
@@ -151,13 +164,13 @@ public final class Constants {
         // === GoBILDA Pinpoint 配置 ===
         // 設定為 true 使用 Pinpoint 進行定位，false 使用原本的 SwerveDriveOdometry + IMU
         public static final boolean USING_PINPOINT = true;
-        public static final String kPinpointName = "pinpoint";  // Pinpoint 在 hardwareMap 中的名稱
+        public static final String kPinpointName = "pinpoint";  // Pin   point 在 hardwareMap 中的名稱
 
         // Pinpoint Odometry Pod 偏移量 (相對於機器人中心，單位：公釐)
         // X Pod 偏移：向左為正，向右為負
         // Y Pod 偏移：向前為正，向後為負
         public static final double kPinpointXPodOffsetMM = 0.0;   // TODO: 調整為實際值
-        public static final double kPinpointYPodOffsetMM = 0.0;   // TODO: 調整為實際值
+        public static final double kPinpointYPodOffsetMM = -100.0;   // TODO: 調整為實際值
 
         // Pinpoint 編碼器方向
         // X: 前進為正，符合本專案座標定義
