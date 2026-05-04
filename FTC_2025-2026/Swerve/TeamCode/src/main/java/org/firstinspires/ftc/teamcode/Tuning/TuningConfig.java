@@ -24,6 +24,9 @@ public class TuningConfig {
 
     // === 2. Turning 補助參數 ===
     public static double _2a_deadbandDeg = Constants.ModuleConstants.kTurningDeadbandDeg;
+    // CRServo 靜摩擦補償：誤差超過 deadband 後，輸出功率至少此值才能推動伺服器。
+    // 若輪角在小誤差下停不到位，請先調大此值（建議從 0.05 開始）。
+    public static double _2b_minOutput = Constants.ModuleConstants.kTurningMinOutput;
 
     // === 3. Drive PID 參數 ===
     public static double _3a_driveP = Constants.ModuleConstants.kPDrive;
@@ -45,6 +48,7 @@ public class TuningConfig {
     public static double turningD() { return _1c_turningD; }
     public static double turningOutputScale() { return _1d_turningOutputScale; }
     public static double deadbandDeg() { return _2a_deadbandDeg; }
+    public static double minOutput()    { return _2b_minOutput; }
     public static double driveP() { return _3a_driveP; }
     public static double driveI() { return _3b_driveI; }
     public static double driveD() { return _3c_driveD; }

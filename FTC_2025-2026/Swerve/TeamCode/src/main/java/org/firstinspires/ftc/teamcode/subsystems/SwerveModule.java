@@ -184,11 +184,7 @@ public class SwerveModule {
             }
         }
 
-        double normalized = accumulatedAngle;
-        while (normalized >  Math.PI) normalized -= 2 * Math.PI;
-        while (normalized < -Math.PI) normalized += 2 * Math.PI;
-
-        cachedTurningPosition = normalized;
+        cachedTurningPosition = Math.IEEEremainder(accumulatedAngle, 2 * Math.PI);
         return cachedTurningPosition;
     }
 
@@ -267,12 +263,7 @@ public class SwerveModule {
 
         lastRawServoRad = currentRaw;
         accumulatedAngle = initAngle;
-
-        double wrapped = initAngle;
-        while (wrapped > Math.PI) wrapped -= 2 * Math.PI;
-        while (wrapped < -Math.PI) wrapped += 2 * Math.PI;
-
-        cachedTurningPosition = wrapped;
+        cachedTurningPosition = Math.IEEEremainder(initAngle, 2 * Math.PI);
         targetAngle = wrapped;   // PID 目標對齊實際位置，不會開機亂轉
 
         turningInitialized = true;
@@ -288,9 +279,7 @@ public class SwerveModule {
         angle *= 2.0 * Math.PI;
         angle -= loadOffsetRad();
         if (absoluteEncoderReversed) angle = -angle;
-        while (angle >  Math.PI) angle -= 2.0 * Math.PI;
-        while (angle < -Math.PI) angle += 2.0 * Math.PI;
-        return angle;
+        return Math.IEEEremainder(angle, 2 * Math.PI);
     }
 
     public double getAbsoluteEncoderVoltage() {
@@ -498,13 +487,8 @@ public class SwerveModule {
     public double getDriveOutput() { return driveOutput; }
 
 
-    /**
-     * 將角度標準化到 [-π, π] 範圍
-     */
     private double normalizeAngle(double angle) {
-        while (angle > Math.PI) angle -= 2 * Math.PI;
-        while (angle < -Math.PI) angle += 2 * Math.PI;
-        return angle;
+        return Math.IEEEremainder(angle, 2 * Math.PI);
     }
 
     public void disableSaving() { enableSaving = false; }
@@ -541,7 +525,6 @@ public class SwerveModule {
         return driveMotor.getCurrentPosition();
     }
 
-    // 為轉向 PID 計算輸出（移除 minOutput 以避免震盪）
     private double computeTurningOutput(double errorRad) {
         double errorDeg = Math.abs(Math.toDegrees(errorRad));
 
@@ -553,7 +536,16 @@ public class SwerveModule {
         if (errorDeg < TuningConfig.deadbandDeg()) return 0;
 
         double output = turningPidController.calculate(0, errorRad) * TuningConfig.turningOutputScale();
-        return Math.max(-1.0, Math.min(1.0, output));
+        output = Math.max(-1.0, Math.min(1.0, output));
+
+        // CRServo 靜摩擦補償：確保輸出功率足以克服伺服器靜止摩擦。
+        // 若 minOutput=0 則停用補償。
+        double minOut = TuningConfig.minOutput();
+        if (minOut > 0 && Math.abs(output) < minOut) {
+            output = Math.copySign(minOut, output);
+        }
+
+        return output;
     }
 
     public double getDriveVelocity() {

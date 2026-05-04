@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tuning/ClearSwervePrefs.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tuning/ClearSwervePrefs.java" />
+              <option name="originalContent" value="package org.firstinspires.ftc.teamcode.Tuning;&#10;&#10;import android.content.Context;&#10;import android.content.SharedPreferences;&#10;&#10;import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;&#10;import com.qualcomm.robotcore.eventloop.opmode.TeleOp;&#10;&#10;import org.firstinspires.ftc.robotcore.internal.system.AppUtil;&#10;&#10;@TeleOp(name = &quot;1c_ClearSwervePrefs&quot;, group = &quot;Tuning&quot;)&#10;public class ClearSwervePrefs extends LinearOpMode {&#10;&#10;    @Override&#10;    public void runOpMode() {&#10;        telemetry.addLine(&quot;Ready to clear persisted swerve tracking values.&quot;);&#10;        telemetry.addLine(&quot;This clears Control Hub stored wheel-angle accumulation.&quot;);&#10;        telemetry.update();&#10;&#10;        waitForStart();&#10;        if (isStopRequested()) return;&#10;&#10;        SharedPreferences prefs = AppUtil.getDefContext()&#10;                .getSharedPreferences(&quot;SwerveModulePersistentAngles&quot;, Context.MODE_PRIVATE);&#10;        prefs.edit().clear().apply();&#10;&#10;        telemetry.addLine(&quot;Cleared: SwerveModulePersistentAngles&quot;);&#10;        telemetry.update();&#10;&#10;        // Keep message visible briefly before exit.&#10;        sleep(2000);&#10;    }&#10;}&#10;&#10;" />
+              <option name="updatedContent" value="package org.firstinspires.ftc.teamcode.Tuning;&#10;&#10;import android.content.Context;&#10;import android.content.SharedPreferences;&#10;&#10;import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;&#10;import com.qualcomm.robotcore.eventloop.opmode.TeleOp;&#10;&#10;import org.firstinspires.ftc.robotcore.internal.system.AppUtil;&#10;&#10;@TeleOp(name = &quot;1c_ClearSwervePrefs&quot;, group = &quot;Tuning&quot;)&#10;public class ClearSwervePrefs extends LinearOpMode {&#10;&#10;    @Override&#10;    public void runOpMode() {&#10;        telemetry.addLine(&quot;Ready to clear persisted swerve tracking values.&quot;);&#10;        telemetry.addLine(&quot;This clears Control Hub stored wheel-angle accumulation.&quot;);&#10;        telemetry.update();&#10;&#10;        waitForStart();&#10;        if (isStopRequested()) return;&#10;&#10;        SharedPreferences prefs = AppUtil.getDefContext()&#10;                .getSharedPreferences(&quot;SwerveModulePersistentAngles&quot;, Context.MODE_PRIVATE);&#10;        prefs.edit().clear().apply();&#10;&#10;        SharedPreferences offsetPrefs = AppUtil.getDefContext()&#10;                .getSharedPreferences(&quot;SwerveOffsetPrefs&quot;, Context.MODE_PRIVATE);&#10;        offsetPrefs.edit().clear().apply();&#10;&#10;        telemetry.addLine(&quot;Cleared: SwerveModulePersistentAngles&quot;);&#10;        telemetry.addLine(&quot;Cleared: SwerveOffsetPrefs&quot;);&#10;        telemetry.update();&#10;&#10;        // Keep message visible briefly before exit.&#10;        sleep(2000);&#10;    }&#10;}&#10;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "org.firstinspires.ftc.teamcode.TeamCode-mergeDebugResources-42:/values-watch-v21/values-watch-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Leon\\.gradle\\caches\\8.9\\transforms\\edefc5c7ae9bfe83201cabf5f4a073a2\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",
+                    "from": {
+                        "startLines": "2,6,10",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,271,499",
+                        "endLines": "5,9,13",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "266,494,724"
+                    }
+                }
+            ]
+        }
+    ]
+}

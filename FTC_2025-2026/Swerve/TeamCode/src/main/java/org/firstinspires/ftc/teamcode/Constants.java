@@ -43,16 +43,16 @@ public final class Constants {
         public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2 * Math.PI;
 
         // === 轉向 PID 控制器參數 ===
-        // 調整於 2026-03-19：解決邊直走邊轉時轉向滯後的問題
-        public static final double kPTurning = 0.5;  // 提升至 0.8 以加快初期反應速度
-        public static final double kITurning = 0.02; // 改為 0.01 以消除穩態誤差
-        public static final double kDTurning = 0.02; // 改為 0.05 以減少超調
-        public static final double kTurningOutputScale = 1.0; // 轉向輸出縮放
+        public static final double kPTurning = 0.8;  // TODO: 從 0.8 起調，反應太慢可加到 1.2
+        public static final double kITurning = 0.02; // 消除穩態誤差，過大會積分飽和
+        public static final double kDTurning = 0.05; // 抑制 kP 提高後的超調，可從 0.03 起調
+        public static final double kTurningOutputScale = 1.0;
 
         // 轉向輸出與感測穩定化
-        // 調整於 2026-03-16：改善馬達同步精度、解決1j6g4馬達轉不動問題
-        // 調整於 2026-03-19：減小死區以加快轉向響應
-        public static final double kTurningDeadbandDeg = 0.0;     // 減至 0.0 度以提高轉向敏銳度
+        public static final double kTurningDeadbandDeg = 0.0;     // 精準模式：不設死區
+        // CRServo 靜摩擦補償：超過 deadband 後保證最小輸出功率。
+        // TODO: 實機測試 CRServo 剛好能動的最低功率，填入此值（建議初值 0.05）。
+        public static final double kTurningMinOutput = 0.05;
 
         // === 驅動 PID 控制器參數 ===
         // 調整於 2026-03-16：解決馬達力矩過大轉不動問題

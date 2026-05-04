@@ -49,9 +49,9 @@ public class SwerveSubsystem extends SubsystemBase {
     private long lastHeadingUpdateMs = 0;
     private static final long HEADING_CACHE_MS = 20; // 50Hz
 
-    // Low-pass filter for Pinpoint heading to reduce vibration-induced gyro noise.
-    // alpha=1.0 disables filtering; lower values (e.g. 0.15) smooth more but add latency.
-    public static double kHeadingFilterAlpha = 0.15;
+    // Low-pass filter applied ONCE per periodic() to avoid compounding on multiple getHeading() calls.
+    // alpha=1.0 = no filter. At 50 Hz: alpha=0.5 → ~20 ms lag; alpha=0.15 → ~123 ms lag (too slow).
+    public static double kHeadingFilterAlpha = 0.5;
     private double filteredHeading = 0;
     private boolean headingFilterInitialized = false;
 
@@ -175,7 +175,7 @@ public class SwerveSubsystem extends SubsystemBase {
             pinpointHeadingOffset = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
             cachedHeading = 0;
             filteredHeading = 0;
-            headingFilterInitialized = false;
+            headingFilterInitialized = false;  // periodic() will re-seed on next loop
             lastHeadingUpdateMs = 0;
         } else if (imu != null) {
             headingOffset = Math.IEEEremainder(
@@ -192,15 +192,8 @@ public class SwerveSubsystem extends SubsystemBase {
     // 修改 getHeading()
     public double getHeading() {
         if (usingPinpoint && pinpoint != null) {
-            double rawHeading = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES) - pinpointHeadingOffset, 360);
-            if (!headingFilterInitialized) {
-                filteredHeading = rawHeading;
-                headingFilterInitialized = true;
-            } else {
-                // Exponential moving average — handles wraparound via shortest-path delta.
-                double delta = Math.IEEEremainder(rawHeading - filteredHeading, 360);
-                filteredHeading = Math.IEEEremainder(filteredHeading + kHeadingFilterAlpha * delta, 360);
-            }
+            // EMA is updated once per periodic(); just return the cached value here
+            // so multiple callers per loop don't compound the filter.
             return filteredHeading;
         } else if (imu != null) {
             long now = System.currentTimeMillis();
@@ -267,10 +260,20 @@ public class SwerveSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         if (usingPinpoint && pinpoint != null) {
-            // Pinpoint 需要每次迴圈呼叫 update() 來更新位置
             pinpoint.update();
+
+            // Apply EMA exactly once per loop so multiple getHeading() calls don't compound the filter.
+            double rawHeading = Math.IEEEremainder(
+                    pinpoint.getHeading(AngleUnit.DEGREES) - pinpointHeadingOffset, 360);
+            if (!headingFilterInitialized) {
+                filteredHeading = rawHeading;
+                headingFilterInitialized = true;
+            } else {
+                double delta = Math.IEEEremainder(rawHeading - filteredHeading, 360);
+                filteredHeading = Math.IEEEremainder(
+                        filteredHeading + kHeadingFilterAlpha * delta, 360);
+            }
         } else {
-            // 使用原本的 SwerveDriveOdometry 更新位置
             odometer.updateWithTime(System.currentTimeMillis() / 1000.0, getRotation2d(),
                     frontLeft.getState(), frontRight.getState(),
                     backLeft.getState(), backRight.getState());
@@ -306,6 +309,27 @@ public class SwerveSubsystem extends SubsystemBase {
         packet.put("targetY", target.getY());
         packet.put("targetHeading", target.getRotation().getDegrees());
 
+        // ===== 輪角 PID 監控 (Graph) =====
+        // FL
+        packet.put("FL_angle_deg",  Math.toDegrees(frontLeft.getCurrentAngleRad()));
+        packet.put("FL_target_deg", Math.toDegrees(frontLeft.getTargetAngleRad()));
+        packet.put("FL_err_deg",    Math.toDegrees(frontLeft.getTurningErrorRad()));
+        packet.put("FL_out",        frontLeft.getTurningOutput());
+        // FR
+        packet.put("FR_angle_deg",  Math.toDegrees(frontRight.getCurrentAngleRad()));
+        packet.put("FR_target_deg", Math.toDegrees(frontRight.getTargetAngleRad()));
+        packet.put("FR_err_deg",    Math.toDegrees(frontRight.getTurningErrorRad()));
+        packet.put("FR_out",        frontRight.getTurningOutput());
+        // BL
+        packet.put("BL_angle_deg",  Math.toDegrees(backLeft.getCurrentAngleRad()));
+        packet.put("BL_target_deg", Math.toDegrees(backLeft.getTargetAngleRad()));
+        packet.put("BL_err_deg",    Math.toDegrees(backLeft.getTurningErrorRad()));
+        packet.put("BL_out",        backLeft.getTurningOutput());
+        // BR
+        packet.put("BR_angle_deg",  Math.toDegrees(backRight.getCurrentAngleRad()));
+        packet.put("BR_target_deg", Math.toDegrees(backRight.getTargetAngleRad()));
+        packet.put("BR_err_deg",    Math.toDegrees(backRight.getTurningErrorRad()));
+        packet.put("BR_out",        backRight.getTurningOutput());
 
         // ===== 場地繪圖 (Field) =====
         Canvas fieldOverlay = packet.fieldOverlay();
