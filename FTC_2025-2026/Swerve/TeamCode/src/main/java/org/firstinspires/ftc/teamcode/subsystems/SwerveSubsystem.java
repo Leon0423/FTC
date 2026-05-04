@@ -49,6 +49,12 @@ public class SwerveSubsystem extends SubsystemBase {
     private long lastHeadingUpdateMs = 0;
     private static final long HEADING_CACHE_MS = 20; // 50Hz
 
+    // Low-pass filter for Pinpoint heading to reduce vibration-induced gyro noise.
+    // alpha=1.0 disables filtering; lower values (e.g. 0.15) smooth more but add latency.
+    public static double kHeadingFilterAlpha = 0.15;
+    private double filteredHeading = 0;
+    private boolean headingFilterInitialized = false;
+
     public SwerveSubsystem(HardwareMap hardwareMap) {
 
         frontLeft = new SwerveModule(
@@ -96,20 +102,28 @@ public class SwerveSubsystem extends SubsystemBase {
                 DriveConstants.kBackRightDriveAbsoluteEncoderReversed,
                 DriveConstants.kBackRightDrivePowerScale);
 
-        // 使用傳入的 hardwareMap
-        imu = hardwareMap.get(IMU.class, "imu");
-        IMU.Parameters parameters = new IMU.Parameters(
-                new RevHubOrientationOnRobot(
-                        DriveConstants.kImuLogoFacingDirection,
-                        DriveConstants.kImuUsbFacingDirection
-                )
-        );
-        imu.initialize(parameters);
+        usingPinpoint = DriveConstants.USING_PINPOINT;
+        IMU imuDevice = null;
+        if (!usingPinpoint) {
+            try {
+                imuDevice = hardwareMap.get(IMU.class, "imu");
+                IMU.Parameters parameters = new IMU.Parameters(
+                        new RevHubOrientationOnRobot(
+                                DriveConstants.kImuLogoFacingDirection,
+                                DriveConstants.kImuUsbFacingDirection
+                        )
+                );
+                imuDevice.initialize(parameters);
+            } catch (Exception e) {
+                // IMU 不存在時避免中斷，heading 會回退到 0 度。
+                imuDevice = null;
+            }
+        }
+        imu = imuDevice;
 
         odometer = new SwerveDriveOdometry(DriveConstants.kDriveKinematics, new Rotation2d(0));
 
         // === Pinpoint 初始化 ===
-        usingPinpoint = DriveConstants.USING_PINPOINT;
         if (usingPinpoint) {
             try {
                 pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, DriveConstants.kPinpointName);
@@ -160,21 +174,35 @@ public class SwerveSubsystem extends SubsystemBase {
             // Keep x/y intact: this API should only zero heading.
             pinpointHeadingOffset = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
             cachedHeading = 0;
+            filteredHeading = 0;
+            headingFilterInitialized = false;
             lastHeadingUpdateMs = 0;
-        } else {
+        } else if (imu != null) {
             headingOffset = Math.IEEEremainder(
                     imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
             cachedHeading = 0;           // ← 加這行
             lastHeadingUpdateMs = 0;     // ← 加這行，強制下次立即更新
+        } else {
+            headingOffset = 0;
+            cachedHeading = 0;
+            lastHeadingUpdateMs = 0;
         }
     }
 
     // 修改 getHeading()
     public double getHeading() {
         if (usingPinpoint && pinpoint != null) {
-            double rawHeading = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES), 360);
-            return Math.IEEEremainder(rawHeading - pinpointHeadingOffset, 360);
-        } else {
+            double rawHeading = Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES) - pinpointHeadingOffset, 360);
+            if (!headingFilterInitialized) {
+                filteredHeading = rawHeading;
+                headingFilterInitialized = true;
+            } else {
+                // Exponential moving average — handles wraparound via shortest-path delta.
+                double delta = Math.IEEEremainder(rawHeading - filteredHeading, 360);
+                filteredHeading = Math.IEEEremainder(filteredHeading + kHeadingFilterAlpha * delta, 360);
+            }
+            return filteredHeading;
+        } else if (imu != null) {
             long now = System.currentTimeMillis();
             if (now - lastHeadingUpdateMs < HEADING_CACHE_MS) return cachedHeading;
             lastHeadingUpdateMs = now;
@@ -183,6 +211,8 @@ public class SwerveSubsystem extends SubsystemBase {
                     imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES), 360);
             cachedHeading = Math.IEEEremainder(raw - headingOffset, 360);
             return cachedHeading;
+        } else {
+            return 0;
         }
     }
 
@@ -266,6 +296,11 @@ public class SwerveSubsystem extends SubsystemBase {
         packet.put("currentX", currentPose.getX());
         packet.put("currentY", currentPose.getY());
         packet.put("currentHeading", currentPose.getRotation().getDegrees());
+        if (usingPinpoint && pinpoint != null) {
+            packet.put("heading_raw_deg",
+                    Math.IEEEremainder(pinpoint.getHeading(AngleUnit.DEGREES) - pinpointHeadingOffset, 360));
+            packet.put("heading_filtered_deg", filteredHeading);
+        }
 
         packet.put("targetX", target.getX());
         packet.put("targetY", target.getY());

@@ -56,7 +56,15 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         swerve = new SwerveSubsystem(hardwareMap);
-        imu    = hardwareMap.get(IMU.class, "imu");
+        if (!DriveConstants.USING_PINPOINT) {
+            try {
+                imu = hardwareMap.get(IMU.class, "imu");
+            } catch (Exception e) {
+                imu = null;
+            }
+        } else {
+            imu = null;
+        }
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
 
@@ -202,11 +210,13 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
 
             double velAvg      = averageWheelVelocity();
             double imuOmegaDeg = getImuAngularVelocityDeg();
-            maxVelMps          = Math.max(maxVelMps, Math.abs(velAvg));
-            maxOmegaRadPerSec  = Math.max(maxOmegaRadPerSec, Math.toRadians(Math.abs(imuOmegaDeg)));
             double heading      = swerve.getHeading();
             double diffOmegaDeg = dt > 0.001 ? (heading - lastHeadingDeg) / dt : 0;
             lastHeadingDeg      = heading;
+            double omegaDegForMax = (imu != null) ? imuOmegaDeg : diffOmegaDeg;
+
+            maxVelMps          = Math.max(maxVelMps, Math.abs(velAvg));
+            maxOmegaRadPerSec  = Math.max(maxOmegaRadPerSec, Math.toRadians(Math.abs(omegaDegForMax)));
 
             telemetry.addLine("════ 測試進行中 ════");
             telemetry.addData("模式",  angularMode ? "角速度" : "直線速度");
@@ -306,6 +316,7 @@ public class _3_MaxSpeedAngularTest extends LinearOpMode {
     }
 
     private double getImuAngularVelocityDeg() {
+        if (imu == null) return 0;
         try {
             AngularVelocity angVel = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
             return angVel.zRotationRate;
