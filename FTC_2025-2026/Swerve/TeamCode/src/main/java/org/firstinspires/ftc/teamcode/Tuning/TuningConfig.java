@@ -24,9 +24,12 @@ public class TuningConfig {
 
     // === 2. Turning 補助參數 ===
     public static double _2a_deadbandDeg = Constants.ModuleConstants.kTurningDeadbandDeg;
-    // CRServo 靜摩擦補償：誤差超過 deadband 後，輸出功率至少此值才能推動伺服器。
-    // 若輪角在小誤差下停不到位，請先調大此值（建議從 0.05 開始）。
+    // CRServo 靜摩擦補償：只在誤差 > _2c_minOutputThreshDeg 時才啟用，
+    // 防止小誤差時 minOutput > P輸出 造成 deadband 邊界 limit cycling。
     public static double _2b_minOutput = Constants.ModuleConstants.kTurningMinOutput;
+    // minOutput 啟用閾值：建議設在 minOutput/P × 57.3° 以上（含安全餘量）。
+    // 預設 4.0° ≈ 0.08/1.5×57.3+margin。調高 P 後此值可等比例縮小。
+    public static double _2c_minOutputThreshDeg = Constants.ModuleConstants.kTurningMinOutputThreshDeg;
 
     // === 3. Drive PID 參數 ===
     public static double _3a_driveP = Constants.ModuleConstants.kPDrive;
@@ -48,7 +51,8 @@ public class TuningConfig {
     public static double turningD() { return _1c_turningD; }
     public static double turningOutputScale() { return _1d_turningOutputScale; }
     public static double deadbandDeg() { return _2a_deadbandDeg; }
-    public static double minOutput()    { return _2b_minOutput; }
+    public static double minOutput()            { return _2b_minOutput; }
+    public static double minOutputThreshDeg()   { return _2c_minOutputThreshDeg; }
     public static double driveP() { return _3a_driveP; }
     public static double driveI() { return _3b_driveI; }
     public static double driveD() { return _3c_driveD; }

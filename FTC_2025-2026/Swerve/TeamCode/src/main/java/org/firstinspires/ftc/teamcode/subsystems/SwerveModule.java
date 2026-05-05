@@ -40,6 +40,13 @@ public class SwerveModule {
     private double Error = 0;
     private double Output = 0;
 
+    // 手動 Turning PID 狀態（D-on-Measurement，避免 derivative kick）
+    private double prevTurningMeasurement = 0;
+    private long prevTurningPidTimeNs = System.nanoTime();
+    private boolean turningPidSeeded = false;
+    private double filteredDTerm = 0;                       // D 項低通濾波後的值
+    private static final double D_FILTER_ALPHA = 0.3;       // 0~1，越小越平滑（0.3 ≈ 截止頻率 ~5Hz @30ms loop）
+
     // Drive PID 監測變數
     private double targetVelocity = 0;
     private double currentVelocity = 0;
@@ -264,7 +271,13 @@ public class SwerveModule {
         lastRawServoRad = currentRaw;
         accumulatedAngle = initAngle;
         cachedTurningPosition = Math.IEEEremainder(initAngle, 2 * Math.PI);
-        targetAngle = wrapped;   // PID 目標對齊實際位置，不會開機亂轉
+        targetAngle = cachedTurningPosition;   // PID 目標對齊實際位置，不會開機亂轉
+
+        // 初始化 D-on-Measurement 狀態，避免第一次 computeTurningOutput 產生假 dTerm
+        prevTurningMeasurement = cachedTurningPosition;
+        prevTurningPidTimeNs = System.nanoTime();
+        turningPidSeeded = true;
+        filteredDTerm = 0;
 
         turningInitialized = true;
 
@@ -308,6 +321,7 @@ public class SwerveModule {
         accumulatedAngle = 0;
         cachedTurningPosition = 0;
         lastUpdateTime = -1;
+        turningPidSeeded = false;   // 重設 D-on-Measurement 狀態
 
         initTurningTracking();
 
@@ -374,7 +388,7 @@ public class SwerveModule {
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        Output = computeTurningOutput(Error);
+        Output = computeTurningOutput(Error, currentAngle);
         turningMotor.setPower(Output);
     }
 
@@ -413,7 +427,7 @@ public class SwerveModule {
         targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        Output = computeTurningOutput(Error);
+        Output = computeTurningOutput(Error, currentAngle);
         turningMotor.setPower(Output);
     }
 
@@ -424,7 +438,7 @@ public class SwerveModule {
         currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        Output = computeTurningOutput(Error);
+        Output = computeTurningOutput(Error, currentAngle);
         turningMotor.setPower(Output);
     }
 
@@ -506,7 +520,7 @@ public class SwerveModule {
         targetAngle = targetRad;
 
         Error = normalizeAngle(targetAngle - currentAngle);
-        Output = computeTurningOutput(Error);
+        Output = computeTurningOutput(Error, currentAngle);
         turningMotor.setPower(Output);
         // ★ 完全不碰 driveMotor
     }
@@ -525,23 +539,54 @@ public class SwerveModule {
         return driveMotor.getCurrentPosition();
     }
 
-    private double computeTurningOutput(double errorRad) {
+    /**
+     * 手動 PD 控制器（D-on-Measurement）。
+     *
+     * 傳統 D-on-Error：D = kD × d(error)/dt，當目標突變時產生巨大 derivative kick。
+     * D-on-Measurement：D = −kD × d(measurement)/dt，只看實際角度變化率，
+     * 目標突變不會觸發 D 項暴衝，init 定位也能快速收斂。
+     *
+     * @param errorRad      normalize 後的誤差（rad），用於 P 項
+     * @param measurement   當前實際角度（rad），用於 D 項
+     */
+    private double computeTurningOutput(double errorRad, double measurement) {
         double errorDeg = Math.abs(Math.toDegrees(errorRad));
 
-        turningPidController.setPID(
-                TuningConfig.turningP(),
-                TuningConfig.turningI(),
-                TuningConfig.turningD());
+        if (errorDeg <= TuningConfig.deadbandDeg()) {
+            // 進入 deadband：重設 D 狀態，避免離開 deadband 時用到過時的 dt
+            prevTurningMeasurement = measurement;
+            prevTurningPidTimeNs = System.nanoTime();
+            filteredDTerm = 0;
+            return 0;
+        }
 
-        if (errorDeg < TuningConfig.deadbandDeg()) return 0;
+        // ── P 項 ──
+        double pTerm = TuningConfig.turningP() * errorRad;
 
-        double output = turningPidController.calculate(0, errorRad) * TuningConfig.turningOutputScale();
+        // ── D 項（D-on-Measurement + 低通濾波）──
+        long nowNs = System.nanoTime();
+        if (turningPidSeeded) {
+            double dt = (nowNs - prevTurningPidTimeNs) * 1e-9;   // 秒
+            if (dt > 1e-6) {   // 防止除以零
+                double dMeasurement = Math.IEEEremainder(
+                        measurement - prevTurningMeasurement, 2 * Math.PI);
+                double rawD = -TuningConfig.turningD() * dMeasurement / dt;
+                // EMA 低通濾波：抑制編碼器量化雜訊造成的 D 項尖峰
+                filteredDTerm = D_FILTER_ALPHA * rawD + (1 - D_FILTER_ALPHA) * filteredDTerm;
+            }
+        } else {
+            turningPidSeeded = true;
+        }
+        prevTurningMeasurement = measurement;
+        prevTurningPidTimeNs = nowNs;
+
+        // ── 合成輸出 ──
+        double output = (pTerm + filteredDTerm) * TuningConfig.turningOutputScale();
         output = Math.max(-1.0, Math.min(1.0, output));
 
-        // CRServo 靜摩擦補償：確保輸出功率足以克服伺服器靜止摩擦。
-        // 若 minOutput=0 則停用補償。
+        // CRServo 靜摩擦補償：只在誤差 > minOutputThreshDeg 時啟用。
         double minOut = TuningConfig.minOutput();
-        if (minOut > 0 && Math.abs(output) < minOut) {
+        if (minOut > 0 && errorDeg > TuningConfig.minOutputThreshDeg() && Math.abs(output) < minOut) {
             output = Math.copySign(minOut, output);
         }
 

@@ -43,26 +43,31 @@ public final class Constants {
         public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2 * Math.PI;
 
         // === 轉向 PID 控制器參數 ===
-        public static final double kPTurning = 0.8;  // TODO: 從 0.8 起調，反應太慢可加到 1.2
-        public static final double kITurning = 0.02; // 消除穩態誤差，過大會積分飽和
-        public static final double kDTurning = 0.05; // 抑制 kP 提高後的超調，可從 0.03 起調
+        public static final double kPTurning = 1.5;  // TODO: 從 0.8 起調，反應太慢可加到 1.2
+        public static final double kITurning = 0.0; // 消除穩態誤差，過大會積分飽和
+        public static final double kDTurning = 0.1; // 抑制 kP 提高後的超調，可從 0.03 起調
         public static final double kTurningOutputScale = 1.0;
 
         // 轉向輸出與感測穩定化
-        public static final double kTurningDeadbandDeg = 0.0;     // 精準模式：不設死區
-        // CRServo 靜摩擦補償：超過 deadband 後保證最小輸出功率。
-        // TODO: 實機測試 CRServo 剛好能動的最低功率，填入此值（建議初值 0.05）。
-        public static final double kTurningMinOutput = 0.05;
+        // 0.5° > encoder 量化雜訊地板（≈0.35°）→ 誤差落入此區間時輸出為 0，輪子停止。
+        public static final double kTurningDeadbandDeg = 0.5;
+
+        // CRServo 靜摩擦補償
+        // minOutput 只在誤差 > kTurningMinOutputThreshDeg 時才啟用，
+        // 防止小誤差下 minOutput 大於 P 輸出，造成 deadband 邊界 limit cycling。
+        // 安全閾值 = minOutput / kP × (180/π) = 0.08/1.5×57.3 ≈ 3.1°，取整至 4.0°。
+        public static final double kTurningMinOutput = 0.08;
+        public static final double kTurningMinOutputThreshDeg = 4.0;
 
         // === 驅動 PID 控制器參數 ===
         // 調整於 2026-03-16：解決馬達力矩過大轉不動問題
         // 啟用PID以提供速度反饋控制，加強低速時的扭矩以克服卡住
-        public static final double kPDrive = 0.0;  // TODO P 係數：降低以減少過度響應，防止抖動
+        public static final double kPDrive = 0.5;  // TODO P 係數：降低以減少過度響應，防止抖動
         public static final double kIDrive = 0.0;  // TODO I 係數：增加至 0.01 以穩定低速轉動
         public static final double kDDrive = 0.0; // TODO D 係數：添加阻尼以穩定控制
-        public static final double kFDrive = 0.0;  // TODO F 係數：增加前饋至 0.05 以增強初動力
+        public static final double kFDrive = 1.6299;  // TODO F 係數：增加前饋至 0.05 以增強初動力
         public static final double kDriveOutputScale = 1.0; // TODO Drive輸出縮放
-        public static final boolean kEnableDrivePID = false; // TODO 是否啟用 Drive PID（啟用速度反饋控制）
+        public static final boolean kEnableDrivePID = true; // TODO 是否啟用 Drive PID（啟用速度反饋控制）
 
     }
 
