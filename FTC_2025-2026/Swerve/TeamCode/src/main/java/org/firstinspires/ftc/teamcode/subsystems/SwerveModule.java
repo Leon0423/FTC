@@ -64,11 +64,14 @@ public class SwerveModule {
 
     private double cachedTurningPosition = 0;
     private long lastUpdateTime = -1;
+    private int updateCount = 0;  // getTurningPosition 累計呼叫次數，用於跳過初始靜止保護
 
-    // CRServo 最大轉速約 120 RPM = 4π rad/s。
-    // 在 40ms（含 Android GC 最差情況）內最多轉 4π × 0.04 ≈ 0.5 rad。
-    // 設 0.75π 作為合理上限：超過代表讀值發生跳變，不累積此次 delta 以防方向誤判。
-    private static final double MAX_DELTA_RAD_PER_LOOP = 0.75 * Math.PI;
+    // CRServo 最大角速度 ≈ 120 RPM = 4π rad/s（servo 軸）。
+    // 取 1.5× 裕度 → 6π ≈ 18.85 rad/s，配合每次 loop 的實際 dt 動態計算上限。
+    // 比固定閾值更穩健：短 loop（30ms）上限 ≈ 0.57 rad，長 GC 暫停（80ms）上限 ≈ 1.51 rad。
+    private static final double MAX_SERVO_RAD_PER_SEC = 6.0 * Math.PI;
+    // 用於第一次呼叫（dt 未知）的保底上限
+    private static final double MAX_DELTA_RAD_FALLBACK = 1.5;
 
     // true  → 轉向 PID 直接以絕對編碼器算誤差（最短路徑，零累積誤差，但跨圈位置追蹤失效）
     // false → 使用 delta 累積值（預設，兼容 getState() 的 odometry 輸出）
@@ -174,16 +177,29 @@ public class SwerveModule {
 
         // 同一毫秒內直接回傳快取值，不重複累積 delta
         if (now == lastUpdateTime) return cachedTurningPosition;
+
+        // 動態計算本次 delta 上限：依實際 dt 和 servo 最大角速度
+        double dtSec = (lastUpdateTime < 0) ? 0 : (now - lastUpdateTime) * 0.001;
         lastUpdateTime = now;
+        double maxDelta = (dtSec > 0) ? MAX_SERVO_RAD_PER_SEC * dtSec : MAX_DELTA_RAD_FALLBACK;
 
         double currentRaw = getOrientedRawServoRad();
         double delta = currentRaw - lastRawServoRad;
         if (delta >  Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
 
-        // 超過物理極限：可能是 GC 停頓導致讀值跳變。
+        // 超過物理極限：可能是電氣雜訊導致讀值跳變。
         // 更新 lastRaw（重設基準點）但不累積，避免方向誤判。
-        if (Math.abs(delta) > MAX_DELTA_RAD_PER_LOOP) {
+        if (Math.abs(delta) > maxDelta) {
+            lastRawServoRad = currentRaw;
+            return cachedTurningPosition;
+        }
+
+        // 靜止保護：turning 輸出接近 0 時，忽略小於 ~1° 的 delta，
+        // 避免類比編碼器量化雜訊在靜止狀態下緩慢累積漂移。
+        // 跳過前 10 次更新，讓 PID 有機會建立初始 Output。
+        updateCount++;
+        if (updateCount > 10 && Math.abs(Output) < 0.01 && Math.abs(delta) < 0.02) {
             lastRawServoRad = currentRaw;
             return cachedTurningPosition;
         }
@@ -256,7 +272,13 @@ public class SwerveModule {
     }
 
     private double getRawServoRad() {
-        return (absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage()) * 2.0 * Math.PI;
+        // 多次採樣取平均，降低類比編碼器的電氣瞬態雜訊
+        final int SAMPLES = 3;
+        double sum = 0;
+        for (int i = 0; i < SAMPLES; i++) {
+            sum += absoluteEncoder.getVoltage();
+        }
+        return (sum / SAMPLES / absoluteEncoder.getMaxVoltage()) * 2.0 * Math.PI;
     }
 
     private double getOrientedRawServoRad() {
@@ -339,6 +361,7 @@ public class SwerveModule {
         accumulatedAngle = 0;
         cachedTurningPosition = 0;
         lastUpdateTime = -1;
+        updateCount = 0;            // 重設靜止保護計數器
         turningPidSeeded = false;   // 重設 D-on-Measurement 狀態
         profiledTargetSeeded = false;
 
