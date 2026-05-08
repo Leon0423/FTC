@@ -169,8 +169,6 @@ public class _1c_AutoSetOffset extends LinearOpMode {
         return loadOffsetRad(DriveConstants.kBackRightTurningMotorName, DriveConstants.kBackRightDriveAbsoluteEncoderOffsetRad);
     }
 
-    private static final int TRACKING_PREF_VERSION = 2;  // 需與 SwerveModule 一致
-
     private void saveOffsetAndZeroTracking(String servoName, AnalogInput encoder) {
         double rawServoRad = getRawServoRad(encoder);
         double wheelOffsetRad = rawServoRad * ModuleConstants.kTurningMotorGearRatio;
@@ -179,12 +177,9 @@ public class _1c_AutoSetOffset extends LinearOpMode {
                 .putFloat("offset_" + servoName, (float) wheelOffsetRad)
                 .apply();
 
-        // 同時寫入 tracking_version，確保 initTurningTracking() 走 resume 路徑
-        // 以 accum=0 + lastRaw=當前 的組合正確初始化。
         trackingPrefs.edit()
                 .putFloat("accum_angle_" + servoName, 0f)
                 .putFloat("last_raw_" + servoName, (float) rawServoRad)
-                .putInt("tracking_version_" + servoName, TRACKING_PREF_VERSION)
                 .apply();
     }
 
