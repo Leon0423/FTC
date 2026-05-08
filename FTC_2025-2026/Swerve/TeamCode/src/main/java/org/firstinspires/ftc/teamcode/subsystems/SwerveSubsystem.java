@@ -492,10 +492,10 @@ public class SwerveSubsystem extends SubsystemBase {
     // 僅轉向到 X 型，不觸發 speed=0 的狀態分支，方便在結束前持續收斂角度。
     public void setXLockPoseTurningOnly() {
         stopDriveMotorsOnly();
-        frontLeft.alignTurningOnly(Math.toRadians(45));
-        frontRight.alignTurningOnly(Math.toRadians(-45));
-        backLeft.alignTurningOnly(Math.toRadians(-45));
-        backRight.alignTurningOnly(Math.toRadians(45));
+        frontLeft.alignTurningOnly(Math.toRadians(-45));
+        frontRight.alignTurningOnly(Math.toRadians(45));
+        backLeft.alignTurningOnly(Math.toRadians(45));
+        backRight.alignTurningOnly(Math.toRadians(-45));
     }
 
     private void addModuleTurningTelemetry(String name, SwerveModule module, Telemetry telemetry) {

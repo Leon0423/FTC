@@ -43,21 +43,21 @@ public final class Constants {
         public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2 * Math.PI;
 
         // === 轉向 PID 控制器參數 ===
-        public static final double kPTurning = 0.9;  // TODO: 從 0.8 起調，反應太慢可加到 1.2
+        public static final double kPTurning = 1.5;  // TODO: 從 0.8 起調，反應太慢可加到 1.2
         public static final double kITurning = 0.0; // 消除穩態誤差，過大會積分飽和
-        public static final double kDTurning = 0.0; // 抑制 kP 提高後的超調，可從 0.03 起調
+        public static final double kDTurning = 0.1; // 抑制 kP 提高後的超調，可從 0.03 起調
         public static final double kTurningOutputScale = 1.0;
 
         // 轉向輸出與感測穩定化
         // 0.5° > encoder 量化雜訊地板（≈0.35°）→ 誤差落入此區間時輸出為 0，輪子停止。
-        public static final double kTurningDeadbandDeg = 2.5;
+        public static final double kTurningDeadbandDeg = 0.5;
 
         // CRServo 靜摩擦補償
         // minOutput 只在誤差 > kTurningMinOutputThreshDeg 時才啟用，
         // 防止小誤差下 minOutput 大於 P 輸出，造成 deadband 邊界 limit cycling。
         // 安全閾值 = minOutput / kP × (180/π) = 0.08/1.5×57.3 ≈ 3.1°，取整至 4.0°。
-        public static final double kTurningMinOutput = 0.03;
-        public static final double kTurningMinOutputThreshDeg = 8.0;
+        public static final double kTurningMinOutput = 0.08;
+        public static final double kTurningMinOutputThreshDeg = 4.0;
 
         // === 驅動 PID 控制器參數 ===
         // 調整於 2026-03-16：解決馬達力矩過大轉不動問題
@@ -121,10 +121,10 @@ public final class Constants {
         public static final String kBackRightAbsoluteEncoderName = "FLEncoder";   // TODO 後右絕對編碼器
 
         // === 絕對編碼器方向設定 ===
-        public static final boolean kFrontLeftDriveAbsoluteEncoderReversed = false;  // TODO 前左絕對編碼器反向
+        public static final boolean kFrontLeftDriveAbsoluteEncoderReversed = true;   // TODO 前左絕對編碼器反向
         public static final boolean kBackLeftDriveAbsoluteEncoderReversed = false;    // TODO 後左絕對編碼器反向
         public static final boolean kFrontRightDriveAbsoluteEncoderReversed = false;  // TODO 前右絕對編碼器反向
-        public static final boolean kBackRightDriveAbsoluteEncoderReversed = false;  // TODO 後右絕對編碼器反向
+        public static final boolean kBackRightDriveAbsoluteEncoderReversed = true;   // TODO 後右絕對編碼器反向
 
         // === 絕對編碼器偏移角度 (度數) ===
         // 用於校正輪子的初始方向，使用 SwerveModuleTuner 測量正確的偏移值

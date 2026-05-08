@@ -39,18 +39,13 @@ public class SwerveModule {
     private double currentAngle = 0;
     private double Error = 0;
     private double Output = 0;
-    private double profiledTargetAngle = 0;
-    private long profiledTargetTimeNs = System.nanoTime();
-    private boolean profiledTargetSeeded = false;
 
     // 手動 Turning PID 狀態（D-on-Measurement，避免 derivative kick）
     private double prevTurningMeasurement = 0;
     private long prevTurningPidTimeNs = System.nanoTime();
     private boolean turningPidSeeded = false;
     private double filteredDTerm = 0;                       // D 項低通濾波後的值
-    private double turningIntegral = 0;                     // I 項累積誤差（rad·s）
     private static final double D_FILTER_ALPHA = 0.3;       // 0~1，越小越平滑（0.3 ≈ 截止頻率 ~5Hz @30ms loop）
-    private static final double MAX_I_TERM = 0.25;          // 限制 I 項最大功率，避免積分飽和造成晃動
 
     // Drive PID 監測變數
     private double targetVelocity = 0;
@@ -85,14 +80,12 @@ public class SwerveModule {
     private static final String MODULE_PREFS_NAME = "SwerveModulePersistentAngles";
     private static final String OFFSET_PREFS_NAME = "SwerveOffsetPrefs";
     private static final int SAVE_EVERY_N_UPDATES = 25;
-    private static final int TRACKING_PREF_VERSION = 2;
 
     private final SharedPreferences modulePrefs;
     private final SharedPreferences offsetPrefs;
     private final String prefAccumulatedAngleKey;
     private final String prefLastRawKey;
     private final String prefOffsetKey;
-    private final String prefVersionKey;
     private boolean enableSaving = true;
     private int saveCounter = 0;
     /**
@@ -120,7 +113,6 @@ public class SwerveModule {
         this.prefAccumulatedAngleKey = "accum_angle_" + turningServoName;
         this.prefLastRawKey = "last_raw_" + turningServoName;
         this.prefOffsetKey = "offset_" + turningServoName;
-        this.prefVersionKey = "tracking_version_" + turningServoName;
         modulePrefs = AppUtil.getDefContext().getSharedPreferences(MODULE_PREFS_NAME, Context.MODE_PRIVATE);
         offsetPrefs = AppUtil.getDefContext().getSharedPreferences(OFFSET_PREFS_NAME, Context.MODE_PRIVATE);
 
@@ -183,7 +175,7 @@ public class SwerveModule {
         lastUpdateTime = now;
         double maxDelta = (dtSec > 0) ? MAX_SERVO_RAD_PER_SEC * dtSec : MAX_DELTA_RAD_FALLBACK;
 
-        double currentRaw = getOrientedRawServoRad();
+        double currentRaw = getRawServoRad();
         double delta = currentRaw - lastRawServoRad;
         if (delta >  Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
@@ -223,7 +215,6 @@ public class SwerveModule {
         modulePrefs.edit()
                 .remove(prefAccumulatedAngleKey)
                 .remove(prefLastRawKey)
-                .remove(prefVersionKey)
                 .apply();
     }
 
@@ -281,20 +272,12 @@ public class SwerveModule {
         return (sum / SAMPLES / absoluteEncoder.getMaxVoltage()) * 2.0 * Math.PI;
     }
 
-    private double getOrientedRawServoRad() {
-        double raw = getRawServoRad();
-        return absoluteEncoderReversed ? -raw : raw;
-    }
-
     // ===== initTurningTracking()：以絕對編碼器直接定義當前角度，避免 offset/gear 比例反覆疊加 =====
     public void initTurningTracking() {
-        double currentRaw = getOrientedRawServoRad();
+        double currentRaw = getRawServoRad();
         double initAngle;
 
-        if (enableSaving
-                && modulePrefs.getInt(prefVersionKey, -1) == TRACKING_PREF_VERSION
-                && modulePrefs.contains(prefAccumulatedAngleKey)
-                && modulePrefs.contains(prefLastRawKey)) {
+        if (enableSaving && modulePrefs.contains(prefAccumulatedAngleKey) && modulePrefs.contains(prefLastRawKey)) {
             // 從上次追蹤狀態續接，並先做一次跨 0/360 的增量補償。
             double savedAccumulated = modulePrefs.getFloat(prefAccumulatedAngleKey, 0f);
             double savedRaw = modulePrefs.getFloat(prefLastRawKey, (float) currentRaw);
@@ -311,16 +294,12 @@ public class SwerveModule {
         accumulatedAngle = initAngle;
         cachedTurningPosition = Math.IEEEremainder(initAngle, 2 * Math.PI);
         targetAngle = cachedTurningPosition;   // PID 目標對齊實際位置，不會開機亂轉
-        profiledTargetAngle = cachedTurningPosition;
-        profiledTargetTimeNs = System.nanoTime();
-        profiledTargetSeeded = true;
 
         // 初始化 D-on-Measurement 狀態，避免第一次 computeTurningOutput 產生假 dTerm
         prevTurningMeasurement = cachedTurningPosition;
         prevTurningPidTimeNs = System.nanoTime();
         turningPidSeeded = true;
         filteredDTerm = 0;
-        turningIntegral = 0;
 
         turningInitialized = true;
 
@@ -331,7 +310,10 @@ public class SwerveModule {
     }
 
     public double getAbsoluteEncoderRad() {
-        double angle = getOrientedRawServoRad() * ModuleConstants.kTurningMotorGearRatio - loadOffsetRad();
+        double angle = absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage();
+        angle *= 2.0 * Math.PI;
+        angle -= loadOffsetRad();
+        if (absoluteEncoderReversed) angle = -angle;
         return Math.IEEEremainder(angle, 2 * Math.PI);
     }
 
@@ -363,7 +345,6 @@ public class SwerveModule {
         lastUpdateTime = -1;
         updateCount = 0;            // 重設靜止保護計數器
         turningPidSeeded = false;   // 重設 D-on-Measurement 狀態
-        profiledTargetSeeded = false;
 
         initTurningTracking();
 
@@ -388,22 +369,8 @@ public class SwerveModule {
         // 優化模組狀態（避免超過90度旋轉）
         state = SwerveModuleState.optimize(state, getState().angle);
 
-        // ===== Turning Motor 控制 =====
-        // 先算轉向誤差，再用誤差縮放 drive power。輪子尚未對準時直接推 drive
-        // 會讓輪胎側向摩擦拖住 CRServo，TeleOp 下會比純 turning tuner 慢很多。
-        currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
-        double requestedTargetAngle = state.angle.getRadians();
-        double finalError = normalizeAngle(requestedTargetAngle - currentAngle);
-        targetAngle = getProfiledTargetAngle(requestedTargetAngle, currentAngle);
-
-        Error = normalizeAngle(targetAngle - currentAngle);
-        Output = computeTurningOutput(Error, currentAngle);
-        turningMotor.setPower(Output);
-
-        double driveAlignmentScale = getDriveAlignmentScale(finalError);
-
         // ===== Drive Motor 控制 =====
-        targetVelocity = state.speedMetersPerSecond * driveAlignmentScale;
+        targetVelocity = state.speedMetersPerSecond;
         currentVelocity = getDriveVelocity();
 
         if (TuningConfig.enableDrivePID()) {
@@ -431,10 +398,21 @@ public class SwerveModule {
             driveMotor.setPower(driveOutput);
         } else {
             // 簡單的開環控制（原本的方式）
-            driveOutput = targetVelocity / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+            driveOutput = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
             driveError = 0;
             driveMotor.setPower(driveOutput);
         }
+
+        // ===== Turning Motor 控制 =====
+        // useAbsoluteForPID=true：直接讀絕對編碼器（最短路徑，零累積誤差）
+        // useAbsoluteForPID=false：使用 delta 累積值（預設，兼容 odometry）
+        // normalizeAngle() 將誤差包到 [-π, π]，即最短路徑方向。
+        currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
+        targetAngle = state.angle.getRadians();
+
+        Error = normalizeAngle(targetAngle - currentAngle);
+        Output = computeTurningOutput(Error, currentAngle);
+        turningMotor.setPower(Output);
     }
 
     public void stop() {
@@ -463,20 +441,17 @@ public class SwerveModule {
         // 優化模組狀態（避免超過90度旋轉）
         state = SwerveModuleState.optimize(state, getState().angle);
 
+        // ===== Drive Motor 控制（無 PID，直接功率）=====
+        double drivePower = state.speedMetersPerSecond / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
+        driveMotor.setPower(drivePower);
+
         // ===== Turning Motor 控制（仍使用 PID）=====
         currentAngle = useAbsoluteForPID ? getAbsoluteEncoderRad() : getTurningPosition();
-        double requestedTargetAngle = state.angle.getRadians();
-        double finalError = normalizeAngle(requestedTargetAngle - currentAngle);
-        targetAngle = getProfiledTargetAngle(requestedTargetAngle, currentAngle);
+        targetAngle = state.angle.getRadians();
 
         Error = normalizeAngle(targetAngle - currentAngle);
         Output = computeTurningOutput(Error, currentAngle);
         turningMotor.setPower(Output);
-
-        // ===== Drive Motor 控制（無 PID，直接功率）=====
-        targetVelocity = state.speedMetersPerSecond * getDriveAlignmentScale(finalError);
-        double drivePower = targetVelocity / DriveConstants.kPhysicalMaxSpeedMetersPerSecond;
-        driveMotor.setPower(drivePower);
     }
 
     /**
@@ -553,42 +528,6 @@ public class SwerveModule {
         return Math.IEEEremainder(angle, 2 * Math.PI);
     }
 
-    private double getDriveAlignmentScale(double turningErrorRad) {
-        double errorDeg = Math.abs(Math.toDegrees(turningErrorRad));
-        double fullSpeedDeg = Math.max(0.0, TuningConfig.driveFullSpeedErrorDeg());
-        double zeroSpeedDeg = Math.max(fullSpeedDeg + 1.0, TuningConfig.driveZeroSpeedErrorDeg());
-
-        if (errorDeg <= fullSpeedDeg) return 1.0;
-        if (errorDeg >= zeroSpeedDeg) return 0.0;
-
-        double t = (zeroSpeedDeg - errorDeg) / (zeroSpeedDeg - fullSpeedDeg);
-        return t * t;
-    }
-
-    private double getProfiledTargetAngle(double requestedTargetAngle, double measurement) {
-        long nowNs = System.nanoTime();
-        if (!profiledTargetSeeded) {
-            profiledTargetAngle = measurement;
-            profiledTargetSeeded = true;
-        }
-
-        double dt = Math.min(0.08, Math.max(0.0, (nowNs - profiledTargetTimeNs) * 1e-9));
-        profiledTargetTimeNs = nowNs;
-
-        double maxRateRadPerSec = Math.toRadians(Math.max(1.0, TuningConfig.turningTargetMaxDegPerSec()));
-        double maxStep = maxRateRadPerSec * dt;
-        double delta = normalizeAngle(requestedTargetAngle - profiledTargetAngle);
-
-        if (Math.abs(delta) <= maxStep) {
-            profiledTargetAngle = requestedTargetAngle;
-        } else {
-            profiledTargetAngle = normalizeAngle(
-                    profiledTargetAngle + Math.copySign(maxStep, delta));
-        }
-
-        return profiledTargetAngle;
-    }
-
     public void disableSaving() { enableSaving = false; }
 
     public void enableSaving()  { enableSaving = true; }
@@ -641,28 +580,17 @@ public class SwerveModule {
             prevTurningMeasurement = measurement;
             prevTurningPidTimeNs = System.nanoTime();
             filteredDTerm = 0;
-            turningIntegral = 0;
             return 0;
         }
 
         // ── P 項 ──
         double pTerm = TuningConfig.turningP() * errorRad;
 
-        // ── I / D 項（D-on-Measurement + 低通濾波）──
-        double iTerm = 0;
+        // ── D 項（D-on-Measurement + 低通濾波）──
         long nowNs = System.nanoTime();
         if (turningPidSeeded) {
             double dt = (nowNs - prevTurningPidTimeNs) * 1e-9;   // 秒
             if (dt > 1e-6) {   // 防止除以零
-                turningIntegral += errorRad * dt;
-                double maxIntegral = TuningConfig.turningI() > 0
-                        ? MAX_I_TERM / TuningConfig.turningI()
-                        : 0;
-                if (maxIntegral > 0) {
-                    turningIntegral = Math.max(-maxIntegral, Math.min(maxIntegral, turningIntegral));
-                    iTerm = TuningConfig.turningI() * turningIntegral;
-                }
-
                 double dMeasurement = Math.IEEEremainder(
                         measurement - prevTurningMeasurement, 2 * Math.PI);
                 double rawD = -TuningConfig.turningD() * dMeasurement / dt;
@@ -676,7 +604,7 @@ public class SwerveModule {
         prevTurningPidTimeNs = nowNs;
 
         // ── 合成輸出 ──
-        double output = (pTerm + iTerm + filteredDTerm) * TuningConfig.turningOutputScale();
+        double output = (pTerm + filteredDTerm) * TuningConfig.turningOutputScale();
         output = Math.max(-1.0, Math.min(1.0, output));
 
         // CRServo 靜摩擦補償：只在誤差 > minOutputThreshDeg 時啟用。
@@ -707,7 +635,6 @@ public class SwerveModule {
         modulePrefs.edit()
                 .putFloat(prefAccumulatedAngleKey, (float) accumulatedAngle)
                 .putFloat(prefLastRawKey, (float) lastRawServoRad)
-                .putInt(prefVersionKey, TRACKING_PREF_VERSION)
                 .apply();
     }
 
