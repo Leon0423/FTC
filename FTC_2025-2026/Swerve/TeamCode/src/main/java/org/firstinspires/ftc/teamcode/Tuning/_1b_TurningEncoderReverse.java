@@ -6,6 +6,8 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
+
 
 import org.firstinspires.ftc.teamcode.Constants.DriveConstants;
 
@@ -98,10 +100,14 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
                     pulseActive = false;
                     power = 0;
 
-                    flVerdict = verdict(flAngleBefore, rawDeg(flAbs), pulsePower);
-                    frVerdict = verdict(frAngleBefore, rawDeg(frAbs), pulsePower);
-                    blVerdict = verdict(blAngleBefore, rawDeg(blAbs), pulsePower);
-                    brVerdict = verdict(brAngleBefore, rawDeg(brAbs), pulsePower);
+                    flVerdict = verdict(flAngleBefore, rawDeg(flAbs), pulsePower,
+                            DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed);
+                    frVerdict = verdict(frAngleBefore, rawDeg(frAbs), pulsePower,
+                            DriveConstants.kFrontRightDriveAbsoluteEncoderReversed);
+                    blVerdict = verdict(blAngleBefore, rawDeg(blAbs), pulsePower,
+                            DriveConstants.kBackLeftDriveAbsoluteEncoderReversed);
+                    brVerdict = verdict(brAngleBefore, rawDeg(brAbs), pulsePower,
+                            DriveConstants.kBackRightDriveAbsoluteEncoderReversed);
                 }
             }
 
@@ -127,8 +133,8 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
             telemetry.addLine("");
 
             telemetry.addLine("════ Pulse 結論（按 A 後更新）════");
-            telemetry.addLine("正功率時角度應增加 → 不用 Reverse");
-            telemetry.addLine("正功率時角度減少   → 需要 Reverse");
+            telemetry.addLine("判斷基準：正 power 時，PID angle delta 應為正");
+            telemetry.addLine("若 PID delta 方向相反，優先切換 AbsoluteEncoderReversed");
             telemetry.addData("FL", flVerdict);
             telemetry.addData("FR", frVerdict);
             telemetry.addData("BL", blVerdict);
@@ -136,10 +142,16 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
             telemetry.addLine("");
 
             telemetry.addLine("════ 目前 Constants 設定 ════");
-            telemetry.addData("FL Reversed", DriveConstants.kFrontLeftTurningEncoderReversed);
-            telemetry.addData("FR Reversed", DriveConstants.kFrontRightTurningEncoderReversed);
-            telemetry.addData("BL Reversed", DriveConstants.kBackLeftTurningEncoderReversed);
-            telemetry.addData("BR Reversed", DriveConstants.kBackRightTurningEncoderReversed);
+            telemetry.addData("Turning motor reversed", "FL:%s FR:%s BL:%s BR:%s",
+                    DriveConstants.kFrontLeftTurningEncoderReversed,
+                    DriveConstants.kFrontRightTurningEncoderReversed,
+                    DriveConstants.kBackLeftTurningEncoderReversed,
+                    DriveConstants.kBackRightTurningEncoderReversed);
+            telemetry.addData("Absolute encoder reversed", "FL:%s FR:%s BL:%s BR:%s",
+                    DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed,
+                    DriveConstants.kFrontRightDriveAbsoluteEncoderReversed,
+                    DriveConstants.kBackLeftDriveAbsoluteEncoderReversed,
+                    DriveConstants.kBackRightDriveAbsoluteEncoderReversed);
 
             telemetry.update();
         }
@@ -154,31 +166,35 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
      * 計算角度變化，處理 0/360° 邊界跳躍
      * @return 結論字串，說明需不需要 Reverse
      */
-    private String verdict(double before, double after, double power) {
-        double delta = after - before;
+    private String verdict(double before, double after, double power, boolean absoluteEncoderReversed) {
+     *double rawDelta = wrapDeltaDeg(after - before);
+     *double pidDelta = rawDelta
+                * * (absoluteEncoderReversed ? -1.0 : 1.0)
+                * * ModuleConstants.kTurningMotorGearRatio;
 
-        // 處理邊界跳躍（例如從 355° 轉到 5°，delta 應是 +10° 不是 -350°）
-        if (delta >  180) delta -= 360;
-        if (delta < -180) delta += 360;
 
-        if (Math.abs(delta) < 1.0) {
+        if (Math.abs(pidDelta) < 0.4) {
             return "變化太小，加大功率再試";
         }
 
-        boolean angleIncreased = delta > 0;
+        boolean pidAngleIncreased = pidDelta > 0;
         boolean powerPositive  = power > 0;
 
-        // 正功率 → 角度增加：正常，不用 Reverse
-        // 正功率 → 角度減少：需要 Reverse
-        boolean needReverse = (powerPositive && !angleIncreased) || (!powerPositive && angleIncreased);
+        boolean needFlipAbsolute = (powerPositive && !pidAngleIncreased)
+                || (!powerPositive && pidAngleIncreased);
 
-        return String.format("%s%.1f°  →  %s",
-                delta > 0 ? "+" : "",
-                delta,
-                needReverse ? "⚠️ 需要 Reverse" : "✅ 不用 Reverse");
+        return String.format("raw:%+.1f° pid:%+.1f° -> %s",
+                rawDelta,
+                pidDelta,
+                needFlipAbsolute ? "切換 AbsoluteReverse" : "OK");
     }
 
     private double rawDeg(AnalogInput input) {
         return (input.getVoltage() / input.getMaxVoltage()) * 360.0;
+    }
+    private double wrapDeltaDeg(double delta) {
+        if (delta >  180) delta -= 360;
+        if (delta < -180) delta += 360;
+        return delta;
     }
 }

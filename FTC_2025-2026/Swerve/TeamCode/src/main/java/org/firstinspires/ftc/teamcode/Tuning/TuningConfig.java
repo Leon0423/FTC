@@ -41,6 +41,12 @@ public class TuningConfig {
     // === 4. 功能開關 ===
     public static boolean _4a_enableDrivePID = Constants.ModuleConstants.kEnableDrivePID;
 
+    // 輪角尚未對準時降低 drive power，避免輪胎側向摩擦拖慢 turning servo。
+    public static double _4b_driveFullSpeedErrorDeg = 10.0;
+    public static double _4c_driveZeroSpeedErrorDeg = 45.0;
+    // TeleOp 中輪角目標變化率限制，避免目標角瞬間大跳造成大幅校正。
+    public static double _4d_turningTargetMaxDegPerSec = 240.0;
+
     // === 5. Teleop 加速度限制 ===
     public static double _5a_teleDriveMaxAccel = Constants.DriveConstants.kTeleDriveMaxAccelerationUnitsPerSecond;
     public static double _5b_teleDriveMaxAngularAccel = Constants.DriveConstants.kTeleDriveMaxAngularAccelerationUnitsPerSecond;
@@ -58,6 +64,9 @@ public class TuningConfig {
     public static double driveD() { return _3c_driveD; }
     public static double driveF() { return _3d_driveF; }
     public static double driveOutputScale() { return _3e_driveOutputScale; }
+    public static double driveFullSpeedErrorDeg() { return _4b_driveFullSpeedErrorDeg; }
+    public static double driveZeroSpeedErrorDeg() { return _4c_driveZeroSpeedErrorDeg; }
+    public static double turningTargetMaxDegPerSec() { return _4d_turningTargetMaxDegPerSec; }
     public static boolean enableDrivePID() { return _4a_enableDrivePID; }
     public static double teleDriveMaxAccel() { return _5a_teleDriveMaxAccel; }
     public static double teleDriveMaxAngularAccel() { return _5b_teleDriveMaxAngularAccel; }
