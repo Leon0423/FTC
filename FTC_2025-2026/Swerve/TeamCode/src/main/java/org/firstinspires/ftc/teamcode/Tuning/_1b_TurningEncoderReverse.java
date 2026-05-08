@@ -167,10 +167,10 @@ public class _1b_TurningEncoderReverse extends LinearOpMode {
      * @return 結論字串，說明需不需要 Reverse
      */
     private String verdict(double before, double after, double power, boolean absoluteEncoderReversed) {
-     *double rawDelta = wrapDeltaDeg(after - before);
-     *double pidDelta = rawDelta
-                * * (absoluteEncoderReversed ? -1.0 : 1.0)
-                * * ModuleConstants.kTurningMotorGearRatio;
+        double rawDelta = wrapDeltaDeg(after - before);
+        double pidDelta = rawDelta
+                * (absoluteEncoderReversed ? -1.0 : 1.0)
+                * ModuleConstants.kTurningMotorGearRatio;
 
 
         if (Math.abs(pidDelta) < 0.4) {
