@@ -66,8 +66,10 @@ public class SwerveModule {
 
     // CRServo 最大轉速約 120 RPM = 4π rad/s。
     // 在 40ms（含 Android GC 最差情況）內最多轉 4π × 0.04 ≈ 0.5 rad。
-    // 設 0.75π 作為合理上限：超過代表讀值發生跳變，不累積此次 delta 以防方向誤判。
-    private static final double MAX_DELTA_RAD_PER_LOOP = 0.75 * Math.PI;
+    // 門檻設 0.6 rad：保留實際運動餘量，同時拒收大多數 ADC 突波。
+    private static final double MAX_DELTA_RAD_PER_LOOP = 0.6;
+    private static final int MAX_CONSECUTIVE_SPIKES_BEFORE_REBASE = 2;
+    private int consecutiveSpikeRejects = 0;
 
     // true  → 轉向 PID 直接以絕對編碼器算誤差（最短路徑，零累積誤差，但跨圈位置追蹤失效）
     // false → 使用 delta 累積值（預設，兼容 getState() 的 odometry 輸出）
@@ -180,12 +182,17 @@ public class SwerveModule {
         if (delta >  Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
 
-        // 超過物理極限：可能是 GC 停頓導致讀值跳變。
-        // 更新 lastRaw（重設基準點）但不累積，避免方向誤判。
+        // 超過物理極限：視為突波，沿用上一個合理讀值。
+        // 只有連續多次都超限，才接受新基準避免長時間卡住。
         if (Math.abs(delta) > MAX_DELTA_RAD_PER_LOOP) {
-            lastRawServoRad = currentRaw;
+            consecutiveSpikeRejects++;
+            if (consecutiveSpikeRejects >= MAX_CONSECUTIVE_SPIKES_BEFORE_REBASE) {
+                lastRawServoRad = currentRaw;
+                consecutiveSpikeRejects = 0;
+            }
             return cachedTurningPosition;
         }
+        consecutiveSpikeRejects = 0;
 
         accumulatedAngle += delta * ModuleConstants.kTurningMotorGearRatio;
         lastRawServoRad = currentRaw;
@@ -255,7 +262,14 @@ public class SwerveModule {
     }
 
     private double getRawServoRad() {
-        return (absoluteEncoder.getVoltage() / absoluteEncoder.getMaxVoltage()) * 2.0 * Math.PI;
+        final int samples = 3;
+        double sum = 0;
+        double maxVoltage = absoluteEncoder.getMaxVoltage();
+        if (maxVoltage <= 0) return 0;
+        for (int i = 0; i < samples; i++) {
+            sum += absoluteEncoder.getVoltage();
+        }
+        return (sum / samples / maxVoltage) * 2.0 * Math.PI;
     }
 
     private double getOrientedRawServoRad() {

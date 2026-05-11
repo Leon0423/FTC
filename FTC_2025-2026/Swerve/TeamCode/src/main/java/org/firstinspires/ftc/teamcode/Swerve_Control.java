@@ -67,7 +67,13 @@ public class Swerve_Control extends LinearOpMode {
         dashboardTelemetry.addData("Status", "Initialized");
         dashboardTelemetry.update();
 
+        // Init 前先從絕對編碼器強制初始化追蹤，確保 getTurningPosition() 在 init loop 裡就是正確的。
+        // 必須在 alignAllModulesToZero() 之前呼叫，否則 PID 震盪時輪子停在奇怪位置，
+        // 等到 waitForStart 後才 reset 就會把錯誤位置當成 0°。
+        swerveSubsystem.resetAllModuleTracking(true);
+
         // Init 階段持續把四顆輪角對齊到 0 度，方便上場前校正。
+        // 此時 turningInitialized=true，使用累積追蹤（即使震盪也能正確跟蹤實際位置）。
         while (!isStarted() && !isStopRequested()) {
             swerveSubsystem.alignAllModulesToZero();
             swerveSubsystem.periodic();
@@ -83,8 +89,6 @@ public class Swerve_Control extends LinearOpMode {
             return;
         }
 
-        // 重建所有模組的角度追蹤狀態，避免開機時沿用舊的 delta
-        swerveSubsystem.resetAllModuleTracking();
         swerveSubsystem.zeroHeading();
 
         lastTime = getRuntime();
