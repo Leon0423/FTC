@@ -3171,7 +3171,6 @@ id CTRL
 id FUNCTION
 id META
 id NO_DEBUG
-id RelativeLayout
 id SHIFT
 id SHOW_ALL
 id SHOW_PATH
@@ -3213,7 +3212,6 @@ id accessibility_custom_action_6
 id accessibility_custom_action_7
 id accessibility_custom_action_8
 id accessibility_custom_action_9
-id action_about
 id action_bar
 id action_bar_activity_content
 id action_bar_container
@@ -3221,21 +3219,15 @@ id action_bar_root
 id action_bar_spinner
 id action_bar_subtitle
 id action_bar_title
-id action_configure_robot
 id action_container
 id action_context_bar
 id action_divider
-id action_exit_app
 id action_image
-id action_inspection_mode
 id action_menu_divider
 id action_menu_presenter
 id action_mode_bar
 id action_mode_bar_stub
 id action_mode_close_button
-id action_program_and_manage
-id action_restart_robot
-id action_settings
 id action_text
 id actions
 id activity_chooser_view_content
@@ -3286,7 +3278,6 @@ id buttonList
 id buttonPanel
 id bytesPerSecond
 id bytesPerSecondLabel
-id cameraMonitorViewId
 id cameraName
 id cancelButton
 id cancel_button
@@ -3540,7 +3531,6 @@ id message
 id middle
 id mini
 id moduleAddressText
-id monitorContainer
 id month_grid
 id month_navigation_bar
 id month_navigation_fragment_toggle
@@ -3737,12 +3727,6 @@ id text
 id text2
 id textDeviceName
 id textEnd
-id textErrorMessage
-id textGamepad1
-id textGamepad2
-id textNetworkConnectionStatus
-id textOpMode
-id textRobotStatus
 id textSpacerNoButtons
 id textSpacerNoTitle
 id textStart
@@ -3810,7 +3794,6 @@ id view_tree_view_model_store_owner
 id visible
 id visible_removing_fragment_view_tag
 id webView
-id webViewBlocksRuntime
 id wifiConnected
 id wifiConnected_img
 id wifiDisabledNotification
@@ -3954,7 +3937,6 @@ layout abc_select_dialog_material
 layout abc_tooltip
 layout activity_configure_from_template
 layout activity_ftc_configuration
-layout activity_ftc_controller
 layout activity_ftc_lynx_address_update
 layout activity_ftc_lynx_fw_update
 layout activity_ftc_wifi_channel_selector
@@ -4085,7 +4067,6 @@ layout template_info
 layout webcam_device
 layout zxing_barcode_scanner
 layout zxing_capture
-menu ftc_robot_controller
 menu inspection_menu_rc_remote
 menu inspection_menu_rcds_local
 plurals mtrl_badge_content_description
@@ -4095,11 +4076,8 @@ raw color_fragment_shader
 raw cube_mesh_fragment_shader
 raw cube_mesh_vertex_shader
 raw errormessage
-raw gold
 raw nxtstartupsound
-raw readme
 raw rev_bhi260_ap_fw_20
-raw silver
 raw simple_vertex_shader
 raw ss_alarm
 raw ss_bb8_down
@@ -4156,7 +4134,6 @@ string about_build_time
 string about_ch_os_version
 string about_dh_os_version
 string about_library_version
-string about_menu_item
 string about_network_connection_info
 string about_network_protocol_version
 string about_wifi_connected
@@ -4232,7 +4209,6 @@ string availableConfigsInfoMessage
 string availableTemplateListCaption
 string batteryLevelLabel
 string blocks_activity
-string blocks_menu_item
 string bluetoothLabel
 string bluetoothOnContext
 string bottom_sheet_behavior
@@ -4329,7 +4305,6 @@ string configurationNotSaved
 string configureFromTemplate
 string configure_activity
 string configure_menu_item
-string configure_robot_menu_item
 string configure_settings
 string confirmConfigDeleteMessage
 string confirmConfigDeleteTitle
@@ -4402,7 +4377,6 @@ string errorScanningDevicesTitle
 string error_a11y_label
 string error_icon_content_description
 string error_text_error
-string exit_menu_item
 string expansionHubDisplayName
 string expansionHubFirmwareUpdateMessage
 string exposed_dropdown_menu_content_description
@@ -4435,7 +4409,6 @@ string incompatibleAppsError
 string input_name_hint
 string input_name_label
 string inspection_activity
-string inspection_mode_menu_item
 string ip_address_prompt_text
 string item_view_role_description
 string launch_wifi_settings
@@ -4705,7 +4678,6 @@ string pref_device_name_rc_display
 string pref_device_name_tracking
 string pref_dh_os_version_code
 string pref_ds_supports_5_ghz
-string pref_ftc_season_year_of_current_rc
 string pref_gamepad_user1_type_key
 string pref_gamepad_user2_type_key
 string pref_hardware_config_filename
@@ -4797,7 +4769,6 @@ string prefedit_wifi_automute
 string prefedit_wifi_automute_summary
 string preferred_imu_name
 string program_and_manage_activity
-string program_and_manage_menu_item
 string progressPleaseWait
 string progressUpdatingDeviceFirmware
 string qrInvalid
@@ -4807,7 +4778,6 @@ string readOnlyConfigFeedback
 string readOnlyExplanation
 string readXML_text
 string rescanButton_text
-string restart_robot_menu_item
 string restore_settings
 string rev_20_hd_hex_name
 string rev_40_hd_hex_name
@@ -4877,7 +4847,6 @@ string servo_port
 string setWifiChannelFailure
 string setWifiChannelSuccess
 string settings_activity
-string settings_menu_item
 string side_sheet_accessibility_pane_title
 string side_sheet_behavior
 string sparkfun_led_stick_description
@@ -4952,10 +4921,8 @@ string toastRobotSetupComplete
 string toastSaved
 string toastWebViewDownloadFile
 string toastWebViewDownloadsComplete
-string toastWifiConfigurationComplete
 string toastWifiP2pChannelChangeRequestedDS
 string toastWifiP2pRememberedGroupsCleared
-string toastWifiUpBeforeProgrammingMode
 string tokenThemeBlue
 string tokenThemeGreen
 string tokenThemeOrange
@@ -5035,12 +5002,6 @@ style AppTheme_Orange
 style AppTheme_Purple
 style AppTheme_Red
 style AppTheme_Teal
-style AppThemeBlueRC
-style AppThemeGreenRC
-style AppThemeOrangeRC
-style AppThemePurpleRC
-style AppThemeRedRC
-style AppThemeTealRC
 style Base_AlertDialog_AppCompat
 style Base_AlertDialog_AppCompat_Light
 style Base_Animation_AppCompat_Dialog
@@ -6318,7 +6279,6 @@ styleable zxing_view zxing_scanner_layout
 xml advanced_rc_settings
 xml app_settings
 xml builtinwebcamcalibrations
-xml device_filter
 xml file_provider_paths
 xml ftc_about_activity
 xml ftc_about_activity_rc

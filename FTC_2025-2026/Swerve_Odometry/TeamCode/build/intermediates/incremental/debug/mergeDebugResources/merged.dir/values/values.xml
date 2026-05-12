@@ -9,13 +9,13 @@
         <item>@color/medium_light_teal</item>
     </array>
     <integer-array name="app_theme_ids">
-      <item>@style/AppThemeRedRC</item>
-      <item>@style/AppThemeGreenRC</item>
-      <item>@style/AppThemeBlueRC</item>
-      <item>@style/AppThemePurpleRC</item>
-      <item>@style/AppThemeOrangeRC</item>
-      <item>@style/AppThemeTealRC</item>
-  </integer-array>
+        <item>@style/AppTheme.Red</item>
+        <item>@style/AppTheme.Green</item>
+        <item>@style/AppTheme.Blue</item>
+        <item>@style/AppTheme.Purple</item>
+        <item>@style/AppTheme.Orange</item>
+        <item>@style/AppTheme.Teal</item>
+    </integer-array>
     <string-array name="app_theme_names">
         <item>Red</item>
         <item>Green</item>
@@ -1171,7 +1171,7 @@
     <dimen name="abc_text_size_title_material">20sp</dimen>
     <dimen name="abc_text_size_title_material_toolbar">20dp</dimen>
     <dimen name="activity_horizontal_margin">16dp</dimen>
-    <dimen name="activity_vertical_margin">5dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="appcompat_dialog_background_inset">16dp</dimen>
     <dimen name="cardview_compat_inset_shadow">1dp</dimen>
     <dimen name="cardview_default_elevation">2dp</dimen>
@@ -2122,7 +2122,6 @@
     <string name="about_ch_os_version">Control Hub OS Version</string>
     <string name="about_dh_os_version">Driver Hub OS Version</string>
     <string name="about_library_version">Library Version</string>
-    <string name="about_menu_item">About</string>
     <string name="about_network_connection_info">Network Connection Info</string>
     <string name="about_network_protocol_version">Robot Wi-Fi Protocol Version</string>
     <string name="about_wifi_connected">Connected</string>
@@ -2164,7 +2163,7 @@
     <string name="appRcIsObsoleteContext">The Robot Controller app is obsolete.</string>
     <string name="appThemeChangeRestartNotifyDS">App color scheme has changed. The driver station will restart.</string>
     <string name="appThemeChangeRestartNotifyRC">App color scheme has changed. The robot controller will restart.</string>
-    <string name="app_name">FTC Robot Controller</string>
+    <string name="app_name">OnBotJava</string>
     <string name="app_result_type_attempting_installation">The APK file was successfully loaded.\nNow attempting installation of the %s.</string>
     <string name="app_result_type_auto_updated_app">Auto-updated app: %s.</string>
     <string name="app_result_type_backup_uninstalling_existing_app">Backing up data, uninstalling, and installing new version of app.</string>
@@ -2201,7 +2200,6 @@
     <string name="availableTemplateListCaption">Available templates:</string>
     <string name="batteryLevelLabel">Battery Level:</string>
     <string name="blocks_activity">Blocks</string>
-    <string name="blocks_menu_item">Blocks</string>
     <string name="bluetoothLabel">Bluetooth:</string>
     <string name="bluetoothOnContext">Bluetooth should be turned off.</string>
     <string name="bottom_sheet_behavior" translatable="false">com.google.android.material.bottomsheet.BottomSheetBehavior</string>
@@ -2298,7 +2296,6 @@
     <string name="configureFromTemplate">Configure from Template</string>
     <string name="configure_activity">Configure Robot</string>
     <string name="configure_menu_item">Configure Robot</string>
-    <string name="configure_robot_menu_item">Configure Robot</string>
     <string name="configure_settings">Change Channel</string>
     <string name="confirmConfigDeleteMessage">Are you sure you want to delete this configuration?</string>
     <string name="confirmConfigDeleteTitle">Confirm Configuration Delete</string>
@@ -2378,7 +2375,6 @@
   </string>
     <string name="error_icon_content_description">Error</string>
     <string name="error_text_error">Error: %s</string>
-    <string name="exit_menu_item">Exit</string>
     <string name="expansionHubDisplayName">Expansion Hub</string>
     <string name="expansionHubFirmwareUpdateMessage">Updating Expansion Hub %1$s firmware with \"%2$s\". Please do not unplug.</string>
     <string name="exposed_dropdown_menu_content_description">Show dropdown menu</string>
@@ -2411,7 +2407,6 @@
     <string name="input_name_hint">Enter device name here</string>
     <string name="input_name_label">Device name</string>
     <string name="inspection_activity">Inspection Mode</string>
-    <string name="inspection_mode_menu_item">Self Inspect</string>
     <string name="ip_address_prompt_text">Enter the ip address of the target device</string>
     <string name="item_view_role_description">Tab</string>
     <string name="launch_wifi_settings">Wi-Fi Settings...</string>
@@ -2644,7 +2639,7 @@
     <string name="ota_result_type_verification_succeeded">Update verification succeeded. Rebooting device and installing update.&lt;br>&lt;br>
         The Control Hub will stop broadcasting its Wi-Fi access point for about a minute, so you may need to manually re-connect in order to see if the update succeeded.</string>
     <string name="ota_result_type_verification_succeeded_localhost">Update verification succeeded. Rebooting device and installing update.</string>
-    <string name="packageName">@string/packageNameRobotController</string>
+    <string name="packageName">(packageNameToBeReplaced)</string>
     <string name="packageNameDriverStation" translatable="false">com.qualcomm.ftcdriverstation</string>
     <string name="packageNameRobotController" translatable="false">com.qualcomm.ftcrobotcontroller</string>
     <string name="pairing_kind_title">"Pairing Method"</string>
@@ -2707,7 +2702,6 @@
     <string name="pref_device_name_tracking">pref_device_name_tracking</string>
     <string name="pref_dh_os_version_code">pref_dh_os_version_code</string>
     <string name="pref_ds_supports_5_ghz">pref_ds_supports_5_ghz</string>
-    <string name="pref_ftc_season_year_of_current_rc" translatable="false">pref_ftc_season_year_of_current_rc_new</string>
     <string name="pref_gamepad_user1_type_key">pref_gamepad_user1_type</string>
     <string name="pref_gamepad_user2_type_key">pref_gamepad_user2_type</string>
     <string name="pref_hardware_config_filename">pref_hardware_config_filename</string>
@@ -2799,7 +2793,6 @@
     <string name="prefedit_wifi_automute_summary">Turn Wi-Fi off automatically after a period of inactivity.</string>
     <string name="preferred_imu_name">imu</string>
     <string name="program_and_manage_activity">Program &amp; Manage</string>
-    <string name="program_and_manage_menu_item">Program &amp; Manage</string>
     <string name="progressPleaseWait">Please wait</string>
     <string name="progressUpdatingDeviceFirmware">Updating Expansion Hub firmware (%s)</string>
     <string name="qrInvalid">Please activate your competition config before scanning</string>
@@ -2809,7 +2802,6 @@
     <string name="readOnlyExplanation">Read-only configurations can be edited, but must be saved under a new name.</string>
     <string name="readXML_text">Select an XML file to instantiate a Robot from that file</string>
     <string name="rescanButton_text">Press the \'Scan\' button to rescan for attached devices</string>
-    <string name="restart_robot_menu_item">Restart Robot</string>
     <string name="restore_settings">Restore Saved Wi-Fi Settings</string>
     <string name="rev_20_hd_hex_name">REV Robotics 20:1 HD Hex Motor</string>
     <string name="rev_40_hd_hex_name">REV Robotics 40:1 HD Hex Motor</string>
@@ -2881,7 +2873,6 @@
     <string name="setWifiChannelFailure">Unable to change Wi-Fi Direct channel to \'%s\'</string>
     <string name="setWifiChannelSuccess">Changed Wi-Fi Direct channel to \'%s\'</string>
     <string name="settings_activity">Settings</string>
-    <string name="settings_menu_item">Settings</string>
     <string description="Title of the side sheet&apos;s accessibility pane that is spoken by TalkBack when the side sheet appears on screen. [CHAR_LIMIT=NONE]" name="side_sheet_accessibility_pane_title">Side Sheet</string>
     <string name="side_sheet_behavior" translatable="false">com.google.android.material.sidesheet.SideSheetBehavior</string>
     <string name="sparkfun_led_stick_description" ns1:ignore="ExtraTranslation">a SparkFun QWIIC LED Stick</string>
@@ -2956,10 +2947,8 @@
     <string name="toastSaved">Saved</string>
     <string name="toastWebViewDownloadFile">Downloading %1$s</string>
     <string name="toastWebViewDownloadsComplete">Downloads Complete</string>
-    <string name="toastWifiConfigurationComplete">Configuration Complete</string>
     <string name="toastWifiP2pChannelChangeRequestedDS">Asked Robot Controller to change to channel \'%s\'. A restart of the Driver Station may be needed.</string>
     <string name="toastWifiP2pRememberedGroupsCleared">Wi-Fi Direct remembered groups have been cleared from the robot controller.</string>
-    <string name="toastWifiUpBeforeProgrammingMode">The Robot Controller must be fully up and running before entering Program and Manage Mode.</string>
     <string name="tokenThemeBlue">blue</string>
     <string name="tokenThemeGreen">green</string>
     <string name="tokenThemeOrange">orange</string>
@@ -3234,18 +3223,6 @@
         <item name="feedbackBackground">@color/background_orange</item>
         <item name="feedbackBorder">@color/border_orange</item>
         <item name="feedbackShape">@drawable/feedback_shape_orange</item>
-    </style>
-    <style name="AppThemeBlueRC" parent="AppTheme.Blue">
-    </style>
-    <style name="AppThemeGreenRC" parent="AppTheme.Green">
-    </style>
-    <style name="AppThemeOrangeRC" parent="AppTheme.Orange">
-    </style>
-    <style name="AppThemePurpleRC" parent="AppTheme.Purple">
-    </style>
-    <style name="AppThemeRedRC" parent="AppTheme.Red">
-    </style>
-    <style name="AppThemeTealRC" parent="AppTheme.Teal">
     </style>
     <style name="Base.AlertDialog.AppCompat" parent="android:Widget">
         <item name="android:layout">@layout/abc_alert_dialog_material</item>

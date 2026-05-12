@@ -3190,7 +3190,6 @@ int drawable ultimategoal_background 0x0
 int id BOTTOM_END 0x0
 int id BOTTOM_START 0x0
 int id NO_DEBUG 0x0
-int id RelativeLayout 0x0
 int id SHOW_ALL 0x0
 int id SHOW_PATH 0x0
 int id SHOW_PROGRESS 0x0
@@ -3230,7 +3229,6 @@ int id accessibility_custom_action_6 0x0
 int id accessibility_custom_action_7 0x0
 int id accessibility_custom_action_8 0x0
 int id accessibility_custom_action_9 0x0
-int id action_about 0x0
 int id action_bar 0x0
 int id action_bar_activity_content 0x0
 int id action_bar_container 0x0
@@ -3238,21 +3236,15 @@ int id action_bar_root 0x0
 int id action_bar_spinner 0x0
 int id action_bar_subtitle 0x0
 int id action_bar_title 0x0
-int id action_configure_robot 0x0
 int id action_container 0x0
 int id action_context_bar 0x0
 int id action_divider 0x0
-int id action_exit_app 0x0
 int id action_image 0x0
-int id action_inspection_mode 0x0
 int id action_menu_divider 0x0
 int id action_menu_presenter 0x0
 int id action_mode_bar 0x0
 int id action_mode_bar_stub 0x0
 int id action_mode_close_button 0x0
-int id action_program_and_manage 0x0
-int id action_restart_robot 0x0
-int id action_settings 0x0
 int id action_text 0x0
 int id actions 0x0
 int id activity_chooser_view_content 0x0
@@ -3298,7 +3290,6 @@ int id buttonList 0x0
 int id buttonPanel 0x0
 int id bytesPerSecond 0x0
 int id bytesPerSecondLabel 0x0
-int id cameraMonitorViewId 0x0
 int id cameraName 0x0
 int id cancelButton 0x0
 int id cancel_button 0x0
@@ -3529,7 +3520,6 @@ int id message 0x0
 int id middle 0x0
 int id mini 0x0
 int id moduleAddressText 0x0
-int id monitorContainer 0x0
 int id month_grid 0x0
 int id month_navigation_bar 0x0
 int id month_navigation_fragment_toggle 0x0
@@ -3714,12 +3704,6 @@ int id templateNameText 0x0
 int id text 0x0
 int id text2 0x0
 int id textDeviceName 0x0
-int id textErrorMessage 0x0
-int id textGamepad1 0x0
-int id textGamepad2 0x0
-int id textNetworkConnectionStatus 0x0
-int id textOpMode 0x0
-int id textRobotStatus 0x0
 int id textSpacerNoButtons 0x0
 int id textSpacerNoTitle 0x0
 int id textView 0x0
@@ -3781,7 +3765,6 @@ int id view_tree_view_model_store_owner 0x0
 int id visible 0x0
 int id visible_removing_fragment_view_tag 0x0
 int id webView 0x0
-int id webViewBlocksRuntime 0x0
 int id wifiConnected 0x0
 int id wifiConnected_img 0x0
 int id wifiDisabledNotification 0x0
@@ -3924,7 +3907,6 @@ int layout abc_select_dialog_material 0x0
 int layout abc_tooltip 0x0
 int layout activity_configure_from_template 0x0
 int layout activity_ftc_configuration 0x0
-int layout activity_ftc_controller 0x0
 int layout activity_ftc_lynx_address_update 0x0
 int layout activity_ftc_lynx_fw_update 0x0
 int layout activity_ftc_wifi_channel_selector 0x0
@@ -4055,7 +4037,6 @@ int layout template_info 0x0
 int layout webcam_device 0x0
 int layout zxing_barcode_scanner 0x0
 int layout zxing_capture 0x0
-int menu ftc_robot_controller 0x0
 int menu inspection_menu_rc_remote 0x0
 int menu inspection_menu_rcds_local 0x0
 int plurals mtrl_badge_content_description 0x0
@@ -4065,10 +4046,8 @@ int raw color_fragment_shader 0x0
 int raw cube_mesh_fragment_shader 0x0
 int raw cube_mesh_vertex_shader 0x0
 int raw errormessage 0x0
-int raw gold 0x0
 int raw nxtstartupsound 0x0
 int raw rev_bhi260_ap_fw_20 0x0
-int raw silver 0x0
 int raw simple_vertex_shader 0x0
 int raw ss_alarm 0x0
 int raw ss_bb8_down 0x0
@@ -4147,7 +4126,6 @@ int string about_build_time 0x0
 int string about_ch_os_version 0x0
 int string about_dh_os_version 0x0
 int string about_library_version 0x0
-int string about_menu_item 0x0
 int string about_network_connection_info 0x0
 int string about_network_protocol_version 0x0
 int string about_wifi_connected 0x0
@@ -4222,7 +4200,6 @@ int string availableConfigsInfoMessage 0x0
 int string availableTemplateListCaption 0x0
 int string batteryLevelLabel 0x0
 int string blocks_activity 0x0
-int string blocks_menu_item 0x0
 int string bluetoothLabel 0x0
 int string bluetoothOnContext 0x0
 int string bottom_sheet_behavior 0x0
@@ -4338,7 +4315,6 @@ int string configurationNotSaved 0x0
 int string configureFromTemplate 0x0
 int string configure_activity 0x0
 int string configure_menu_item 0x0
-int string configure_robot_menu_item 0x0
 int string configure_settings 0x0
 int string confirmConfigDeleteMessage 0x0
 int string confirmConfigDeleteTitle 0x0
@@ -4417,7 +4393,6 @@ int string errorScanningDevicesTitle 0x0
 int string error_a11y_label 0x0
 int string error_icon_content_description 0x0
 int string error_text_error 0x0
-int string exit_menu_item 0x0
 int string expansionHubDisplayName 0x0
 int string expansionHubFirmwareUpdateMessage 0x0
 int string exposed_dropdown_menu_content_description 0x0
@@ -4450,7 +4425,6 @@ int string incompatibleAppsError 0x0
 int string input_name_hint 0x0
 int string input_name_label 0x0
 int string inspection_activity 0x0
-int string inspection_mode_menu_item 0x0
 int string ip_address_prompt_text 0x0
 int string item_view_role_description 0x0
 int string launch_wifi_settings 0x0
@@ -4728,7 +4702,6 @@ int string pref_device_name_tracking 0x0
 int string pref_dh_os_version_code 0x0
 int string pref_ds_supports_5_ghz 0x0
 int string pref_ds_version_code 0x0
-int string pref_ftc_season_year_of_current_rc 0x0
 int string pref_gamepad_user1_type_key 0x0
 int string pref_gamepad_user2_type_key 0x0
 int string pref_hardware_config_filename 0x0
@@ -4821,7 +4794,6 @@ int string prefedit_wifi_automute 0x0
 int string prefedit_wifi_automute_summary 0x0
 int string preferred_imu_name 0x0
 int string program_and_manage_activity 0x0
-int string program_and_manage_menu_item 0x0
 int string progressPleaseWait 0x0
 int string progressUpdatingDeviceFirmware 0x0
 int string qrInvalid 0x0
@@ -4831,7 +4803,6 @@ int string readOnlyConfigFeedback 0x0
 int string readOnlyExplanation 0x0
 int string readXML_text 0x0
 int string rescanButton_text 0x0
-int string restart_robot_menu_item 0x0
 int string restore_settings 0x0
 int string rev_20_hd_hex_name 0x0
 int string rev_40_hd_hex_name 0x0
@@ -4901,7 +4872,6 @@ int string servo_port 0x0
 int string setWifiChannelFailure 0x0
 int string setWifiChannelSuccess 0x0
 int string settings_activity 0x0
-int string settings_menu_item 0x0
 int string side_sheet_accessibility_pane_title 0x0
 int string side_sheet_behavior 0x0
 int string sparkfun_led_stick_description 0x0
@@ -4976,10 +4946,8 @@ int string toastRobotSetupComplete 0x0
 int string toastSaved 0x0
 int string toastWebViewDownloadFile 0x0
 int string toastWebViewDownloadsComplete 0x0
-int string toastWifiConfigurationComplete 0x0
 int string toastWifiP2pChannelChangeRequestedDS 0x0
 int string toastWifiP2pRememberedGroupsCleared 0x0
-int string toastWifiUpBeforeProgrammingMode 0x0
 int string tokenThemeBlue 0x0
 int string tokenThemeGreen 0x0
 int string tokenThemeOrange 0x0
@@ -5053,12 +5021,6 @@ int style Animation_Material3_SideSheetDialog_Right 0x0
 int style Animation_MaterialComponents_BottomSheetDialog 0x0
 int style AppBaseTheme 0x0
 int style AppTheme 0x0
-int style AppThemeBlueRC 0x0
-int style AppThemeGreenRC 0x0
-int style AppThemeOrangeRC 0x0
-int style AppThemePurpleRC 0x0
-int style AppThemeRedRC 0x0
-int style AppThemeTealRC 0x0
 int style AppTheme_Blue 0x0
 int style AppTheme_Green 0x0
 int style AppTheme_Orange 0x0
@@ -8013,7 +7975,6 @@ int styleable zxing_view_zxing_scanner_layout 0
 int xml advanced_rc_settings 0x0
 int xml app_settings 0x0
 int xml builtinwebcamcalibrations 0x0
-int xml device_filter 0x0
 int xml file_provider_paths 0x0
 int xml ftc_about_activity 0x0
 int xml ftc_about_activity_rc 0x0

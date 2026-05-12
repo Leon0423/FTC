@@ -25,14 +25,9 @@ public class SwerveModule {
 
     private final AnalogInput absoluteEncoder; // turningMotor的Encoder
 
-    private final PIDController turningPidController;
-    private final PIDController drivePidController;  // 新增：Drive PID Controller
-
     private final boolean absoluteEncoderReversed;
     private final double absoluteEncoderOffsetRad;
 
-    private double previousAngle = 0;
-    private long previousTime = System.currentTimeMillis();
 
     // Turning PID 監測變數
     private double targetAngle = 0;
