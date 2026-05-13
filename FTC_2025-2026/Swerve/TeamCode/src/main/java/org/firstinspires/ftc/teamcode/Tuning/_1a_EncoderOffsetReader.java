@@ -154,9 +154,9 @@ public class _1a_EncoderOffsetReader extends LinearOpMode {
         if (enc == null) return 0;
         double angle = enc.getVoltage() / enc.getMaxVoltage();
         angle *= 2.0 * Math.PI;                                      // raw rad
+        if (reversed) angle = -angle;
         angle *= ModuleConstants.kTurningMotorGearRatio;             // 齒輪比
         angle -= Math.toRadians(offsetDeg);                          // 扣 offset
-        if (reversed) angle = -angle;
         while (angle >  Math.PI) angle -= 2.0 * Math.PI;            // normalize -π~π
         while (angle < -Math.PI) angle += 2.0 * Math.PI;
         return Math.toDegrees(angle);                                // 轉回角度方便讀

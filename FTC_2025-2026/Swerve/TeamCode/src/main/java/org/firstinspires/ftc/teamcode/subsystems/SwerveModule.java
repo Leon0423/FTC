@@ -164,7 +164,7 @@ public class SwerveModule {
     public double getDrivePosition() {
         // FTC 中直接在讀取時應用轉換因子
         // 等效於 driveEncoder.setPositionConversionFactor(ModuleConstants.kDriveEncoderRot2Meter)
-        return driveMotor.getCurrentPosition() * ModuleConstants.kDriveEncoderRot2Meter;
+        return driveMotor.getCurrentPosition() * ModuleConstants.kDriveEncoderTick2Meter;
     }
 
     // ===== 修改 getTurningPosition()，每次更新後儲存 =====
@@ -240,10 +240,11 @@ public class SwerveModule {
      * @return 馬達轉速 (rotations per minute)
      */
     public double getDriveRPM() {
-        // 從 getDriveVelocity() 推導，確保與 PID 速度回授完全一致。
-        // wheel_RPM = (m/s) / circumference * 60
-        double rawMps = driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
-        return rawMps / (Math.PI * ModuleConstants.kWheelDiameterMeters) * 60.0;
+        // getVelocity() 回傳 ticks per second
+        // goBILDA 馬達: 28 ticks/revolution
+        // RPM = (ticks/sec) / (ticks/rev) * 60
+        double ticksPerSec = driveMotor.getVelocity();
+        return (ticksPerSec / ModuleConstants.kDriveEncoderTicksPerRevolution) * 60.0;
     }
 
     public double getTurningVelocity() {
@@ -677,18 +678,13 @@ public class SwerveModule {
     }
 
     public double getDriveVelocity() {
-        double raw = driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
+        double raw = driveMotor.getVelocity() * ModuleConstants.kDriveEncoderTick2Meter;
         filteredVelocity = VELOCITY_FILTER_ALPHA * raw + (1 - VELOCITY_FILTER_ALPHA) * filteredVelocity;
         return filteredVelocity;
     }
 
     public double getRawDriveVelocity() {
-        return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderRot2Meter;
-    }
-
-    /** 回傳馬達編碼器原始 ticks/sec，用於診斷 kDriveEncoderTicksPerRev 是否正確。 */
-    public double getRawTicksPerSec() {
-        return driveMotor.getVelocity();
+        return driveMotor.getVelocity() * ModuleConstants.kDriveEncoderTick2Meter;
     }
 
     private void saveTrackingState() {

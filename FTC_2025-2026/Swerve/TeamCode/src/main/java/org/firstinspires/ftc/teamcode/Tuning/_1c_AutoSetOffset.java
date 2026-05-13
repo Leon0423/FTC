@@ -25,6 +25,7 @@ import org.firstinspires.ftc.teamcode.Constants.ModuleConstants;
  */
 @TeleOp(name = "1c. Auto Set Offset", group = "Tuning")
 public class _1c_AutoSetOffset extends LinearOpMode {
+    private static final int TRACKING_PREF_VERSION = 2;
 
     private CRServo flServo, frServo, blServo, brServo;
     private AnalogInput flEncoder, frEncoder, blEncoder, brEncoder;
@@ -144,16 +145,26 @@ public class _1c_AutoSetOffset extends LinearOpMode {
     // ===== 計算 =====
     private double getGearedDeg(AnalogInput enc) {
         if (enc == null) return 0;
-        return (enc.getVoltage() / enc.getMaxVoltage()) * 360.0 * ModuleConstants.kTurningMotorGearRatio;
+        double sign = getReversedForEncoder(enc) ? -1.0 : 1.0;
+        return sign * (enc.getVoltage() / enc.getMaxVoltage()) * 360.0 * ModuleConstants.kTurningMotorGearRatio;
     }
 
     private double getFinalDeg(AnalogInput enc) {
         if (enc == null) return 0;
-        double angle = Math.toRadians(getGearedDeg(enc));
+        boolean reversed = getReversedForEncoder(enc);
+        double rawServoRad = getRawServoRad(enc);
+        double angle = (reversed ? -rawServoRad : rawServoRad) * ModuleConstants.kTurningMotorGearRatio;
         angle -= getActiveOffsetRadForEncoder(enc);
         while (angle >  Math.PI) angle -= 2 * Math.PI;
         while (angle < -Math.PI) angle += 2 * Math.PI;
         return Math.toDegrees(angle);
+    }
+
+    private boolean getReversedForEncoder(AnalogInput enc) {
+        if (enc == flEncoder) return DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed;
+        if (enc == frEncoder) return DriveConstants.kFrontRightDriveAbsoluteEncoderReversed;
+        if (enc == blEncoder) return DriveConstants.kBackLeftDriveAbsoluteEncoderReversed;
+        return DriveConstants.kBackRightDriveAbsoluteEncoderReversed;
     }
 
     private double getActiveOffsetRadForEncoder(AnalogInput enc) {
@@ -171,7 +182,8 @@ public class _1c_AutoSetOffset extends LinearOpMode {
 
     private void saveOffsetAndZeroTracking(String servoName, AnalogInput encoder) {
         double rawServoRad = getRawServoRad(encoder);
-        double wheelOffsetRad = rawServoRad * ModuleConstants.kTurningMotorGearRatio;
+        double orientedRawServoRad = getReversedForServoName(servoName) ? -rawServoRad : rawServoRad;
+        double wheelOffsetRad = orientedRawServoRad * ModuleConstants.kTurningMotorGearRatio;
 
         offsetPrefs.edit()
                 .putFloat("offset_" + servoName, (float) wheelOffsetRad)
@@ -179,8 +191,22 @@ public class _1c_AutoSetOffset extends LinearOpMode {
 
         trackingPrefs.edit()
                 .putFloat("accum_angle_" + servoName, 0f)
-                .putFloat("last_raw_" + servoName, (float) rawServoRad)
+                .putFloat("last_raw_" + servoName, (float) orientedRawServoRad)
+                .putInt("tracking_version_" + servoName, TRACKING_PREF_VERSION)
                 .apply();
+    }
+
+    private boolean getReversedForServoName(String servoName) {
+        if (servoName.equals(DriveConstants.kFrontLeftTurningMotorName)) {
+            return DriveConstants.kFrontLeftDriveAbsoluteEncoderReversed;
+        }
+        if (servoName.equals(DriveConstants.kFrontRightTurningMotorName)) {
+            return DriveConstants.kFrontRightDriveAbsoluteEncoderReversed;
+        }
+        if (servoName.equals(DriveConstants.kBackLeftTurningMotorName)) {
+            return DriveConstants.kBackLeftDriveAbsoluteEncoderReversed;
+        }
+        return DriveConstants.kBackRightDriveAbsoluteEncoderReversed;
     }
 
     private double loadOffsetRad(String servoName, double fallback) {

@@ -102,7 +102,20 @@ public class SwerveSubsystem extends SubsystemBase {
                 DriveConstants.kBackRightDriveAbsoluteEncoderReversed,
                 DriveConstants.kBackRightDrivePowerScale);
 
-        usingPinpoint = DriveConstants.USING_PINPOINT;
+        // === Pinpoint 初始化 ===
+        boolean pinpointAvailable = false;
+        if (DriveConstants.USING_PINPOINT) {
+            try {
+                pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, DriveConstants.kPinpointName);
+                configurePinpoint();
+                pinpointAvailable = true;
+            } catch (Exception e) {
+                // Pinpoint 不存在或初始化失敗時，退回 IMU + module odometry。
+                pinpoint = null;
+            }
+        }
+        usingPinpoint = DriveConstants.USING_PINPOINT && pinpointAvailable;
+
         IMU imuDevice = null;
         if (!usingPinpoint) {
             try {
@@ -122,17 +135,6 @@ public class SwerveSubsystem extends SubsystemBase {
         imu = imuDevice;
 
         odometer = new SwerveDriveOdometry(DriveConstants.kDriveKinematics, new Rotation2d(0));
-
-        // === Pinpoint 初始化 ===
-        if (usingPinpoint) {
-            try {
-                pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, DriveConstants.kPinpointName);
-                configurePinpoint();
-            } catch (Exception e) {
-                // 如果 Pinpoint 初始化失敗，記錄錯誤但不中斷
-                pinpoint = null;
-            }
-        }
 
         // 不再在背景自動歸零；如需歸零請在 OpMode 內明確呼叫 zeroHeading()
     }
@@ -483,10 +485,10 @@ public class SwerveSubsystem extends SubsystemBase {
 
     // 停機鎖輪：輪角擺成 X 型，增加外力推動阻力。
     public void setXLockPose() {
-        frontLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
-        frontRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
-        backLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
-        backRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
+        frontLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
+        frontRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
+        backLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
+        backRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
     }
 
     // 僅轉向到 X 型，不觸發 speed=0 的狀態分支，方便在結束前持續收斂角度。
