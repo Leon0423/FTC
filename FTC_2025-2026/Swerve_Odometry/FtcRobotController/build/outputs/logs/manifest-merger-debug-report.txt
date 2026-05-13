@@ -1,16 +1,22 @@
 -- Merging decision tree log ---
 manifest
-ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml:2:13-83
-INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml:2:13-83
+ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml:2:1-6:12
+INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml:2:1-6:12
 	package
-		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml
+		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml
+	android:versionName
+		ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml:4:5-31
 	xmlns:android
-		ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml:2:23-81
+		ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml:2:11-69
+	android:versionCode
+		ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml:3:5-29
+application
+ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml:5:5-19
 uses-sdk
-INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml reason: use-sdk injection requested
-INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml
-INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml
+INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml
+INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml
 	android:targetSdkVersion
-		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml
+		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest11538322320174275070.xml
+		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\src\main\AndroidManifest.xml

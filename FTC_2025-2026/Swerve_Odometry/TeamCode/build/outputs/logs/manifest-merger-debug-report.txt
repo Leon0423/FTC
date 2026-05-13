@@ -2,7 +2,9 @@
 manifest
 ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:2:1-4:12
 INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:2:1-4:12
-MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
+INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:2:1-4:12
+INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:2:1-4:12
+MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-11:12
 MERGED from [org.firstinspires.ftc:OnBotJava:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\49ab41844e40a6ae734507446ea114d4\transformed\OnBotJava-11.1.0\AndroidManifest.xml:34:1-41:12
 MERGED from [org.firstinspires.ftc:Blocks:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\014a2558a65424df9c884b3d245cc1d7\transformed\Blocks-11.1.0\AndroidManifest.xml:2:1-24:12
 MERGED from [com.acmerobotics.dashboard:dashboard:0.5.1] C:\Users\Leon\.gradle\caches\9.0.0\transforms\b3fe96915d0629a76e3ff603907a1918\transformed\dashboard-0.5.1\AndroidManifest.xml:2:1-7:12
@@ -78,11 +80,17 @@ MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\Leon\.g
 MERGED from [org.openftc:opencv-repackaged-bundled-dylibs:4.10.0-A] C:\Users\Leon\.gradle\caches\9.0.0\transforms\2e7fb6d4e93ad3c6d6688d9957754309\transformed\opencv-repackaged-bundled-dylibs-4.10.0-A\AndroidManifest.xml:2:1-9:12
 	package
 		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml
 	xmlns:android
 		ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:2:11-69
 application
 ADDED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:3:5-19
 INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml:3:5-19
+MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:5-20
+MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:5-20
 MERGED from [org.firstinspires.ftc:Blocks:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\014a2558a65424df9c884b3d245cc1d7\transformed\Blocks-11.1.0\AndroidManifest.xml:16:5-22:19
 MERGED from [org.firstinspires.ftc:Blocks:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\014a2558a65424df9c884b3d245cc1d7\transformed\Blocks-11.1.0\AndroidManifest.xml:16:5-22:19
 MERGED from [org.firstinspires.ftc:FtcCommon:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\b2d185987842193e802c5b26d58a9b8f\transformed\FtcCommon-11.1.0\AndroidManifest.xml:21:5-176:19
@@ -127,8 +135,8 @@ uses-sdk
 INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml
 INJECTED from D:\FTC\FTC_2025-2026\Swerve_Odometry\TeamCode\src\main\AndroidManifest.xml
-MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
-MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-44
+MERGED from [:FtcRobotController] D:\FTC\FTC_2025-2026\Swerve_Odometry\FtcRobotController\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-44
 MERGED from [org.firstinspires.ftc:OnBotJava:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\49ab41844e40a6ae734507446ea114d4\transformed\OnBotJava-11.1.0\AndroidManifest.xml:39:5-44
 MERGED from [org.firstinspires.ftc:OnBotJava:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\49ab41844e40a6ae734507446ea114d4\transformed\OnBotJava-11.1.0\AndroidManifest.xml:39:5-44
 MERGED from [org.firstinspires.ftc:Blocks:11.1.0] C:\Users\Leon\.gradle\caches\9.0.0\transforms\014a2558a65424df9c884b3d245cc1d7\transformed\Blocks-11.1.0\AndroidManifest.xml:7:5-44
