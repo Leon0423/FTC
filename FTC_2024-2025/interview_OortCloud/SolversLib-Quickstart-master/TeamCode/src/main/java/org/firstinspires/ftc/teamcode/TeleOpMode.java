@@ -1,4 +1,4 @@
-package pedroPathing;
+package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -22,7 +22,7 @@ public class TeleOpMode extends LinearOpMode {
 
     // * intake
     private Servo intakeLeft, intakeRight, intake_claw;
-    private double intake_maxPosition = 0.75;
+    private double intake_maxPosition = 0.9;
     private double intake_minPosition = 0.0;
     private double intake_pos = 0.0;
 
@@ -90,7 +90,7 @@ public class TeleOpMode extends LinearOpMode {
 
 
             // * intake: gamepad2.right_stick_y
-            // * intake position: 0.0 ~ 0.8
+            // * intake position: 0.0 ~ 0.9
             // * --------------------------------------------------- //
             intake_pos += (-gamepad2.right_stick_y) * 0.005;
             intake_pos = Math.min(intake_maxPosition, Math.max(intake_minPosition, intake_pos));
